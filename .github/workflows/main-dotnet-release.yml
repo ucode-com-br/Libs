@@ -1,0 +1,70 @@
+# This workflow will build a .NET project and publish the package to GitHub Packages and NuGet.org
+
+name: Version and Release
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with: 
+        fetch-depth: '0'
+
+    - name: "Setup .NET"
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 8.0.x
+
+    - name: "Setup git"
+      run: |
+        git config --local user.email "github-actions@ucode.com.br"
+        git config --local user.name "Github Actions"
+
+    - name: DotnetNugetAddSource
+      run: dotnet nuget add source --username USERNAME --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name "github" "https://nuget.pkg.github.com/ucode-com-br/index.json"
+
+    - name: "Install Versionize"
+      run: dotnet tool install --global Versionize
+
+    - name: "Install Husky"
+      run: dotnet tool install --global Husky
+
+    - name: "Install dotnet-format"
+      run: dotnet tool install -g dotnet-format --version "8.*" --add-source "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet8/nuget/v3/index.json"
+
+    - name: "Versionize Release"
+      id: versionize
+      run: versionize --changelog-all --exit-insignificant-commits --skip-dirty
+      continue-on-error: true
+
+    - name: "Restore dependencies"
+      run: dotnet restore 
+
+    - name: "Build with no restore"
+      run: dotnet build --no-restore --configuration "Release" --nologo --debug --verbosity minimal
+
+    - name: "Pack the project"
+      run: dotnet pack --include-symbols --include-source --nologo --configuration "Release" -p:SymbolPackageFormat=snupkg
+
+    - name: "Push Package to GitHub Packages"
+      run: |
+        echo "Working directory is > ${{ github.workspace }}"
+        dotnet nuget push "**/*.nupkg" --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate --source "https://nuget.pkg.github.com/ucode-com-br/index.json" --force-english-output
+
+    - name: "Push Package to NuGet.org"
+      run: |
+        dotnet nuget push "**/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate --source "https://api.nuget.org/v3/index.json"
+
+    - name: "Push changes to GitHub"
+      if: steps.versionize.outcome == 'success'
+      uses: ad-m/github-push-action@v0.6.0
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: ${{ github.ref }}
+        tags: true
