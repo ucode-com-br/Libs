@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
+using MongoDB.Driver.Core.Configuration;
 using MongoDB.Driver.Core.Events;
 using UCode.Extensions;
 using ILoggerFactory = Microsoft.Extensions.Logging.ILoggerFactory;
@@ -198,19 +199,19 @@ namespace UCode.Mongo
             this.InternalConstructor(connectionString);
         }
 
-        private async Task InternalConstructor()
+        private async Task InternalConstructor(string connectionString)
         {
-            await this.MapAsync();
+            var implimentedUnderlyingSystemType = this.GetType().UnderlyingSystemType;
+            var fullname = implimentedUnderlyingSystemType.FullName!;
 
-            await this.IndexAsync();
+            _instanceMongoContextImplementation = new MongoContextImplementation(fullname, implimentedUnderlyingSystemType, connectionString.CalculateSha256Hash()!, this.DatabaseName);
 
-            if (_collectionNames == null)
+            _instanceCollectionNames = _dictionaryConstructed.AddOrUpdate(_instanceMongoContextImplementation, (key) =>
             {
-                lock (_collectionNamesLock)
-                {
-                    _collectionNames ??= new System.Collections.Concurrent.ConcurrentBag<string>(this.Database.ListCollectionNames().ToEnumerable());
-                }
-            }
+                this.MapAsync().Wait();
+                this.IndexAsync().Wait();
+                return this.Database.ListCollectionNames().ToEnumerable().Select(collectionName => $"{fullname}-{this.DatabaseName}.{collectionName}").ToList();
+            }, (key, value) => value);
         }
 
         // Get a database set
@@ -287,7 +288,7 @@ namespace UCode.Mongo
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         /// <summary>
-        ///     Inicia a transação
+        ///     Inicia a transaÃ§Ã£o
         /// </summary>
         public void StartTransaction()
         {
