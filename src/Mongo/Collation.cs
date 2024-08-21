@@ -101,27 +101,37 @@ namespace UCode.Mongo
         /// </summary>
         public bool? NumericOrdering { get; init; } = false;
 
+        /// <summary>
+        /// Implicit conversion operator from <see cref="Collation"/> to <see cref="MongoDB.Driver.Collation"/>.
+        /// </summary>
+        /// <param name="collation">The <see cref="Collation"/> object to convert.</param>
+        /// <returns>The converted <see cref="MongoDB.Driver.Collation"/> object.</returns>
         public static implicit operator MongoDB.Driver.Collation(Collation collation)
         {
+            // If the collation is the default value, return the default value of MongoDB.Driver.Collation.
             if (collation == default)
             {
                 return default;
             }
 
-            var result = new MongoDB.Driver.Collation(collation.Locale,
-                collation.CaseLevel,
+            // Create a new MongoDB.Driver.Collation object with the same properties as the input collation.
+            var result = new MongoDB.Driver.Collation(
+                collation.Locale, // The locale of the collation.
+                collation.CaseLevel, // Whether the collation is case-sensitive.
                 collation.UpperCaseFirst.HasValue
                     ? collation.UpperCaseFirst.Value ? CollationCaseFirst.Upper : CollationCaseFirst.Lower
-                    : CollationCaseFirst.Off,
-                (CollationStrength)collation.Strength,
-                collation.NumericOrdering,
-                collation.Alternate ? CollationAlternate.NonIgnorable : CollationAlternate.Shifted,
+                    : CollationCaseFirst.Off, // The first character's case in the collation.
+                (CollationStrength)collation.Strength, // The strength of the collation.
+                collation.NumericOrdering, // Whether numeric characters are ordered.
+                collation.Alternate ? CollationAlternate.NonIgnorable : CollationAlternate.Shifted, // The alternate handling of characters.
                 collation.MaxVariable.HasValue
                     ? collation.MaxVariable.Value ? CollationMaxVariable.Space : CollationMaxVariable.Punctuation
-                    : null,
-                collation.Normalization,
-                collation.Backwards);
+                    : null, // The maximum variable handling of characters.
+                collation.Normalization, // Whether normalization is applied.
+                collation.Backwards); // Whether to sort backwards.
+                                      // Return the converted MongoDB.Driver.Collation object.
 
+            // Return the converted MongoDB.Driver.Collation object.
             return result;
         }
     }

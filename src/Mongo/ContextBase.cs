@@ -22,36 +22,104 @@ namespace UCode.Mongo
         // Lock for synchronizing access to _collectionNames
         private static readonly object _collectionNamesLock = new();
 
+        // Collection names
+        /// <summary>
+        /// Stores the names of all collections in the database.
+        /// </summary>
         private static System.Collections.Concurrent.ConcurrentDictionary<MongoContextImplementation, IEnumerable<string>> _dictionaryConstructed = new();
 
-
+        /// <summary>
+        /// The logger factory used to create loggers.
+        /// </summary>
         internal readonly ILoggerFactory LoggerFactory;
+
+        /// <summary>
+        /// The MongoDB client used to connect to the database.
+        /// </summary>
         internal readonly MongoClient Client;
+
+        /// <summary>
+        /// The database associated with this context.
+        /// </summary>
         internal readonly MongoDatabaseBase Database;
+
+        /// <summary>
+        /// The session handle used for the current transaction.
+        /// </summary>
         internal IClientSessionHandle? Session;
+
+        /// <summary>
+        /// Indicates whether a transaction is currently in progress.
+        /// </summary>
         private bool _onTransaction;
+
+        /// <summary>
+        /// Lock object used to ensure thread safety when starting or aborting transactions.
+        /// </summary>
         private readonly object _onTransactionLock = new();
+
+
+        /// <summary>
+        /// The name of the database associated with this context.
+        /// </summary>
         public readonly string DatabaseName;
+
+        /// <summary>
+        /// Indicates whether a session was started by the constructor.
+        /// </summary>
         private readonly bool SessionStatedOnConstructor;
 
+        /// <summary>
+        /// Lazily creates a logger for this context.
+        /// </summary>
         private readonly Lazy<ILogger<ContextBase>> _logger;
+
+        /// <summary>
+        /// Gets the logger for this context.
+        /// </summary>
         protected ILogger<ContextBase> Logger => this._logger.Value;
 
+        /// <summary>
+        /// Indicates whether a transaction is currently in progress.
+        /// </summary>
         public bool IsUseTransaction
         {
             get; private set;
         }
+
+        /// <summary>
+        /// Indicates whether a transaction was started by the constructor.
+        /// </summary>
         private bool SetUseTransactionOnConstructor
         {
             get; set;
         }
+
+        /// <summary>
+        /// Indicates whether the object has been disposed.
+        /// </summary>
         private bool _disposedValue;
         private MongoContextImplementation _instanceMongoContextImplementation;
         private IEnumerable<string> _instanceCollectionNames;
 
+        /// <summary>
+        /// Event handler for MongoDB events.
+        /// </summary>
+        /// <typeparam name="TEvent">The type of the event.</typeparam>
+        /// <param name="sender">The sender of the event.</param>
+        /// <param name="args">The event arguments.</param>
         public delegate void EventHandler<TEvent>(object sender, MongoEventArgs<TEvent> args);
+
+        /// <summary>
+        /// Event raised when a MongoDB event occurs.
+        /// </summary>
         public event EventHandler Event;
 
+        /// <summary>
+        /// Invokes the event handler for the given event.
+        /// </summary>
+        /// <typeparam name="TEvent">The type of the event.</typeparam>
+        /// <param name="ev">The event to invoke the handler for.</param>
         public virtual void OnEvent<TEvent>(TEvent ev) => Event?.Invoke(this, new MongoEventArgs<TEvent>(ev));
 
         /// <summary>
@@ -81,14 +149,25 @@ namespace UCode.Mongo
                 mongoClientSettings.ApplicationName = applicationName;
             }
 
+            // Store the previous cluster configurator
             var prevClusterConfigurator = mongoClientSettings.ClusterConfigurator;
+
+            // Set the new cluster configurator
             mongoClientSettings.ClusterConfigurator = clusterConfigurator =>
             {
+                // Invoke the previous cluster configurator (if any)
                 prevClusterConfigurator?.Invoke(clusterConfigurator);
 
+                // Subscribe to command started events
                 clusterConfigurator.Subscribe<CommandStartedEvent>(this.OnEvent);
+
+                // Subscribe to command succeeded events
                 clusterConfigurator.Subscribe<CommandSucceededEvent>(this.OnEvent);
+
+                // Subscribe to command failed events
                 clusterConfigurator.Subscribe<CommandFailedEvent>(this.OnEvent);
+
+                // Subscribe to connection failed events
                 clusterConfigurator.Subscribe<ConnectionFailedEvent>(this.OnEvent);
             };
 
@@ -119,32 +198,33 @@ namespace UCode.Mongo
             this.InternalConstructor(connectionString);
         }
 
-        private void InternalConstructor(string connectionString)
+        private async Task InternalConstructor()
         {
-            var implimentedUnderlyingSystemType = this.GetType().UnderlyingSystemType;
-            var fullname = implimentedUnderlyingSystemType.FullName!;
+            await this.MapAsync();
 
-            _instanceMongoContextImplementation = new MongoContextImplementation(fullname, implimentedUnderlyingSystemType, connectionString.CalculateSha256Hash()!, this.DatabaseName);
+            await this.IndexAsync();
 
-            _instanceCollectionNames = _dictionaryConstructed.AddOrUpdate(_instanceMongoContextImplementation, (key) =>
+            if (_collectionNames == null)
             {
-                this.MapAsync().Wait();
-
-                this.IndexAsync().Wait();
-
-                return this.Database.ListCollectionNames().ToEnumerable().Select(collectionName => $"{fullname}-{this.DatabaseName}.{collectionName}").ToList();
-            }, (key, value) => value);
+                lock (_collectionNamesLock)
+                {
+                    _collectionNames ??= new System.Collections.Concurrent.ConcurrentBag<string>(this.Database.ListCollectionNames().ToEnumerable());
+                }
+            }
         }
 
+        // Get a database set
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public DbSet<TDocument, TObjectId> GetDbSet<TDocument, TObjectId>(string? collectionName = null,
             Options.TimerSeriesOptions? timeSeriesOptions = null)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
             where TDocument : IObjectId<TObjectId> => new(this, collectionName, timeSeriesOptions);
 
+        // Get a raw database set
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public RawDbSet GetDbSet(string collectionName, Options.TimerSeriesOptions? timeSeriesOptions = null) => new(this, collectionName, timeSeriesOptions);
 
+        // Get a database set with a string ID
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public DbSet<TDocument> GetDbSet<TDocument>(string? collectionName = null, Options.TimerSeriesOptions? timeSeriesOptions = null)
             where TDocument : IObjectId<string> => new(this, collectionName, timeSeriesOptions);
@@ -162,17 +242,9 @@ namespace UCode.Mongo
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IEnumerable<string> CollectionNames() => _instanceCollectionNames;
 
-        /// <summary>
-        /// Map the bson collections one single time.
-        /// </summary>
-        /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public abstract Task MapAsync();
 
-        /// <summary>
-        /// Index the collections one single time.
-        /// </summary>
-        /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public abstract Task IndexAsync();
 
@@ -213,51 +285,63 @@ namespace UCode.Mongo
             return this.Session;
         }
 
-
-        /// <summary>
-        /// Start transaction if one hasn't already been started
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /// <summary>
+        ///     Inicia a transaÁ„o
+        /// </summary>
         public void StartTransaction()
         {
-            if (this._onTransaction)
-                throw new InvalidOperationException("Transaction has already been started.");
-
             this.Session ??= this.Client.StartSession();
 
+            // Lock to ensure thread safety when starting the transaction
             lock (this._onTransactionLock)
             {
+                // If a transaction is already in progress, throw an exception
+                //if (_onTransaction)
+                //    throw new InvalidOperationException("Transaction has already been called.");
+
+                // Set the IsUseTransaction flag to true to indicate that a transaction is in progress
                 this.IsUseTransaction = true;
+
+                // Start the transaction
                 this.Session.StartTransaction();
+
+                // Set the _onTransaction flag to true to indicate that a transaction is in progress
                 this._onTransaction = true;
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         /// <summary>
-        ///     Aborta a transa√ß√£o
+        /// Aborts the current transaction.
         /// </summary>
+        /// <remarks>
+        /// This method should be called after a transaction has been started using the <see cref="StartTransaction"/> method.
+        /// </remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AbortTransaction()
         {
-            if (!this._onTransaction)
-                throw new InvalidOperationException("Transaction has not been started.");
-
             lock (this._onTransactionLock)
             {
+                // If the transaction was not started with the constructor, reset the IsUseTransaction flag to false
                 if (!this.SetUseTransactionOnConstructor)
                 {
                     this.IsUseTransaction = false;
                 }
 
+                // Abort the transaction
                 this.Session.AbortTransaction();
                 this._onTransaction = false;
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         /// <summary>
-        ///     Aplica mudan√ßas pendentes
+        /// Commits the current transaction.
+        /// This method should be called after a transaction has been started using the <see cref="StartTransaction"/> method.
         /// </summary>
+        /// <remarks>
+        /// This method should be called within a lock to ensure thread safety.
+        /// </remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void CommitTransaction()
         {
             if (!this._onTransaction)
@@ -265,9 +349,16 @@ namespace UCode.Mongo
 
             lock (this._onTransactionLock)
             {
+                // Commit the transaction
                 this.Session.CommitTransaction();
+
+                // Dispose of the session to release resources
                 this.Session.Dispose();
+
+                // Set the session to null to indicate that the transaction has been committed
                 this.Session = null;
+
+                // Set _onTransaction to false to indicate that the transaction has been committed
                 this._onTransaction = false;
             }
         }
@@ -305,10 +396,24 @@ namespace UCode.Mongo
 
         #endregion
 
+        /// <summary>
+        /// Gets the MongoClient instance associated with this context.
+        /// </summary>
+        /// <returns>The MongoClient instance.</returns>
         public MongoClient GetMongoClient() => this.Client;
 
+        /// <summary>
+        /// Implicitly converts a ContextBase instance to a MongoClient instance.
+        /// </summary>
+        /// <param name="context">The ContextBase instance to convert.</param>
+        /// <returns>The MongoClient instance.</returns>
         public static implicit operator MongoClient(ContextBase context) => context.Client;
 
+        /// <summary>
+        /// Implicitly converts a ContextBase instance to a MongoDatabaseBase instance.
+        /// </summary>
+        /// <param name="context">The ContextBase instance to convert.</param>
+        /// <returns>The MongoDatabaseBase instance.</returns>
         public static implicit operator MongoDatabaseBase(ContextBase context) => context.Database;
     }
 }

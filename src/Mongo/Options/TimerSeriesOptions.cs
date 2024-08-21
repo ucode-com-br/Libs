@@ -52,7 +52,15 @@ namespace UCode.Mongo.Options
             get; set;
         }
 
-        public static implicit operator MongoDB.Driver.TimeSeriesOptions(TimerSeriesOptions options) => new MongoDB.Driver.TimeSeriesOptions(options.TimeField,
-                options.MetaField, (MongoDB.Driver.TimeSeriesGranularity)options.Granularity);
+        /// <summary>
+        /// This implicit operator allows us to convert a TimerSeriesOptions object to a MongoDB.Driver.TimeSeriesOptions object.
+        /// </summary>
+        /// <param name="options">The TimerSeriesOptions object to convert.</param>
+        /// <returns>A MongoDB.Driver.TimeSeriesOptions object.</returns>
+        public static implicit operator MongoDB.Driver.TimeSeriesOptions(TimerSeriesOptions options) =>
+            new MongoDB.Driver.TimeSeriesOptions(
+                options.TimeField, // The field that stores the time of the data point.
+                options.MetaField, // The field that stores metadata about the data point.
+                (MongoDB.Driver.TimeSeriesGranularity)options.Granularity);  // The granularity of the time series.
     }
 }
