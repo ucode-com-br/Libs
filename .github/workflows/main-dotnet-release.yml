@@ -52,11 +52,6 @@ jobs:
     - name: "Pack the project"
       run: dotnet pack --include-symbols --include-source --nologo --configuration "Release" -p:SymbolPackageFormat=snupkg
 
-    - name: "Push Package to GitHub Packages"
-      run: |
-        echo "Working directory is > ${{ github.workspace }}"
-        dotnet nuget push "**/*.nupkg" --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate --source "https://nuget.pkg.github.com/ucode-com-br/index.json" --force-english-output
-
     - name: "Push Package to NuGet.org"
       run: |
         dotnet nuget push "**/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate --source "https://api.nuget.org/v3/index.json"
