@@ -2,31 +2,31 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.6.33723.286
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.Extensions", "Extensions\UCode.Extensions.csproj", "{07FF8AF7-438B-4AA1-BEE7-3320D9BE9FEF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.Extensions", "src\Extensions\UCode.Extensions.csproj", "{07FF8AF7-438B-4AA1-BEE7-3320D9BE9FEF}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.Crypto", "Crypto\UCode.Crypto.csproj", "{1EACA7AA-BCD7-41EF-9376-59859C08EBD1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.Crypto", "src\Crypto\UCode.Crypto.csproj", "{1EACA7AA-BCD7-41EF-9376-59859C08EBD1}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.Cache", "Cache\UCode.Cache.csproj", "{5639D861-29D1-4409-8EB7-C94010AC811C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.Cache", "src\Cache\UCode.Cache.csproj", "{5639D861-29D1-4409-8EB7-C94010AC811C}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.Blob", "Blob\UCode.Blob.csproj", "{B5565C67-C3BB-43C6-931B-AC5486E7BF4A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.Blob", "src\Blob\UCode.Blob.csproj", "{B5565C67-C3BB-43C6-931B-AC5486E7BF4A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.Compress", "Compress\UCode.Compress.csproj", "{BDE6594C-5CD8-451A-A334-0E0D8A454ABB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.Compress", "src\Compress\UCode.Compress.csproj", "{BDE6594C-5CD8-451A-A334-0E0D8A454ABB}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.Keyvault", "Keyvault\UCode.Keyvault.csproj", "{A8250B19-973D-44E0-8476-A7A7D5941603}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.Keyvault", "src\Keyvault\UCode.Keyvault.csproj", "{A8250B19-973D-44E0-8476-A7A7D5941603}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.Mongo", "Mongo\UCode.Mongo.csproj", "{3CFE6755-BF4B-499E-9C9C-94C76A587309}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.Mongo", "src\Mongo\UCode.Mongo.csproj", "{3CFE6755-BF4B-499E-9C9C-94C76A587309}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.Repositories", "Repositories\UCode.Repositories.csproj", "{BAFF2CF2-B68C-4EEB-9E70-D8F979DEE563}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.Repositories", "src\Repositories\UCode.Repositories.csproj", "{BAFF2CF2-B68C-4EEB-9E70-D8F979DEE563}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.Scrapper", "Scrapper\UCode.Scrapper.csproj", "{150EA08D-6722-4858-B88F-9A903C40A3BC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.Scrapper", "src\Scrapper\UCode.Scrapper.csproj", "{150EA08D-6722-4858-B88F-9A903C40A3BC}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.ServiceBus", "ServiceBus\UCode.ServiceBus.csproj", "{F3C49FCB-78BC-4D2C-93FA-A5F86E67A9F3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.ServiceBus", "src\ServiceBus\UCode.ServiceBus.csproj", "{F3C49FCB-78BC-4D2C-93FA-A5F86E67A9F3}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.Azure.AppConfiguration", "AppConfiguration\UCode.Azure.AppConfiguration.csproj", "{285E73B0-E304-4267-B645-825EB617B81C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.Azure.AppConfiguration", "src\AppConfiguration\UCode.Azure.AppConfiguration.csproj", "{285E73B0-E304-4267-B645-825EB617B81C}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.RedisDatabase", "RedisDatabase\UCode.RedisDatabase.csproj", "{641672CA-CC71-4510-B3B5-0FE1BEB475CC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.RedisDatabase", "src\RedisDatabase\UCode.RedisDatabase.csproj", "{641672CA-CC71-4510-B3B5-0FE1BEB475CC}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.DeepCloning", "DeepCloning\UCode.DeepCloning.csproj", "{5A23E37A-4DD3-4209-A13C-1A9938EF387C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.DeepCloning", "src\DeepCloning\UCode.DeepCloning.csproj", "{5A23E37A-4DD3-4209-A13C-1A9938EF387C}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{0C04DCEC-24F4-404E-AF5D-C2FDCB466DF7}"
 	ProjectSection(SolutionItems) = preProject
@@ -52,8 +52,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".husky", ".husky", "{7E58D6
 		.husky\task-runner.json = .husky\task-runner.json
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{F3EB541E-CCE5-4E1F-A412-DA68D0E319C9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UCode.MongoTests", "tests\MongoTests\UCode.MongoTests.csproj", "{13597B21-E8E9-4495-8D46-BD6879BFC366}"
+EndProject
 Global
 	GlobalSection(NestedProjects) = preSolution
+		{13597B21-E8E9-4495-8D46-BD6879BFC366} = {F3EB541E-CCE5-4E1F-A412-DA68D0E319C9}
 		{981ECB21-C828-4516-AFE0-3CE973D2A691} = {871D6DB2-384D-414A-923C-560D66A797EA}
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -65,6 +70,10 @@ Global
 		{07FF8AF7-438B-4AA1-BEE7-3320D9BE9FEF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{07FF8AF7-438B-4AA1-BEE7-3320D9BE9FEF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{07FF8AF7-438B-4AA1-BEE7-3320D9BE9FEF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{13597B21-E8E9-4495-8D46-BD6879BFC366}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{13597B21-E8E9-4495-8D46-BD6879BFC366}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{13597B21-E8E9-4495-8D46-BD6879BFC366}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{13597B21-E8E9-4495-8D46-BD6879BFC366}.Release|Any CPU.Build.0 = Release|Any CPU
 		{1EACA7AA-BCD7-41EF-9376-59859C08EBD1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{1EACA7AA-BCD7-41EF-9376-59859C08EBD1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1EACA7AA-BCD7-41EF-9376-59859C08EBD1}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -114,14 +123,6 @@ Global
 		{5A23E37A-4DD3-4209-A13C-1A9938EF387C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5A23E37A-4DD3-4209-A13C-1A9938EF387C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {71F77922-6012-44F2-906A-D0B3B20C41E1}
-	EndGlobalSection
-EndGlobal
-EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
