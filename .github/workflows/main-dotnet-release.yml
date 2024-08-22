@@ -50,11 +50,12 @@ jobs:
       run: dotnet build --no-restore --configuration "Release" --nologo --debug --verbosity minimal
 
     - name: "Pack the project"
-      run: dotnet pack --include-symbols --include-source --nologo --configuration "Release" -p:SymbolPackageFormat=snupkg
+      run: dotnet pack --include-symbols --include-source --nologo --configuration "Release" -p:SymbolPackageFormat=snupkg -o "artifacts"
 
     - name: "Push Package to NuGet.org"
       run: |
-        dotnet nuget push "**/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate --source "https://api.nuget.org/v3/index.json"
+        cd artifacts
+        dotnet nuget push "*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate --source "https://api.nuget.org/v3/index.json" 
 
     - name: "Push changes to GitHub"
       if: steps.versionize.outcome == 'success'
