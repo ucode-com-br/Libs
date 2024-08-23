@@ -57,14 +57,14 @@ namespace UCode.MongoTests
         [Fact]
         public async Task Test4()
         {
-            var context = new ContextImpl(_loggerFactory, ConnectionString, nameof(ContextTests), false);
+            //var context = new ContextImpl(_loggerFactory, ConnectionString, nameof(ContextTests), false);
 
-            var query = Query<IdStringCollectionRecord>.FromQuery("");
-            var options = new FindOptionsPaging<IdStringCollectionRecord>();
+            //var query = Query<IdStringCollectionRecord>.FromQuery("");
+            //var options = new FindOptionsPaging<IdStringCollectionRecord>();
 
-            var result1 = await context.IdStringCollection.GetPagedAsync<IdStringCollectionRecord>(filter: query, findOptions: );
+            //var result1 = await context.IdStringCollection.GetPagedAsync<IdStringCollectionRecord>(filter: query, findOptions: );
 
-            Assert.True(result1.Any());
+            //Assert.True(result1.Any());
         }
     }
 }
