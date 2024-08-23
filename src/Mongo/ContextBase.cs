@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -7,7 +6,6 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
-using MongoDB.Driver.Core.Configuration;
 using MongoDB.Driver.Core.Events;
 using UCode.Extensions;
 using ILoggerFactory = Microsoft.Extensions.Logging.ILoggerFactory;
@@ -185,21 +183,16 @@ namespace UCode.Mongo
             this.IsUseTransaction = forceTransaction;
             this.SetUseTransactionOnConstructor = forceTransaction;
 
-            //if (SessionStatedOnConstructor)
-            //{
-            //Session = Client.StartSession();
-
             if (forceTransaction)
             {
                 this.Session = this.Client.StartSession();
                 this.StartTransaction();
             }
-            //}
 
             this.InternalConstructor(connectionString);
         }
 
-        private async Task InternalConstructor(string connectionString)
+        private void InternalConstructor(string connectionString)
         {
             var implimentedUnderlyingSystemType = this.GetType().UnderlyingSystemType;
             var fullname = implimentedUnderlyingSystemType.FullName!;

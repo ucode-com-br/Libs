@@ -243,17 +243,23 @@ namespace UCode.Mongo
             findOptions ??= new Options.FindOptions<TDocument>();
 
             // Set limit and skip options for counting
-            CountOptions countOptions = findOptions;
+            MongoDB.Driver.CountOptions countOptions = findOptions;
             countOptions.Limit = 1;
             countOptions.Skip = 0;
 
             // Count documents and check if count is greater than 0
             if (findOptions.NotPerformInTransaction)
             {
+                return await this.MongoCollection.CountDocumentsAsync(query, countOptions) > 0;
+            }
+            else if (this._contextbase.IsUseTransaction)
+            {
                 return await this.MongoCollection.CountDocumentsAsync(this._contextbase.Session, query, countOptions) > 0;
             }
-
-            return await this.MongoCollection.CountDocumentsAsync(query, countOptions) > 0;
+            else
+            {
+                return await this.MongoCollection.CountDocumentsAsync(query, countOptions) > 0;
+            }
         }
 
         #endregion
@@ -336,7 +342,7 @@ namespace UCode.Mongo
             FilterDefinition<TDocument> filterSelected = query;
 
             // Create the options for the find operation
-            FindOptions<TDocument, TProjection> options = findOptions;
+            MongoDB.Driver.FindOptions<TDocument, TProjection> options = findOptions;
 
             // Create the cursor for the find operation
             IAsyncCursor<TProjection> cursor;
@@ -344,12 +350,16 @@ namespace UCode.Mongo
             // If the find operation should not be performed in a transaction
             if (findOptions.NotPerformInTransaction)
             {
+                // Perform the find operation with the filter
+                cursor = await this.MongoCollection.FindAsync(filterSelected, options);
+            }
+            else if (this._contextbase.IsUseTransaction)
+            {
                 // Perform the find operation with the session and filter
                 cursor = await this.MongoCollection.FindAsync(this._contextbase.Session, filterSelected, options);
             }
             else
             {
-                // Perform the find operation with the filter
                 cursor = await this.MongoCollection.FindAsync(filterSelected, options);
             }
 
@@ -555,7 +565,7 @@ namespace UCode.Mongo
             }
 
             // Create the options for the find operation
-            FindOptions<TDocument, TProjection> options = findOptions;
+            MongoDB.Driver.FindOptions<TDocument, TProjection> options = findOptions;
 
             // Create the cursor for the find operation
             IAsyncCursor<TProjection> cursor;
@@ -563,12 +573,16 @@ namespace UCode.Mongo
             // If the find operation should not be performed in a transaction
             if (findOptions.NotPerformInTransaction)
             {
+                // Perform the find operation with the filter
+                cursor = await this.MongoCollection.FindAsync(filterSelected, options);
+            }
+            else if (this._contextbase.IsUseTransaction)
+            {
                 // Perform the find operation with the session and filter
                 cursor = await this.MongoCollection.FindAsync(this._contextbase.Session, filterSelected, options);
             }
             else
             {
-                // Perform the find operation with the filter
                 cursor = await this.MongoCollection.FindAsync(filterSelected, options);
             }
 
@@ -681,7 +695,7 @@ namespace UCode.Mongo
             FilterDefinition<TDocument> filterSelected = filter;
 
             // Create the options for the find operation
-            FindOptions<TDocument, TProjection> options = findOptions;
+            MongoDB.Driver.FindOptions<TDocument, TProjection> options = findOptions;
 
             // Create the cursor for the find operation
             IAsyncCursor<TProjection> cursor;
@@ -689,12 +703,16 @@ namespace UCode.Mongo
             // If the find operation should not be performed in a transaction
             if (findOptions.NotPerformInTransaction)
             {
+                // Perform the find operation with the filter
+                cursor = await this.MongoCollection.FindAsync(filterSelected, options);
+            }
+            else if (this._contextbase.IsUseTransaction)
+            {
                 // Perform the find operation with the session and filter
                 cursor = await this.MongoCollection.FindAsync(this._contextbase.Session, filterSelected, options);
             }
             else
             {
-                // Perform the find operation with the filter
                 cursor = await this.MongoCollection.FindAsync(filterSelected, options);
             }
 
@@ -777,7 +795,7 @@ namespace UCode.Mongo
             FilterDefinition<TDocument> filterSelected = filter;
 
             // Create the options for the find operation
-            FindOptions<TDocument, TProjection> options = findOptions;
+            MongoDB.Driver.FindOptions<TDocument, TProjection> options = findOptions;
 
             // Create the count options from the find options and set the limit and skip options to null
             var countOptions = findOptions.CopyTo<Options.IOptions, Options.CountOptions>();
@@ -791,6 +809,12 @@ namespace UCode.Mongo
 
             // If the find operation should not be performed in a transaction
             if (findOptions.NotPerformInTransaction)
+            {
+                // Perform the find operation with the filter
+                this.Logger.LogDebug($"Call \"this.MongoCollection.FindAsync(...)\" without session, filter: \"{filterSelected}\" and options: {options.JsonString()}");
+                cursor = await this.MongoCollection.FindAsync(filterSelected, options);
+            }
+            else if (this._contextbase.IsUseTransaction)
             {
                 // Perform the find operation with the session and filter
                 this.Logger.LogDebug($"Call \"this.MongoCollection.FindAsync(...)\" with session, filter: \"{filterSelected}\" and options: {options.JsonString()}");
@@ -853,7 +877,7 @@ namespace UCode.Mongo
             [NotNull] Options.FindOneAndUpdateOptions<TDocument> options)
         {
             // Create a copy of the options to avoid modifying the original
-            FindOneAndUpdateOptions<TDocument> fouOptions = options;
+            MongoDB.Driver.FindOneAndUpdateOptions<TDocument> fouOptions = options;
 
             // Declare a variable to hold the result
             TDocument result;
@@ -868,25 +892,18 @@ namespace UCode.Mongo
                 // Perform the find and update operation without a session
                 result = await this.MongoCollection.FindOneAndUpdateAsync(filter, update, fouOptions);
             }
-
             // If a transaction is in use
             else if (this._contextbase.IsUseTransaction)
             {
                 // Perform the find and update operation with a session
                 result = await this.MongoCollection.FindOneAndUpdateAsync(this._contextbase.Session, filter, update, fouOptions);
             }
-
             // If no transaction is in use
             else
             {
                 // Perform the find and update operation without a session
                 result = await this.MongoCollection.FindOneAndUpdateAsync(filter, update, fouOptions);
             }
-
-            //if (_contextbase.IsUseTransaction)
-            //    result = await MongoCollection.FindOneAndUpdateAsync(_contextbase.Session, filter, update, fouOptions);
-            //else
-            //    result = await MongoCollection.FindOneAndUpdateAsync(filter, update, fouOptions);
 
             // Return the updated document
             return result;
@@ -904,7 +921,7 @@ namespace UCode.Mongo
             [NotNull] Options.FindOneAndUpdateOptions<TDocument> options)
         {
             // Create a copy of the options to avoid modifying the original
-            FindOneAndUpdateOptions<TDocument> fouOptions = options;
+            MongoDB.Driver.FindOneAndUpdateOptions<TDocument> fouOptions = options;
 
             // Declare a variable to hold the result
             TDocument result;
@@ -915,25 +932,18 @@ namespace UCode.Mongo
                 // Perform the find and update operation without a session
                 result = await this.MongoCollection.FindOneAndUpdateAsync(filter, update, fouOptions);
             }
-
             // If a transaction is in use
             else if (this._contextbase.IsUseTransaction)
             {
                 // Perform the find and update operation with a session
                 result = await this.MongoCollection.FindOneAndUpdateAsync(this._contextbase.Session, filter, update, fouOptions);
             }
-
             // If no transaction is in use
             else
             {
                 // Perform the find and update operation without a session
                 result = await this.MongoCollection.FindOneAndUpdateAsync(filter, update, fouOptions);
             }
-
-            //if (_contextbase.IsUseTransaction)
-            //    result = await MongoCollection.FindOneAndUpdateAsync(_contextbase.Session, filter, update, fouOptions);
-            //else
-            //    result = await MongoCollection.FindOneAndUpdateAsync(filter, update, fouOptions);
 
             // Return the updated document
             return result;
@@ -953,7 +963,7 @@ namespace UCode.Mongo
            [NotNull] Options.FindOneAndUpdateOptions<TDocument> options = default)
         {
             // Create a copy of the options to avoid modifying the original
-            FindOneAndUpdateOptions<TDocument> fouOptions = options;
+            MongoDB.Driver.FindOneAndUpdateOptions<TDocument> fouOptions = options;
 
             // Declare a variable to hold the result
             TDocument result;
@@ -964,25 +974,18 @@ namespace UCode.Mongo
                 // Perform the find and update operation without a session
                 result = await this.MongoCollection.FindOneAndUpdateAsync(filter, update, fouOptions);
             }
-
             // If a transaction is in use
             else if (this._contextbase.IsUseTransaction)
             {
                 // Perform the find and update operation with a session
                 result = await this.MongoCollection.FindOneAndUpdateAsync(this._contextbase.Session, filter, update, fouOptions);
             }
-
             // If no transaction is in use
             else
             {
                 // Perform the find and update operation without a session
                 result = await this.MongoCollection.FindOneAndUpdateAsync(filter, update, fouOptions);
             }
-
-            //if (_contextbase.IsUseTransaction)
-            //    result = await MongoCollection.FindOneAndUpdateAsync(_contextbase.Session, filter, update, fouOptions);
-            //else
-            //    result = await MongoCollection.FindOneAndUpdateAsync(filter, update, fouOptions);
 
             // Return the result
             return result;
@@ -1006,15 +1009,19 @@ namespace UCode.Mongo
             UpdateResult result;
 
             // If a transaction is not in use and the operation is not set to not perform in a transaction
-            if (!this._contextbase.IsUseTransaction && !options.NotPerformInTransaction)
+            if (options.NotPerformInTransaction)
             {
                 // Perform the update operation without a session
                 result = await this.MongoCollection.UpdateManyAsync(query, query.Update, options);
             }
+            else if (this._contextbase.IsUseTransaction)
+            {
+                // Perform the update operation without a session
+                result = await this.MongoCollection.UpdateManyAsync(this._contextbase.Session, query, query.Update, options);
+            }
             else
             {
-                // Perform the update operation with a session
-                result = await this.MongoCollection.UpdateManyAsync(this._contextbase.Session, query, query.Update, options);
+                result = await this.MongoCollection.UpdateManyAsync(query, query.Update, options);
             }
 
             //if (_contextbase.IsUseTransaction)
@@ -1046,25 +1053,18 @@ namespace UCode.Mongo
                 // Perform the update operation without a session
                 result = await this.MongoCollection.UpdateManyAsync(filter, update, options);
             }
-
             // If a transaction is in use
             else if (this._contextbase.IsUseTransaction)
             {
                 // Perform the update operation with a session
                 result = await this.MongoCollection.UpdateManyAsync(this._contextbase.Session, filter, update, options);
             }
-
             // If no transaction is in use
             else
             {
                 // Perform the update operation without a session
                 result = await this.MongoCollection.UpdateManyAsync(filter, update, options);
             }
-
-            //if (_contextbase.IsUseTransaction)
-            //    result = await MongoCollection.UpdateManyAsync(_contextbase.Session, filter, update, options);
-            //else
-            //    result = await MongoCollection.UpdateManyAsync(filter, update, options);
 
             // Return the number of modified documents, or -1 if the operation was not acknowledged
             return result.IsAcknowledged ? result.ModifiedCount : -1;
@@ -1134,12 +1134,18 @@ namespace UCode.Mongo
             // If the operation should not be performed in a transaction
             if (countOptions.NotPerformInTransaction)
             {
+                // If a transaction is in use
+                return await this.MongoCollection.CountDocumentsAsync(filterDefinition, countOptions);
+            }
+            else if (this._contextbase.IsUseTransaction)
+            {
                 // Perform the count operation without a session
                 return await this.MongoCollection.CountDocumentsAsync(this._contextbase.Session, filterDefinition, countOptions);
             }
-
-            // If a transaction is in use
-            return await this.MongoCollection.CountDocumentsAsync(filterDefinition, countOptions);
+            else
+            {
+                return await this.MongoCollection.CountDocumentsAsync(filterDefinition, countOptions);
+            }
         }
 
         #endregion
@@ -1179,31 +1185,24 @@ namespace UCode.Mongo
             // Initialize the result to null
             UpdateResult result;
 
-            // If the operation should not be performed in a transaction
+            // Respect first wise if the operation should not be performed in a transaction
             if (updateOptions.NotPerformInTransaction)
             {
                 // Perform the update operation without a session
                 result = await this.MongoCollection.UpdateOneAsync(filterDefinition, updateDefinition, updateOptions);
             }
-
             // If a transaction is in use
-            else if (this._contextbase.IsUseTransaction)
+            if (this._contextbase.IsUseTransaction)
             {
                 // Perform the update operation with a session
                 result = await this.MongoCollection.UpdateOneAsync(this._contextbase.Session, filterDefinition, updateDefinition, updateOptions);
             }
-
             // If no transaction is in use
             else
             {
                 // Perform the update operation without a session
                 result = await this.MongoCollection.UpdateOneAsync(filterDefinition, updateDefinition, updateOptions);
             }
-
-            //if (_contextbase.IsUseTransaction)
-            //    result = await MongoCollection.UpdateOneAsync(_contextbase.Session, filterDefinition, updateDefinition, updateOptions);
-            //else
-            //    result = await MongoCollection.UpdateOneAsync(filterDefinition, updateDefinition, updateOptions);
 
             // Return the number of modified documents, or -1 if the operation was not acknowledged
             return result == default ? -1 : result.IsAcknowledged ? result.ModifiedCount : -1;
@@ -1233,18 +1232,22 @@ namespace UCode.Mongo
             };
 
 
-            ///return await this.BulkWriteAsync(writeModels, insertOneOptions);
-            
-            // If a session is in use and a transaction is not set to not perform in a transaction,
-            // perform the insert operation with a session
-            if ((this._contextbase.Session != null && this._contextbase.Session.IsInTransaction) || insertOneOptions.NotPerformInTransaction)
+            // Respect first wise if the operation should not be performed in a transaction
+            if (insertOneOptions.NotPerformInTransaction)
             {
+                // Perform the update operation without a session
+                await this.MongoCollection.InsertOneAsync(source, insertOneOptions);
+            }
+            // If a transaction is in use
+            else if (this._contextbase.IsUseTransaction)
+            {
+                // Perform the update operation with a session
                 await this.MongoCollection.InsertOneAsync(this._contextbase.Session, source, insertOneOptions);
             }
-
-            // Otherwise, perform the insert operation without a session
+            // If no transaction is in use
             else
             {
+                // Perform the update operation without a session
                 await this.MongoCollection.InsertOneAsync(source, insertOneOptions);
             }
 
@@ -1380,14 +1383,12 @@ namespace UCode.Mongo
                 // Perform the replace operation without a session
                 result = await this.MongoCollection.ReplaceOneAsync(filterDefinition, doc, replaceOptions);
             }
-
             // If a transaction is in use
             else if (this._contextbase.IsUseTransaction)
             {
                 // Perform the replace operation with a session
                 result = await this.MongoCollection.ReplaceOneAsync(this._contextbase.Session, filterDefinition, doc, replaceOptions);
             }
-
             // If no transaction is in use
             else
             {
@@ -1678,22 +1679,8 @@ namespace UCode.Mongo
             // Perform the bulk write operation based on the provided options
             BulkWriteResult result;
 
-            //if (!bulkWriteOptions.NotPerformInTransaction || this._contextbase.IsUseTransaction)
-            //{
-            //    if (this._contextbase.Session == null)
-            //    {
-            //        result = await this.MongoCollection.BulkWriteAsync(writeModel, bulkWriteOptions);
-            //    }
-
-            //    result = await this.MongoCollection.BulkWriteAsync(this._contextbase.Session, writeModel, bulkWriteOptions);
-            //}
-            //else
-            //{
-            //    result = await this.MongoCollection.BulkWriteAsync(writeModel, bulkWriteOptions);
-            //}
-
             // If the bulk write operation should not be performed in a transaction or if a transaction is in use
-            if (bulkWriteOptions.NotPerformInTransaction || !this._contextbase.IsUseTransaction || this._contextbase.Session == null)
+            if (bulkWriteOptions.NotPerformInTransaction)
             {
                 // Perform the bulk write operation without a session
                 result = await this.MongoCollection.BulkWriteAsync(writeModel, bulkWriteOptions);
@@ -1708,11 +1695,6 @@ namespace UCode.Mongo
                 // Perform the bulk write operation without a session
                 result = await this.MongoCollection.BulkWriteAsync(writeModel, bulkWriteOptions);
             }
-
-            //if (_contextbase.IsUseTransaction)
-            //    result = await MongoCollection.BulkWriteAsync(_contextbase.Session, writeModel, bulkWriteOptions);
-            //else
-            //    result = await MongoCollection.BulkWriteAsync(writeModel, bulkWriteOptions);
 
             // Check if the result is default
             if (result == default)

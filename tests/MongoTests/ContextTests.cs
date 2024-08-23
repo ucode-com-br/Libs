@@ -4,6 +4,8 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using UCode.Mongo;
+using UCode.Mongo.Options;
 
 namespace UCode.MongoTests
 {
@@ -50,6 +52,19 @@ namespace UCode.MongoTests
             var result3 = await context.IdStringCollection.InsertAsync(new IdStringCollectionRecord() { MyProperty1 = nameof(Test3), MyProperty2 = 3, MyProperty3 = 0x03 });
 
             Assert.True(result1 == 1 && result2 == 1 && result3 == 1);
+        }
+
+        [Fact]
+        public async Task Test4()
+        {
+            var context = new ContextImpl(_loggerFactory, ConnectionString, nameof(ContextTests), false);
+
+            var query = Query<IdStringCollectionRecord>.FromQuery("");
+            var options = new FindOptionsPaging<IdStringCollectionRecord>();
+
+            var result1 = await context.IdStringCollection.GetPagedAsync<IdStringCollectionRecord>(filter: query, findOptions: );
+
+            Assert.True(result1.Any());
         }
     }
 }
