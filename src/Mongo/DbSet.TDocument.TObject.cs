@@ -47,6 +47,14 @@ namespace UCode.Mongo
         }
 
         /// <summary>
+        /// The name of the collection.
+        /// </summary>
+        public string CollectionName
+        {
+            get;
+        }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="DbSet{TDocument, TObjectId}"/> class.
         /// </summary>
         /// <param name="contextBase">The context base.</param>
@@ -68,9 +76,11 @@ namespace UCode.Mongo
                 }
             };
 
+            CollectionName = collectionName ?? $"{nameof(TDocument)}Collection";
+
             // Initialize the MongoDB collection
             this.MongoCollection =
-                contextBase.Database.GetCollection<TDocument>(collectionName ?? $"{nameof(TDocument)}Collection", new MongoCollectionSettings());
+                contextBase.Database.GetCollection<TDocument>(CollectionName, new MongoCollectionSettings());
 
             // Set the context base
             this._contextbase = contextBase;
@@ -1612,58 +1622,6 @@ namespace UCode.Mongo
             return default;
         }
 
-        /*public async Task<TR> Aggregate<TR>([NotNull] Query<TR> query,
-            AggregateOptions<TDocument> aggregateOptions = default)
-        {
-            if (aggregateOptions == default)
-                aggregateOptions = new AggregateOptions<TDocument>();
-
-            if (!aggregateOptions.Skip.HasValue || aggregateOptions.Skip.Value < 0)
-                throw new Exception("Skip is invalid or null.");
-
-            if (!aggregateOptions.Limit.HasValue || aggregateOptions.Limit.Value <= 0)
-                throw new Exception("Limit is invalid or null.");
-
-
-            BsonDocument[] bsonDocumentFilter = query;
-            List<BsonDocument> bsonDocumentFilterPaging = ((BsonDocument[])query).ToList();
-
-            bsonDocumentFilterPaging.Add(
-                new BsonDocument(new BsonElement("$skip", BsonValue.Create(aggregateOptions.Skip.Value))));
-            bsonDocumentFilterPaging.Add(
-                new BsonDocument(new BsonElement("$limit", BsonValue.Create(aggregateOptions.Limit.Value))));
-
-            var structAggregate = "[ { \"$facet\": { \"result\": [],\"total\": [{\"$count\": \"total\"}]}} ]";
-
-            var bson = BsonSerializer.Deserialize<BsonDocument[]>(structAggregate);
-
-            bson[0][0][0] = new BsonArray(bsonDocumentFilterPaging);
-            foreach (var it in new BsonArray(bsonDocumentFilter).Reverse()) ((BsonArray) bson[0][0][1]).Insert(0, it);
-
-            if (Debugger.IsAttached)
-            {
-                // converter novamente em string para verificar se o json de consulta esta correto
-                var stringWriter = new StringWriter();
-                BsonSerializer.Serialize(new JsonWriter(stringWriter), bson);
-                //var json = stringWriter.ToString();
-            }
-
-            FacedAggregate<TR> item = default;
-
-            var cursor = await MongoCollection.AggregateAsync<FacedAggregate<TR>>(bson);
-
-            while (await cursor.MoveNextAsync())
-                foreach (var c in cursor.Current)
-                    item = c;
-
-            cursor.Dispose();
-
-            if (item != default)
-                return new PagedResult<TR>(item.Result.ToArray(), aggregateOptions.Skip.Value,
-                    aggregateOptions.Limit.Value, item.TotalRows());
-
-            return default;
-        }*/
 
         #endregion
 
@@ -1721,6 +1679,14 @@ namespace UCode.Mongo
         /// <returns>The MongoCollectionBase of TDocument.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static explicit operator MongoCollectionBase<TDocument>(DbSet<TDocument, TObjectId> dbSet) => dbSet.MongoCollection as MongoCollectionBase<TDocument>;
+
+        /// <summary>
+        /// Converts a DbSet back to parent context.
+        /// </summary>
+        /// <param name="dbSet">The DbSet to convert.</param>
+        /// <returns>The ContextBase of current DbSet.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static explicit operator ContextBase(DbSet<TDocument, TObjectId> dbSet) => dbSet._contextbase;
 
         #region Dispose
 
