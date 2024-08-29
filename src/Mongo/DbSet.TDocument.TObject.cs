@@ -8,11 +8,13 @@ using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using UCode.Extensions;
+using UCode.Mongo.Options;
 using UCode.Repositories;
 
 namespace UCode.Mongo
@@ -1620,6 +1622,74 @@ namespace UCode.Mongo
 
             // If there is no result, return the default value
             return default;
+        }
+
+        /// <summary>
+        /// Asynchronously performs an aggregation operation on the collection and returns the result.
+        /// </summary>
+        /// <typeparam name="TR"> The type of the result.</typeparam>
+        /// <typeparam name="TProjection"> The type of the projection.</typeparam>
+        /// <param name="query"> The query to match the documents against. </param>
+        /// <param name="aggregateOptions"> Options for the aggregation operation. Default is null.</param>
+        /// <returns> A task that represents the asynchronous operation. The task result contains the result of the aggregation operation. </returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public async Task<TProjection?> Aggregate<TR, TProjection>([NotNull] Query<TR, TProjection> query,
+            Options.AggregateOptions<TDocument> aggregateOptions = default)
+        {
+            // Set default aggregate options if not provided
+            aggregateOptions ??= new Options.AggregateOptions<TDocument>();
+
+
+            // Convert the query to a BsonDocument array
+            BsonDocument[] bsonDocumentFilter = query;
+
+
+            // If the debugger is attached, serialize the aggregation pipeline to a string for debugging purposes
+            if (Debugger.IsAttached)
+            {
+                // converter novamente em string para verificar se o json de consulta esta correto
+                var stringWriter = new StringWriter();
+                BsonSerializer.Serialize(new JsonWriter(stringWriter), bsonDocumentFilter);
+                if (stringWriter != null)
+                    this.Logger.LogDebug(stringWriter.ToString());
+            }
+
+            // Perform the aggregation operation and iterate over the results
+            TProjection? item = default;
+
+            IAsyncCursor<TProjection> cursor = default;
+
+            if (aggregateOptions.NotPerformInTransaction)
+            {
+                // Create a cursor for the aggregation operation
+                cursor = await this.MongoCollection.AggregateAsync<TProjection>(bsonDocumentFilter, aggregateOptions);
+            }
+            else if (this._contextbase.IsUseTransaction)
+            {
+                // Create a cursor for the aggregation operation with the session and filter
+                cursor = await this.MongoCollection.AggregateAsync<TProjection>(this._contextbase.Session, bsonDocumentFilter, aggregateOptions);
+            }
+            else
+            {
+                // Create a cursor for the aggregation operation
+                cursor = await this.MongoCollection.AggregateAsync<TProjection>(bsonDocumentFilter, aggregateOptions);
+            } 
+
+
+            while (await cursor.MoveNextAsync())
+            {
+                foreach (var c in cursor.Current)
+                {
+                    // Set the item variable to the current result
+                    item = c;
+                }
+            }
+
+            // Dispose the cursor
+            cursor.Dispose();
+
+
+            return item;
         }
 
 
