@@ -8,7 +8,6 @@ namespace UCode.Repositories
     {
         public PagedResult(IEnumerable<T> results, int currentPage, int pageSize, int rowCount)
         {
-            //System.Convert.ChangeType(results, typeof(IReadOnlyList<T>))
             if (results is List<T> list)
             {
                 this._results = list.AsReadOnly();

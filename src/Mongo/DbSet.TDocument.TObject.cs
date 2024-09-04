@@ -840,21 +840,17 @@ namespace UCode.Mongo
             }
 
             // Create an array to hold the items
-            var itens = new TProjection[options.Limit < total ? options.Limit.Value : total];
-
-            var trPos = 0;
+            var itens = new TProjection[(options != null && options.Limit.HasValue && options.Limit.Value < total) ? options.Limit.Value : total];
 
             var lastPos = 0;
-
             // Iterate over the cursor and retrieve the items
             while (await cursor.MoveNextAsync())
             {
                 foreach (var item in cursor.Current)
                 {
-                    lastPos = trPos++;
                     if (item != null)
                     {
-                        itens[lastPos] = item;
+                        itens[lastPos++] = item;
                     }
                 }
             }
@@ -863,7 +859,7 @@ namespace UCode.Mongo
             cursor.Dispose();
 
             // Resize the array if necessary    
-            if (lastPos + 1 < itens.Length)
+            if (lastPos < itens.Length)
             {
                 Array.Resize(ref itens, lastPos);
             }
