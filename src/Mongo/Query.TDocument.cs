@@ -168,6 +168,10 @@ namespace UCode.Mongo
                 // If the query is a full-text search query, create a new TextFilterDefinition
                 return Builders<TDocument>.Filter.Text(query.FullTextSearchOptions!.Value.Item1, (TextSearchOptions)query.FullTextSearchOptions!.Value.Item2);
             }
+            else if (query.FilterDefinition != null)
+            {
+                return query.FilterDefinition;
+            }
             else if (query.IncompletedExpressionQuery != null)
             {
                 // If the query requires a constant but does not have one, throw an exception

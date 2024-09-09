@@ -322,34 +322,35 @@ namespace UCode.Mongo
                 return default;
             }
 
+            
             // Check if the query has a JSON query
             if (!string.IsNullOrWhiteSpace(query.JsonQuery))
             {
                 // Create a new JsonFilterDefinition object with the JSON query
                 return new JsonFilterDefinition<TDocument>(query.JsonQuery);
             }
-
             // Check if the query has an expression query
             else if (query.ExpressionQuery != null)
             {
                 // Create a new ExpressionFilterDefinition object with the expression query
                 return new ExpressionFilterDefinition<TDocument>(query.ExpressionQuery);
             }
-
             // Check if the query has full-text search options
             else if (query.FullTextSearchOptions != default)
             {
                 // Create a new TextFilterDefinition object with the full-text search options
                 return Builders<TDocument>.Filter.Text(query.FullTextSearchOptions!.Value.Item1, (TextSearchOptions)query.FullTextSearchOptions!.Value.Item2);
             }
-
+            else if (query.FilterDefinition != null)
+            {
+                return query.FilterDefinition;
+            }
             // Check if the query has an incomplete expression query
             else if (query.IncompletedExpressionQuery != null)
             {
                 // Throw an exception if the query requires a constant value
                 throw new InvalidOperationException("Fail to convert an expression that requires an constant.");
             }
-
             // Return an empty FilterDefinition object if none of the above conditions are met
             else
             {

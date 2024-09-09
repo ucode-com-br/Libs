@@ -321,19 +321,20 @@ namespace UCode.Mongo
             {
                 return new JsonFilterDefinition<TDocument>(query.JsonQuery);
             }
-
             // If the ExpressionQuery property is not null, create a new ExpressionFilterDefinition object and return it
             else if (query.ExpressionQuery != null)
             {
                 return new ExpressionFilterDefinition<TDocument>(query.ExpressionQuery);
             }
-
             // If the FullTextSearchOptions property is not null, build a filter using the TextSearchOptions and return it
             else if (query.FullTextSearchOptions != default)
             {
                 return Builders<TDocument>.Filter.Text(query.FullTextSearchOptions!.Value.Item1, (TextSearchOptions)query.FullTextSearchOptions!.Value.Item2);
             }
-
+            else if (query.FilterDefinition != null)
+            {
+                return query.FilterDefinition;
+            }
             // If the IncompletedExpressionQuery property is not null, throw an InvalidOperationException
             else if (query.IncompletedExpressionQuery != null)
             {
