@@ -8,6 +8,7 @@ namespace UCode.Extensions
 {
     public static class ConvertersExtensions
     {
+        [return: MaybeNull]
         public static string? ToHexString(this byte[]? source)
         {
             if (source == null)
@@ -18,10 +19,17 @@ namespace UCode.Extensions
             return BitConverter.ToString(source).Replace("-", "");
         }
 
-        public static string ToHexString(this Stream stream) => BitConverter.ToString(stream.ToBytes()).Replace("-", "");
+        [return: MaybeNull]
+        public static string? ToHexString(this Stream? stream) => stream == null ? null : BitConverter.ToString(stream.ToBytes()).Replace("-", "");
 
-        public static byte[] FromHexString(this string hexString)
+        [return: MaybeNull]
+        public static byte[]? FromHexString(this string? hexString)
         {
+            if (hexString == null)
+            {
+                return null;
+            }
+
             var length = (hexString.Length + 1) / 3;
             var arr1 = new byte[length];
             for (var i = 0; i < length; i++)
@@ -32,10 +40,11 @@ namespace UCode.Extensions
             return arr1;
         }
 
-        public static byte[] FromBase64(this string hexString) => Convert.FromBase64String(hexString);
+        [return: MaybeNull]
+        public static byte[]? FromBase64(this string? hexString) => hexString == null ? null : Convert.FromBase64String(hexString);
 
-        [return: NotNull]
-        public static string ToBase64([NotNull] this byte[] @byte) => Convert.ToBase64String(@byte);
+        [return: MaybeNull]
+        public static string? ToBase64([NotNull] this byte[]? @byte) => @byte == null ? null : Convert.ToBase64String(@byte);
 
         [return: MaybeNull]
         public static byte[]? ToBytes([MaybeNull] this string? source)
@@ -66,17 +75,18 @@ namespace UCode.Extensions
             return Encoding.UTF8.GetBytes(json);
         }
 
-        public static T? ToObject<T>([NotNull] this byte[] bytes) => Encoding.UTF8.GetString(bytes).JsonObject<T>();
-
-        [return: NotNull]
-        public static object? ToObject([NotNull] this byte[] bytes, Type type) => Encoding.UTF8.GetString(bytes).JsonObject(type);
-
-
-        [return: NotNull]
-        public static Stream ToStream([NotNull] this string source) => source.ToBytes().ToStream();
+        [return: MaybeNull]
+        public static T? ToObject<T>([NotNull] this byte[]? bytes) => bytes == null ? default : Encoding.UTF8.GetString(bytes).JsonObject<T>();
 
         [return: MaybeNull]
-        public static byte[] ToBytes([MaybeNull] this Stream stream)
+        public static object? ToObject([NotNull] this byte[]? bytes, Type type) => bytes == null ? null : Encoding.UTF8.GetString(bytes).JsonObject(type);
+
+
+        [return: MaybeNull]
+        public static Stream? ToStream([NotNull] this string? source) => source?.ToBytes()?.ToStream();
+
+        [return: MaybeNull]
+        public static byte[]? ToBytes([MaybeNull] this Stream? stream)
         {
             if (stream == null)
             {
@@ -105,18 +115,22 @@ namespace UCode.Extensions
         }
 
         [return: MaybeNull]
-        public static Stream ToStream([MaybeNull] this byte[] bytes) => new MemoryStream(bytes);
+        public static Stream? ToStream([MaybeNull] this byte[]? bytes) => bytes == null ? null : new MemoryStream(bytes);
 
+        [return: MaybeNull]
+        public static byte[]? ToBytes(this int? @int) => @int == null ? null : BitConverter.GetBytes(@int.Value);
 
-        [return: NotNull]
-        public static byte[] ToBytes(this int @int) => BitConverter.GetBytes(@int);
+        [return: MaybeNull]
+        public static byte[]? ToBytes(this long? @long) => @long == null ? null : BitConverter.GetBytes(@long.Value);
 
-        [return: NotNull]
-        public static byte[] ToBytes(this long @long) => BitConverter.GetBytes(@long);
-
-        [return: NotNull]
-        public static int ToInt32(this byte[] bytes)
+        [return: MaybeNull]
+        public static int? ToInt32(this byte[]? bytes)
         {
+            if (bytes == null)
+            {
+                return null;
+            }
+
             if (bytes.Length != 4)
             {
                 throw new ArgumentException("FOr convert to Int32 need 4 bytes.");
@@ -125,9 +139,14 @@ namespace UCode.Extensions
             return BitConverter.ToInt32(bytes);
         }
 
-        [return: NotNull]
-        public static long ToInt64(this byte[] bytes)
+        [return: MaybeNull]
+        public static long? ToInt64(this byte[]? bytes)
         {
+            if (bytes == null)
+            {
+                return null;
+            }
+
             if (bytes.Length != 8)
             {
                 throw new ArgumentException("FOr convert to Int32 need 8 bytes.");
@@ -137,29 +156,6 @@ namespace UCode.Extensions
         }
 
 
-        //public static T AutoMap<T>(this object source)
-        //{
-        //    if (source == default)
-        //        return default;
-
-        //    var configuration = new MapperConfiguration(cfg => { });
-
-        //    var mapper = configuration.CreateMapper();
-
-        //    return mapper.Map<T>(source);
-        //}
-
-        //public static IEnumerable<T> AutoMap<T>(this IEnumerable<object> source)
-        //{
-        //    if (source == default)
-        //        return default;
-
-        //    var configuration = new MapperConfiguration(cfg => { cfg.CreateMap<object, T>(); });
-
-        //    var mapper = configuration.CreateMapper();
-
-        //    return mapper.Map<IEnumerable<object>, IEnumerable<T>>(source);
-        //}
 
 
         #region ToSha256Hash
@@ -172,6 +168,9 @@ namespace UCode.Extensions
         /// <returns>Hex string</returns>
         public static string? CalculateSha256Hash([MaybeNull] this string? source)
         {
+            if (source == null)
+                return null;
+
             var bytes = source.ToBytes();
 
             var hash = ToSha256Hash(bytes);
@@ -187,6 +186,9 @@ namespace UCode.Extensions
         /// <returns>Hex string</returns>
         public static string? CalculateSha256Hash([MaybeNull] this byte[]? bytes)
         {
+            if (bytes == null)
+                return null;
+
             var hash = ToSha256Hash(bytes);
 
             return hash.ToHexString();
@@ -200,6 +202,9 @@ namespace UCode.Extensions
         /// <returns>Hex string</returns>
         public static string? CalculateSha256Hash([MaybeNull] this Stream? stream)
         {
+            if (stream == null)
+                return null;
+
             var hash = ToSha256Hash(stream);
 
             return hash.ToHexString();
@@ -214,6 +219,9 @@ namespace UCode.Extensions
         /// <returns>Hex string</returns>
         public static string? CalculateSha256Hash<T>([MaybeNull] this T? instance)
         {
+            if (instance == null)
+                return null;
+
             var json = System.Text.Json.JsonSerializer.Serialize<T>(instance);
 
             var hash = ToSha256Hash(json);
@@ -222,7 +230,7 @@ namespace UCode.Extensions
         }
 
 
-
+        [return: MaybeNull]
         public static byte[]? ToSha256Hash(this Stream? stream)
         {
             if (stream == null)
@@ -230,12 +238,14 @@ namespace UCode.Extensions
                 return null;
             }
 
-            byte[] bytes = null;
-            bytes = SHA256.HashData(stream.ToBytes());
+            byte[]? sourceBytes = stream.ToBytes();
 
-            return bytes;
+            byte[]? hashedBytes = SHA256.HashData(sourceBytes);
+
+            return hashedBytes;
         }
 
+        [return: MaybeNull]
         public static byte[]? ToSha256Hash(this byte[]? source)
         {
             if (source == null)
@@ -243,12 +253,12 @@ namespace UCode.Extensions
                 return null;
             }
 
-            byte[] bytes = null;
-            bytes = SHA256.HashData(source);
+            byte[] bytes = SHA256.HashData(source);
 
             return bytes;
         }
 
+        [return: MaybeNull]
         public static byte[]? ToSha256Hash(this string? source)
         {
             if (source == null)

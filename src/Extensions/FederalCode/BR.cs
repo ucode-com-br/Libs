@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 
 namespace UCode.Extensions.FederalCode
 {
@@ -36,7 +37,7 @@ namespace UCode.Extensions.FederalCode
                 soma = 0;
                 for (var i = 0; i < 12; i++)
                 {
-                    soma += int.Parse(tempCnpj[i].ToString()) * multiplicador1[i];
+                    soma += int.Parse(tempCnpj[i].ToString(), CultureInfo.InvariantCulture) * multiplicador1[i];
                 }
 
                 resto = soma % 11;
@@ -55,7 +56,7 @@ namespace UCode.Extensions.FederalCode
                 soma = 0;
                 for (var i = 0; i < 13; i++)
                 {
-                    soma += int.Parse(tempCnpj[i].ToString()) * multiplicador2[i];
+                    soma += int.Parse(tempCnpj[i].ToString(), CultureInfo.InvariantCulture) * multiplicador2[i];
                 }
 
                 resto = soma % 11;
@@ -70,7 +71,7 @@ namespace UCode.Extensions.FederalCode
 
                 digito += resto;
 
-                return cnpj.EndsWith(digito);
+                return cnpj.EndsWith(digito, StringComparison.InvariantCulture);
             }
             catch (Exception)
             {
@@ -82,7 +83,7 @@ namespace UCode.Extensions.FederalCode
         {
             if (cnpj.Length != 12)
             {
-                throw new ArgumentException();
+                throw new ArgumentException(cnpj.Length.ToString(CultureInfo.InvariantCulture), nameof(cnpj));
             }
 
             var multiplicador1 = new int[12] { 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2 };
@@ -95,7 +96,7 @@ namespace UCode.Extensions.FederalCode
             soma = 0;
             for (var i = 0; i < 12; i++)
             {
-                soma += int.Parse(cnpj[i].ToString()) * multiplicador1[i];
+                soma += int.Parse(cnpj[i].ToString(), CultureInfo.InvariantCulture) * multiplicador1[i];
             }
 
             resto = soma % 11;
@@ -108,13 +109,13 @@ namespace UCode.Extensions.FederalCode
                 resto = 11 - resto;
             }
 
-            digito = resto.ToString();
+            digito = resto.ToString(CultureInfo.InvariantCulture);
 
             cnpj += digito;
             soma = 0;
             for (var i = 0; i < 13; i++)
             {
-                soma += int.Parse(cnpj[i].ToString()) * multiplicador2[i];
+                soma += int.Parse(cnpj[i].ToString(), CultureInfo.InvariantCulture) * multiplicador2[i];
             }
 
             resto = soma % 11;
@@ -157,7 +158,7 @@ namespace UCode.Extensions.FederalCode
                     return false;
                 }
 
-                cpf = l.ToString().PadLeft(11, '0');
+                cpf = l.ToString(CultureInfo.InvariantCulture).PadLeft(11, '0');
 
 
                 tempCpf = cpf[..9];
@@ -165,7 +166,7 @@ namespace UCode.Extensions.FederalCode
 
                 for (var i = 0; i < 9; i++)
                 {
-                    soma += int.Parse(tempCpf[i].ToString()) * multiplicador1[i];
+                    soma += int.Parse(tempCpf[i].ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture) * multiplicador1[i];
                 }
 
                 resto = soma % 11;
@@ -178,14 +179,14 @@ namespace UCode.Extensions.FederalCode
                     resto = 11 - resto;
                 }
 
-                digito = resto.ToString();
+                digito = resto.ToString(CultureInfo.InvariantCulture);
 
                 tempCpf += digito;
 
                 soma = 0;
                 for (var i = 0; i < 10; i++)
                 {
-                    soma += int.Parse(tempCpf[i].ToString()) * multiplicador2[i];
+                    soma += int.Parse(tempCpf[i].ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture) * multiplicador2[i];
                 }
 
                 resto = soma % 11;
@@ -200,7 +201,7 @@ namespace UCode.Extensions.FederalCode
 
                 digito += resto;
 
-                return cpf.EndsWith(digito);
+                return cpf.EndsWith(digito, StringComparison.InvariantCulture);
             }
             catch (Exception)
             {
@@ -208,7 +209,7 @@ namespace UCode.Extensions.FederalCode
             }
         }
 
-        public static string ToCnpj(string format)
+        public static string? ToCnpj(string? format)
         {
             if (format == null)
             {
@@ -225,7 +226,7 @@ namespace UCode.Extensions.FederalCode
             return null;
         }
 
-        public static string ToCpf(string format)
+        public static string? ToCpf(string? format)
         {
             if (format == null)
             {
@@ -242,7 +243,7 @@ namespace UCode.Extensions.FederalCode
             return null;
         }
 
-        public static string CnpjFormat(string format)
+        public static string? CnpjFormat(string? format)
         {
             if (format == null)
             {
@@ -264,7 +265,7 @@ namespace UCode.Extensions.FederalCode
             return null;
         }
 
-        public static string CpfFormat(string format)
+        public static string? CpfFormat(string? format)
         {
             if (format == null)
             {

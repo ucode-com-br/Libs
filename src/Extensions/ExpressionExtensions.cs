@@ -66,7 +66,7 @@ namespace UCode.Extensions
                 if (where.Invoke(ref item))
                 {
                     if(item.ReplaceParam == null)
-                        throw new NullReferenceException("Object ReplaceParam from item is null.");
+                        throw new ArgumentNullException("Object ReplaceParam from item is null.");
 
                     yield return item.ReplaceParam!;
                 }
