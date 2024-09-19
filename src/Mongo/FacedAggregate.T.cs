@@ -7,7 +7,7 @@ namespace UCode.Mongo
     /// Represents the result of an aggregation operation on a collection.
     /// </summary>
     /// <typeparam name="T">The type of the projection.</typeparam>
-    internal sealed class FacedAggregate<T>
+    internal sealed record FacedAggregate<T>
     {
         /// <summary>
         /// Gets or sets the result of the aggregation operation.

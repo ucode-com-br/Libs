@@ -46,9 +46,6 @@ namespace UCode.Mongo
                 throw new InvalidOperationException("This query does not have incomplete expression.");
             }
 
-            // Create a new ParameterExpressionItem object
-            ParameterExpressionItem arg = new ParameterExpressionItem();
-
             // Replace the incomplete expression with the constant value
             return this.IncompletedExpressionQuery.ReplaceToConstant<Func<TDocument, TDocument, bool>, TDocument, Func<TDocument, bool>>(col => col.Where((ref ParameterExpressionItem x) => this.ReplaceParam(ref x, constrainValue)));
         }

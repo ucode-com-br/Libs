@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Events;
 using UCode.Extensions;
+using UCode.Mongo.Options;
 using ILoggerFactory = Microsoft.Extensions.Logging.ILoggerFactory;
 
 namespace UCode.Mongo
@@ -207,20 +209,137 @@ namespace UCode.Mongo
             }, (key, value) => value);
         }
 
-        // Get a database set
+
+        #region Before
+        internal TDocument BeforeInsertInternal<TDocument, TObjectId>(TDocument original)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectId<TObjectId>
+        {
+            var destination = this.BeforeInsert<TDocument, TObjectId>(original);
+
+            if (destination == null)
+            {
+                throw new Exception("cannot save null object.");
+            }
+
+            return destination;
+        }
+
+        internal Update<TDocument> BeforeUpdateInternal<TDocument, TObjectId>(Update<TDocument> updateOptions)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectId<TObjectId>
+        {
+            var destination = this.BeforeUpdate<TDocument, TObjectId>(updateOptions);
+
+            if (destination == null)
+            {
+                throw new Exception("cannot update null object.");
+            }
+
+            return destination;
+        }
+
+        internal TDocument BeforeReplaceInternal<TDocument, TObjectId>(TDocument original)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectId<TObjectId>
+        {
+            var destination = this.BeforeReplace<TDocument, TObjectId>(original);
+
+            if (destination == null)
+            {
+                throw new Exception("cannot save null object.");
+            }
+
+            return destination;
+        }
+
+        internal Query<TDocument, TProjection> BeforeAggregateInternal<TDocument, TObjectId, TProjection>(Query<TDocument, TProjection> original)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectId<TObjectId>
+        {
+            var destination = this.BeforeAggregate<TDocument, TObjectId, TProjection>(original);
+
+            if (destination == null)
+            {
+                throw new Exception("cannot save null aggregation.");
+            }
+
+            return destination;
+        }
+
+        /// <summary>
+        /// Before send insert to TDocument to MongoDB
+        /// </summary>
+        /// <typeparam name="TDocument">Document collection type</typeparam>
+        /// <typeparam name="TObjectId">Document id type</typeparam>
+        /// <param name="original">Document original value</param>
+        /// <returns>Document changed</returns>
+        protected virtual TDocument? BeforeInsert<TDocument, TObjectId>(TDocument original)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectId<TObjectId> => original;
+
+        /// <summary>
+        /// Before send update to TDocument to MongoDB
+        /// </summary>
+        /// <typeparam name="TDocument">Document collection type</typeparam>
+        /// <typeparam name="TObjectId">Document id type</typeparam>
+        /// <param name="updateOptions">Original update command</param>
+        /// <returns>Update command</returns>
+        protected virtual Update<TDocument>? BeforeUpdate<TDocument, TObjectId>(Update<TDocument> updateOptions)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectId<TObjectId> => updateOptions;
+
+        /// <summary>
+        /// Before send replace to TDocument to MongoDB
+        /// </summary>
+        /// <typeparam name="TDocument">Document collection type</typeparam>
+        /// <typeparam name="TObjectId">Document id type</typeparam>
+        /// <param name="original">Document original value</param>
+        /// <returns>Document changed</returns>
+        protected virtual TDocument? BeforeReplace<TDocument, TObjectId>(TDocument original)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectId<TObjectId> => original;
+
+        /// <summary>
+        /// Before send aggregation to TDocument to MongoDB
+        /// </summary>
+        /// <typeparam name="TDocument">Document collection type</typeparam>
+        /// <typeparam name="TObjectId">Document id type</typeparam>
+        /// <typeparam name="TProjection">Document projection type</typeparam>
+        /// <param name="query">Original aggregation query</param>
+        /// <returns>Aggregation query changed</returns>
+        protected virtual Query<TDocument, TProjection>? BeforeAggregate<TDocument, TObjectId, TProjection>(Query<TDocument, TProjection> query)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectId<TObjectId> => query;
+        #endregion
+
+
+        /// <summary>
+        /// Get a database set
+        /// </summary>
+        /// <typeparam name="TDocument">Document collection type</typeparam>
+        /// <typeparam name="TObjectId">Document id type</typeparam>
+        /// <param name="collectionName">Collection name.</param>
+        /// <param name="timeSeriesOptions">Time series options.</param>
+        /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public DbSet<TDocument, TObjectId> GetDbSet<TDocument, TObjectId>(string? collectionName = null,
-            Options.TimerSeriesOptions? timeSeriesOptions = null)
+            TimerSeriesOptions? timeSeriesOptions = null)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
             where TDocument : IObjectId<TObjectId> => new(this, collectionName, timeSeriesOptions);
 
-        // Get a raw database set
+        /// <summary>
+        /// Get a raw database set
+        /// </summary>
+        /// <param name="collectionName">Name of the collection.</param>
+        /// <param name="timeSeriesOptions">Time series options.</param>
+        /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public RawDbSet GetDbSet(string collectionName, Options.TimerSeriesOptions? timeSeriesOptions = null) => new(this, collectionName, timeSeriesOptions);
+        public RawDbSet GetDbSet(string collectionName, TimerSeriesOptions? timeSeriesOptions = null) => new(this, collectionName, timeSeriesOptions);
 
         // Get a database set with a string ID
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public DbSet<TDocument> GetDbSet<TDocument>(string? collectionName = null, Options.TimerSeriesOptions? timeSeriesOptions = null)
+        public DbSet<TDocument> GetDbSet<TDocument>(string? collectionName = null, TimerSeriesOptions? timeSeriesOptions = null)
             where TDocument : IObjectId<string> => new(this, collectionName, timeSeriesOptions);
 
 
@@ -359,6 +478,10 @@ namespace UCode.Mongo
 
         #region Dispose
 
+        /// <summary>
+        /// Disposes of the object.
+        /// </summary>
+        /// <param name="disposing">True if disposing, false otherwise.</param>
         protected virtual void Dispose(bool disposing)
         {
             if (!this._disposedValue)
@@ -381,6 +504,9 @@ namespace UCode.Mongo
         //     Dispose(disposing: false);
         // }
 
+        /// <summary>
+        /// Disposes of the object.
+        /// </summary>
         public void Dispose()
         {
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
