@@ -1582,7 +1582,7 @@ namespace UCode.Mongo
         /// <param name="aggregateOptions">Options for the aggregation operation. Default is null.</param>
         /// <returns>An asynchronous enumerable of documents matching the aggregation criteria.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async IAsyncEnumerable<TDocument> AggregateEnumerableAsync([NotNull] Query<TDocument> query,
+        public async IAsyncEnumerable<TDocument> AggregateFacetEnumerableAsync([NotNull] Query<TDocument> query,
             AggregateOptions<TDocument>? aggregateOptions = default)
         {
             // Set default aggregate options if not provided
@@ -1687,15 +1687,39 @@ namespace UCode.Mongo
         /// <summary>
         /// Asynchronously performs an aggregation operation on the collection and returns the result.
         /// </summary>
+        /// <typeparam name="TProjection">The type of the projection.</typeparam>
+        /// <param name="query">The query to match the documents against.</param>
+        /// <param name="aggregateOptions">Options for the aggregation operation. Default is null.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the result of the aggregation operation.</returns>
+        public async Task<IReadOnlyList<TProjection?>> AggregateAsync<TProjection>([NotNull] Query<TDocument, TProjection> query,
+            AggregateOptions<TDocument>? aggregateOptions = default, CancellationToken cancellationToken = default)
+        {
+            var result = new List<TProjection?>();
+
+            await foreach (var item in this.AggregateEnumerableAsync<TProjection>(query, aggregateOptions, cancellationToken))
+            {
+                result.Add(item);
+            }
+
+            return result.AsReadOnly();
+        }
+
+        /// <summary>
+        /// Asynchronously performs an aggregation operation on the collection and returns the result.
+        /// </summary>
         /// <typeparam name="TDocument"> The type of the result.</typeparam>
         /// <typeparam name="TProjection"> The type of the projection.</typeparam>
         /// <param name="query"> The query to match the documents against. </param>
         /// <param name="aggregateOptions"> Options for the aggregation operation. Default is null.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns> A task that represents the asynchronous operation. The task result contains the result of the aggregation operation. </returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async Task<TProjection?> AggregateAsync<TProjection>([NotNull] Query<TDocument, TProjection> query,
-            AggregateOptions<TDocument>? aggregateOptions = default)
+        public async IAsyncEnumerable<TProjection?> AggregateEnumerableAsync<TProjection>([NotNull] Query<TDocument, TProjection> query,
+            AggregateOptions<TDocument>? aggregateOptions = default, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             // Set default aggregate options if not provided
             aggregateOptions ??= new AggregateOptions<TDocument>();
 
@@ -1717,41 +1741,39 @@ namespace UCode.Mongo
             }
 
             // Perform the aggregation operation and iterate over the results
-            TProjection? item = default;
+            IList<TProjection?> item = default;
 
-            IAsyncCursor<TProjection> cursor = default;
+            IAsyncCursor<TProjection> cursor = default!;
 
             if (aggregateOptions.NotPerformInTransaction)
             {
                 // Create a cursor for the aggregation operation
-                cursor = await this.MongoCollection.AggregateAsync<TProjection>(bsonDocumentFilter, aggregateOptions);
+                cursor = await this.MongoCollection.AggregateAsync<TProjection>(bsonDocumentFilter, aggregateOptions, cancellationToken);
             }
             else if (this._contextbase.IsUseTransaction)
             {
                 // Create a cursor for the aggregation operation with the session and filter
-                cursor = await this.MongoCollection.AggregateAsync<TProjection>(this._contextbase.Session, bsonDocumentFilter, aggregateOptions);
+                cursor = await this.MongoCollection.AggregateAsync<TProjection>(this._contextbase.Session, bsonDocumentFilter, aggregateOptions, cancellationToken);
             }
             else
             {
                 // Create a cursor for the aggregation operation
-                cursor = await this.MongoCollection.AggregateAsync<TProjection>(bsonDocumentFilter, aggregateOptions);
+                cursor = await this.MongoCollection.AggregateAsync<TProjection>(bsonDocumentFilter, aggregateOptions, cancellationToken);
             }
 
 
-            while (await cursor.MoveNextAsync())
+            while (await cursor.MoveNextAsync(cancellationToken))
             {
                 foreach (var c in cursor.Current)
                 {
-                    // Set the item variable to the current result
-                    item = c;
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    yield return c;
                 }
             }
 
             // Dispose the cursor
             cursor.Dispose();
-
-
-            return item;
         }
 
 
