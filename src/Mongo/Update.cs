@@ -54,8 +54,29 @@ namespace UCode.Mongo
         public override int GetHashCode() => this.ToString().GetHashCode();
 
         #region Operator == != & +
-        public static bool operator ==(Update<TDocument> lhs, Update<TDocument> rhs) => lhs.GetHashCode() == rhs.GetHashCode();
-        public static bool operator !=(Update<TDocument> lhs, Update<TDocument> rhs) => lhs.GetHashCode() != rhs.GetHashCode();
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="lhs"></param>
+        /// <param name="rhs"></param>
+        /// <returns></returns>
+        public static bool operator == (Update<TDocument>? lhs, Update<TDocument>? rhs)
+        {
+            if (ReferenceEquals(lhs, rhs) || lhs!.Equals(rhs))
+            {
+                return true;
+            }
+
+            return lhs!.GetHashCode() == rhs!.GetHashCode();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="lhs"></param>
+        /// <param name="rhs"></param>
+        /// <returns></returns>
+        public static bool operator != (Update<TDocument>? lhs, Update<TDocument>? rhs) => !(lhs == rhs);
 
 
         /// <summary>
@@ -66,6 +87,9 @@ namespace UCode.Mongo
         /// <returns>The result of the operator.</returns>
         public static Update<TDocument> operator &(Update<TDocument> lhs, Update<TDocument> rhs)
         {
+            ArgumentNullException.ThrowIfNull(lhs);
+            ArgumentNullException.ThrowIfNull(rhs);
+
             var updated = new UpdateDefinitionBuilder<TDocument>().Combine(lhs, rhs);
 
             return updated;
@@ -79,6 +103,9 @@ namespace UCode.Mongo
         /// <returns>The result of the operator.</returns>
         public static Update<TDocument> operator +(Update<TDocument> lhs, Update<TDocument> rhs)
         {
+            ArgumentNullException.ThrowIfNull(lhs);
+            ArgumentNullException.ThrowIfNull(rhs);
+
             var updated = new UpdateDefinitionBuilder<TDocument>().Combine(lhs, rhs);
 
             return updated;
@@ -1063,8 +1090,7 @@ namespace UCode.Mongo
                 return false;
             }
 
-            // Throw a NotImplementedException since this method is not implemented
-            throw new NotImplementedException();
+            return this.GetHashCode() == obj.GetHashCode();
         }
 
 

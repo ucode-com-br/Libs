@@ -1405,6 +1405,7 @@ namespace UCode.Mongo
         /// </summary>
         /// <param name="doc">The document to replace.</param>
         /// <param name="replaceOptions">Options for the replace operation. Default is null.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>The number of replaced documents.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async ValueTask<long> ReplaceAsync([NotNull] TDocument doc, ReplaceOptions<TDocument>? replaceOptions = default, CancellationToken cancellationToken = default)
@@ -1442,7 +1443,7 @@ namespace UCode.Mongo
             cancellationToken.ThrowIfCancellationRequested();
 
             // Set default replace options if not provided
-            replaceOptions ??= new Options.ReplaceOptions<TDocument>();
+            replaceOptions ??= new ReplaceOptions<TDocument>();
 
             // Initialize the result to null
             ReplaceOneResult result;
