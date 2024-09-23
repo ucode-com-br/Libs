@@ -60,14 +60,14 @@ namespace UCode.Mongo
         /// <param name="lhs"></param>
         /// <param name="rhs"></param>
         /// <returns></returns>
-        public static bool operator == (Update<TDocument>? lhs, Update<TDocument>? rhs)
+        public static bool operator ==(Update<TDocument>? lhs, Update<TDocument>? rhs)
         {
-            if (ReferenceEquals(lhs, rhs) || lhs!.Equals(rhs))
+            if (ReferenceEquals(lhs, rhs))
             {
                 return true;
             }
 
-            return lhs!.GetHashCode() == rhs!.GetHashCode();
+            return lhs!.Equals(rhs);
         }
 
         /// <summary>
@@ -76,7 +76,7 @@ namespace UCode.Mongo
         /// <param name="lhs"></param>
         /// <param name="rhs"></param>
         /// <returns></returns>
-        public static bool operator != (Update<TDocument>? lhs, Update<TDocument>? rhs) => !(lhs == rhs);
+        public static bool operator !=(Update<TDocument>? lhs, Update<TDocument>? rhs) => !(lhs == rhs);
 
 
         /// <summary>
