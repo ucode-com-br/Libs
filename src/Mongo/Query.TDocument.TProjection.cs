@@ -46,11 +46,9 @@ namespace UCode.Mongo
         /// <param name="constrainValue">The constant value to replace the incomplete expression with.</param>
         /// <returns>A new Query object with the completed expression.</returns>
         /// <exception cref="InvalidOperationException">Thrown if the query does not have an incomplete expression.</exception>
-        public Query<TDocument, TProjection> CompleteExpression(TDocument constrainValue)
-        {
+        public new Query<TDocument, TProjection> CompleteExpression(TDocument constrainValue) =>
             // Call the base class method to complete the expression
-            return new Query<TDocument, TProjection>(base.CompleteExpression(constrainValue));
-         }
+            new Query<TDocument, TProjection>(base.CompleteExpression(constrainValue));
 
 
         #region Static Methods
@@ -176,10 +174,10 @@ namespace UCode.Mongo
         public static implicit operator Query<TDocument, TProjection>([NotNull] Query<TDocument> query)
         {
             // Check if the query has a JSON query
-            if (!string.IsNullOrWhiteSpace(query.JsonQuery))
+            if (!string.IsNullOrWhiteSpace(query.jsonQuery))
             {
                 // Create a new Query object with the JSON query and update
-                return new(query.JsonQuery)
+                return new(query.jsonQuery)
                 {
                     Update = query.Update
                 };
@@ -238,10 +236,10 @@ namespace UCode.Mongo
         public static implicit operator Query<TDocument>([NotNull] Query<TDocument, TProjection> query)
         {
             // Check if the query has a JSON query
-            if (!string.IsNullOrWhiteSpace(query.JsonQuery))
+            if (!string.IsNullOrWhiteSpace(query.jsonQuery))
             {
                 // Create a new Query object with the JSON query and update
-                return new(query.JsonQuery)
+                return new(query.jsonQuery)
                 {
                     Update = query.Update
                 };
@@ -324,10 +322,10 @@ namespace UCode.Mongo
 
             
             // Check if the query has a JSON query
-            if (!string.IsNullOrWhiteSpace(query.JsonQuery))
+            if (!string.IsNullOrWhiteSpace(query.jsonQuery))
             {
                 // Create a new JsonFilterDefinition object with the JSON query
-                return new JsonFilterDefinition<TDocument>(query.JsonQuery);
+                return new JsonFilterDefinition<TDocument>(query.jsonQuery);
             }
             // Check if the query has an expression query
             else if (query.ExpressionQuery != null)
@@ -399,9 +397,9 @@ namespace UCode.Mongo
             }
 
             // If the query has a JSON query, return it
-            if (!string.IsNullOrWhiteSpace(query.JsonQuery))
+            if (!string.IsNullOrWhiteSpace(query.jsonQuery))
             {
-                return query.JsonQuery;
+                return query.jsonQuery;
             }
 
             // Otherwise, convert the expression query to a BsonDocument and return it
@@ -423,9 +421,9 @@ namespace UCode.Mongo
             }
 
             // If the query has a JSON query, return it
-            if (!string.IsNullOrWhiteSpace(query.JsonQuery))
+            if (!string.IsNullOrWhiteSpace(query.jsonQuery))
             {
-                return query.JsonQuery;
+                return query.jsonQuery;
             }
 
             // Otherwise, convert the expression query to a BsonDocument and return it
@@ -447,9 +445,9 @@ namespace UCode.Mongo
             }
 
             // If the query has a JSON query, deserialize it into a BsonDocument and return it
-            if (!string.IsNullOrWhiteSpace(query.JsonQuery))
+            if (!string.IsNullOrWhiteSpace(query.jsonQuery))
             {
-                return BsonSerializer.Deserialize<BsonDocument>(query.JsonQuery);
+                return BsonSerializer.Deserialize<BsonDocument>(query.jsonQuery);
             }
 
             // Otherwise, convert the expression query to a BsonDocument and return it

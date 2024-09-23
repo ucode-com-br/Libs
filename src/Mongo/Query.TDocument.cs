@@ -153,10 +153,10 @@ namespace UCode.Mongo
                 return default;
             }
 
-            if (!string.IsNullOrWhiteSpace(query.JsonQuery))
+            if (!string.IsNullOrWhiteSpace(query.jsonQuery))
             {
                 // If the query is a JSON query, create a new JsonFilterDefinition
-                return new JsonFilterDefinition<TDocument>(query.JsonQuery);
+                return new JsonFilterDefinition<TDocument>(query.jsonQuery);
             }
             else if (query.ExpressionQuery != null)
             {

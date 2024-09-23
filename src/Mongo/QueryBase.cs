@@ -11,18 +11,27 @@ using static UCode.Extensions.ExpressionExtensions;
 
 namespace UCode.Mongo
 {
+    /// <summary>
+    /// Represents a query for documents of type TDocument.
+    /// </summary>
+    /// <typeparam name="TDocument"></typeparam>
     public abstract record QueryBase<TDocument>
     {
         internal Expression<Func<TDocument, TDocument, bool>>? IncompletedExpressionQuery;
         internal Expression<Func<TDocument, bool>>? ExpressionQuery;
-        internal string? JsonQuery;
+        internal string? jsonQuery;
         internal (string, FullTextSearchOptions<TDocument>)? FullTextSearchOptions;
         internal FilterDefinition<TDocument>? FilterDefinition;
+
+        /// <summary>
+        /// Represents an update operation on a document in a MongoDB collection.
+        /// </summary>
+        private Update<TDocument>? _update;
 
         #region Constructors
         internal QueryBase([NotNull] FilterDefinition<TDocument> filterDefinition) => this.FilterDefinition = filterDefinition;
 
-        internal QueryBase([NotNull] string str) => this.JsonQuery = str;
+        internal QueryBase([NotNull] string str) => this.jsonQuery = str;
 
         internal QueryBase(string text, FullTextSearchOptions<TDocument> fullTextSearchOptions) => this.FullTextSearchOptions = (text, fullTextSearchOptions);
 
@@ -112,12 +121,6 @@ namespace UCode.Mongo
 
 
         /// <summary>
-        /// Represents an update operation on a document in a MongoDB collection.
-        /// </summary>
-        /// <typeparam name="TDocument">The type of the document being updated.</typeparam>
-        private Update<TDocument> _update;
-
-        /// <summary>
         /// Gets or sets the update operation for the document.
         /// </summary>
         /// <value>
@@ -132,56 +135,56 @@ namespace UCode.Mongo
             internal set => this._update = value;
         }
 
-
+        /// <summary>
+        /// Compare two QueryBase objects
+        /// </summary>
+        /// <param name="left">Left QueryBase object</param>
+        /// <param name="right">Right QueryBase object</param>
+        /// <returns>Returns true if the objects are equal.</returns>
         public static bool operator ==(QueryBase<TDocument> left, object right) => Equals(left, right);
+
+        /// <summary>
+        /// Compare two QueryBase objects
+        /// </summary>
+        /// <param name="left">Left QueryBase object</param>
+        /// <param name="right">Right QueryBase object</param>
+        /// <returns>Returns true if the objects are not equal.</returns>
         public static bool operator !=(QueryBase<TDocument> left, object right) => !Equals(left, right);
 
+        /// <summary>
+        /// Compare two QueryBase objects
+        /// </summary>
+        /// <param name="left">Left QueryBase object</param>
+        /// <param name="right">Right QueryBase object</param>
+        /// <returns>Returns true if the objects are equal.</returns>
         public static bool operator ==(object left, QueryBase<TDocument> right) => Equals(right, left);
+
+        /// <summary>
+        /// Compare two QueryBase objects
+        /// </summary>
+        /// <param name="left">Left QueryBase object</param>
+        /// <param name="right">Right QueryBase object</param>
+        /// <returns>Returns true if the objects are not equal.</returns>
         public static bool operator !=(object left, QueryBase<TDocument> right) => !Equals(right, left);
 
 
         /// <summary>
         /// Compare two QueryBase objects
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="left"></param>
-        /// <param name="right"></param>
-        /// <returns></returns>
-        public static bool Equals<T>(T? left, object? right) where T : QueryBase<TDocument> => Equals((object)left, right);/*// Both sides are null
-            if (left == null && right == null)
-            {
-                return true;
-            }
-
-            // One side is null
-            if ((left != null && right == null) || (left == null && right != null))
-            {
-                return false;
-            }
-
-            // Both sides are the same instance
-            if (ReferenceEquals(left, right))
-            {
-                return true;
-            }
-
-            // Both sides are the same type
-            if (right is QueryBase<TDocument> lrhs && left is QueryBase<TDocument> rlhs)
-            {
-                return lrhs.GetHashCode() == rlhs.GetHashCode() && lrhs.Update == rlhs.Update;
-            }
-
-
-            return false;*/
+        /// <typeparam name="T">The type of the object. (where T : <see cref="QueryBase{TDocument}"/>)</typeparam>
+        /// <param name="left">Left QueryBase object</param>
+        /// <param name="right">Right QueryBase object</param>
+        /// <returns>returns true if the objects are equal.</returns>
+        public static bool Equals<T>(T? left, object? right) where T : QueryBase<TDocument> => Equals((object)left, right);
 
         /// <summary>
         /// Compare two QueryBase objects
         /// </summary>
-        /// <typeparam name="TL"></typeparam>
-        /// <typeparam name="TR"></typeparam>
-        /// <param name="left"></param>
-        /// <param name="right"></param>
-        /// <returns></returns>
+        /// <typeparam name="TL">The type of the object. (where TL : <see cref="QueryBase{TDocument}"/>)</typeparam>
+        /// <typeparam name="TR">The type of the object. (where TL : <see cref="QueryBase{TDocument}"/>)</typeparam>
+        /// <param name="left">Left QueryBase object</param>
+        /// <param name="right">Right QueryBase object</param>
+        /// <returns>returns true if the objects are equal.</returns>
         public static bool Equals<TL, TR>(TL? left, TR? right)
             where TL : QueryBase<TDocument>
             where TR : QueryBase<TDocument> => Equals((object)left, right);/*// Both sides are null
@@ -253,7 +256,6 @@ namespace UCode.Mongo
         /// <param name="query">The <see cref="QueryBase{TDocument}"/> to convert.</param>
         /// <returns>The converted <see cref="BsonDocument"/> array.</returns>
         /// <exception cref="InvalidOperationException">Thrown if the conversion fails due to an incomplete expression.</exception>
-        [return: NotNull]
         public static implicit operator BsonDocument[]([NotNull] QueryBase<TDocument> query)
         {
             // If the query is null, return null
@@ -268,9 +270,9 @@ namespace UCode.Mongo
             //return BsonSerializer.Deserialize<BsonDocument[]>(query.ExpressionQuery.ToBson());
 
             // If the JsonQuery property is not null or whitespace, deserialize it into a BsonDocument array and return it
-            if (!string.IsNullOrWhiteSpace(query.JsonQuery))
+            if (!string.IsNullOrWhiteSpace(query.jsonQuery))
             {
-                return BsonSerializer.Deserialize<BsonDocument[]>(query.JsonQuery);
+                return BsonSerializer.Deserialize<BsonDocument[]>(query.jsonQuery);
             }
 
             // If the ExpressionQuery property is not null, deserialize it into a BsonDocument array and return it
@@ -304,19 +306,18 @@ namespace UCode.Mongo
         /// <param name="query">The QueryBase object to convert.</param>
         /// <returns>The converted FilterDefinition object.</returns>
         /// <exception cref="InvalidOperationException">Thrown if the conversion fails due to an incomplete expression.</exception>
-        [return: NotNull]
         public static implicit operator FilterDefinition<TDocument>([NotNull] QueryBase<TDocument> query)
         {
             // If the query is null, return null
             if (query == default)
             {
-                return default;
+                return null;
             }
 
             // If the JsonQuery property is not null or whitespace, create a new JsonFilterDefinition object and return it
-            if (!string.IsNullOrWhiteSpace(query.JsonQuery))
+            if (!string.IsNullOrWhiteSpace(query.jsonQuery))
             {
-                return new JsonFilterDefinition<TDocument>(query.JsonQuery);
+                return new JsonFilterDefinition<TDocument>(query.jsonQuery);
             }
             // If the ExpressionQuery property is not null, create a new ExpressionFilterDefinition object and return it
             else if (query.ExpressionQuery != null)

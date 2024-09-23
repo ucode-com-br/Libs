@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text.Json;
+using System.Xml.Linq;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -52,13 +53,13 @@ namespace UCode.Mongo
         /// <returns></returns>
         public override int GetHashCode() => this.ToString().GetHashCode();
 
-        #region Operator & +
+        #region Operator == != & +
         public static bool operator ==(Update<TDocument> lhs, Update<TDocument> rhs) => lhs.GetHashCode() == rhs.GetHashCode();
         public static bool operator !=(Update<TDocument> lhs, Update<TDocument> rhs) => lhs.GetHashCode() != rhs.GetHashCode();
 
 
         /// <summary>
-        /// Implements the operator &.
+        /// Implements the operator & for combining two Update objects.
         /// </summary>
         /// <param name="lhs">left query</param>
         /// <param name="rhs">right query</param>
@@ -71,7 +72,7 @@ namespace UCode.Mongo
         }
 
         /// <summary>
-        /// Implements the operator &.
+        /// Implements the operator + for combining two Update objects.
         /// </summary>
         /// <param name="lhs">left query</param>
         /// <param name="rhs">right query</param>
@@ -1048,7 +1049,7 @@ namespace UCode.Mongo
         /// </summary>
         /// <param name="obj">The object to compare with the current object.</param>
         /// <returns>True if the objects are equal, false otherwise.</returns>
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             // Check if the current object is the same as the object being compared
             if (ReferenceEquals(this, obj))
@@ -1064,6 +1065,89 @@ namespace UCode.Mongo
 
             // Throw a NotImplementedException since this method is not implemented
             throw new NotImplementedException();
+        }
+
+
+        /// <summary>
+        /// Set fields values in document. (recursive)
+        /// </summary>
+        /// <param name="bsonDocument">The bson document.</param>
+        /// <param name="updateNullValues">if set to <c>true</c> [update null values].</param>
+        /// <param name="ignoreElement">The ignore BsonElement.</param>
+        /// <returns>The Update object.</returns>
+        public Update<TDocument> Set(BsonDocument bsonDocument, bool updateNullValues = true, Func<BsonElement, bool>? ignoreElement = null)
+        {
+            var list = BuildNestedUpdate("", bsonDocument, updateNullValues, ignoreElement ?? (x => false));
+
+            var combined = Builders<TDocument>.Update.Combine(list);
+
+            if (this._updateDefinition != null)
+            {
+                list.Add(this._updateDefinition);
+            }
+            this._updateDefinition = Builders<TDocument>.Update.Combine(list);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Set fields values in document. (recursive)
+        /// </summary>
+        /// <param name="doc"> Document instance.</param>
+        /// <param name="updateNullValues">if set to <c>true</c> [update null values].</param>
+        /// <param name="ignoreElement">The ignore BsonElement.</param>
+        /// <returns>The Update object.</returns>
+        public Update<TDocument> Set(TDocument doc, bool updateNullValues = true, Func<BsonElement, bool>? ignoreElement = null)
+        {
+            var bson = BsonDocument.Create(doc);
+            return Set(bson, updateNullValues, ignoreElement);
+        }
+
+        /// <summary>
+        /// Set fields values in document. (recursive)
+        /// </summary>
+        /// <param name="doc">JsonDocument</param>
+        /// <param name="updateNullValues">if set to <c>true</c> [update null values].</param>
+        /// <param name="ignoreElement">The ignore BsonElement.</param>
+        /// <returns>The Update object.</returns>
+        public Update<TDocument> Set(JsonDocument doc, bool updateNullValues = true, Func<BsonElement, bool>? ignoreElement = null)
+        {
+            var bson = BsonDocument.Parse(doc.ToJson());
+            return Set(bson, updateNullValues, ignoreElement);
+        }
+
+        private List<UpdateDefinition<TDocument>> BuildNestedUpdate(string path, BsonDocument bsonDocument, bool updateNullValues, Func<BsonElement, bool> ignoreElement)
+        {
+            var updateBuilder = Builders<TDocument>.Update;
+            var updateDefinitions = new List<UpdateDefinition<TDocument>>();
+
+
+            foreach (var element in bsonDocument.Elements)
+            {
+                if (ignoreElement(element))
+                {
+                    continue;
+                }
+
+                var fullPath = string.IsNullOrWhiteSpace(path) ? element.Name : $"{path}.{element.Name}";
+
+                if (element.Value.IsBsonDocument)
+                {
+                    updateDefinitions.AddRange(BuildNestedUpdate(fullPath, element.Value.AsBsonDocument, updateNullValues, ignoreElement));
+                }
+                else
+                {
+                    var v = element.Value;
+
+                    if (updateNullValues || (!updateNullValues && !v.IsBsonNull))
+                    {
+                        //_ = Set(fullPath, v);
+                        updateDefinitions.Add(updateBuilder.Set(fullPath, v));
+                    }
+                }
+            }
+
+            return updateDefinitions;
         }
 
         #endregion
