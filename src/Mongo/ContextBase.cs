@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Events;
 using UCode.Extensions;
@@ -253,15 +254,15 @@ namespace UCode.Mongo
             return destination;
         }
 
-        internal Query<TDocument, TProjection> BeforeAggregateInternal<TDocument, TObjectId, TProjection>(Query<TDocument, TProjection> original)
+        internal BsonDocument[] BeforeAggregateInternal<TDocument, TObjectId, TProjection>(BsonDocument[] original)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
             where TDocument : IObjectId<TObjectId>
         {
             var destination = this.BeforeAggregate<TDocument, TObjectId, TProjection>(original);
 
-            if (destination == null)
+            if (destination == null || destination.Length == 0)
             {
-                throw new Exception("cannot save null aggregation.");
+                throw new Exception("Cannot save null or empty aggregation.");
             }
 
             return destination;
@@ -308,9 +309,9 @@ namespace UCode.Mongo
         /// <typeparam name="TProjection">Document projection type</typeparam>
         /// <param name="query">Original aggregation query</param>
         /// <returns>Aggregation query changed</returns>
-        protected virtual Query<TDocument, TProjection>? BeforeAggregate<TDocument, TObjectId, TProjection>(Query<TDocument, TProjection> query)
+        protected virtual BsonDocument[]? BeforeAggregate<TDocument, TObjectId, TProjection>(BsonDocument[] bsonDocuments)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectId<TObjectId> => query;
+            where TDocument : IObjectId<TObjectId> => bsonDocuments;
         #endregion
 
 
