@@ -161,44 +161,50 @@ namespace UCode.Extensions
             switch (mostPreciseTypeCode)
             {
                 case TypeCode.Byte:
-                    result = (byte)a + (byte)b;
+                    result = Convert.ToByte(a) + Convert.ToByte(b);
                     break;
                 case TypeCode.SByte:
-                    result = (sbyte)a + (sbyte)b;
+                    result = Convert.ToSByte(a) + Convert.ToSByte(b);
                     break;
                 case TypeCode.UInt16:
-                    result = (ushort)a + (ushort)b;
+                    result = Convert.ToUInt16(a) + Convert.ToUInt16(b);
                     break;
                 case TypeCode.UInt32:
-                    result = (uint)a + (uint)b;
+                    result = Convert.ToUInt32(a) + Convert.ToUInt32(b);
                     break;
                 case TypeCode.UInt64:
-                    result = (ulong)a + (ulong)b;
+                    result = Convert.ToUInt64(a) + Convert.ToUInt64(b);
                     break;
                 case TypeCode.Int16:
-                    result = (short)a + (short)b;
+                    result = Convert.ToInt16(a) + Convert.ToInt16(b);
                     break;
                 case TypeCode.Int32:
-                    result = (int)a + (int)b;
+                    result = Convert.ToInt32(a) + Convert.ToInt32(b);
                     break;
                 case TypeCode.Int64:
-                    result = (long)a + (long)b;
+                    result = Convert.ToInt64(a) + Convert.ToInt64(b);
                     break;
                 case TypeCode.Decimal:
-                    result = (decimal)a + (decimal)b;
+                    result = Convert.ToDecimal(a) + Convert.ToDecimal(b);
                     break;
                 case TypeCode.Double:
-                    result = (double)a + (double)b;
+                    result = Convert.ToDouble(a) + Convert.ToDouble(b);
                     break;
                 case TypeCode.Single:
-                    result = (float)a + (float)b;
+                    result = Convert.ToSingle(a) + Convert.ToSingle(b);
                     break;
                 default:
                     throw new InvalidOperationException($"O tipo {mostPreciseTypeCode} não é suportado para adição numérica.");
             }
 
-            // Converter o resultado para o tipo esperado
-            return Convert.ChangeType(result, type);
+            if (result.GetType() == type)
+            {
+                return result;
+            }
+            else
+            {
+                return Convert.ChangeType(result, type)!;
+            }
         }
 
         private static object? ConvertStringToMostPreciseType(string value, out Type? type)
