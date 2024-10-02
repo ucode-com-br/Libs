@@ -88,11 +88,6 @@ namespace UCode.Extensions
             return result!;
         }
 
-
-
-
-
-
         public static bool IsNumeric(this object obj)
         {
             if (obj == typeof(string))
@@ -110,6 +105,8 @@ namespace UCode.Extensions
         }
 
         public static bool IsNumeric<T>(this T source) => IsNumeric(source);
+
+
 
 
         private static bool IsNumericType<T>() => IsNumericType(typeof(T));
