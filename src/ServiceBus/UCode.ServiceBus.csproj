@@ -8,7 +8,7 @@
     <Copyright>UCode (c) Desenvolvimento de Software 2024</Copyright>
     <IncludeSymbols>True</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <Version>2.1.8</Version>
+    <Version>2.1.9</Version>
     <Title>UCode ServiceBus</Title>
     <RepositoryType>git</RepositoryType>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
@@ -41,7 +41,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.18.1" />
+    <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.18.2" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Extensions\UCode.Extensions.csproj" />

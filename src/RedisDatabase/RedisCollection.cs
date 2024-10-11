@@ -46,506 +46,65 @@ namespace UCode.RedisDatabase
 
 
 
-        private sealed class AutoBool
-        {
-            //private readonly List<(int index, string name, bool value)> _list = new();
-            private readonly List<(int index, Type type, bool value)> _list = new();
-            private readonly bool DefaultValue;
-
-            public AutoBool(bool defaultValue = true)
-            {
-                this[null] = defaultValue;
-                this.DefaultValue = defaultValue;
-            }
-
-            public bool IsAll(bool value) => this._list.All(a => a.value == value);
-            public bool this[Type type]
-            {
-                get
-                {
-                    if (this._list.All(a => a.type != type))
-                    {
-                        this._list.Add((this._list.Count, type, this.DefaultValue));
-                    }
-
-                    return this._list.First(f => f.type == type).value;
-                }
-                set
-                {
-                    if (this._list.All(a => a.type != type))
-                    {
-                        this._list.Add((this._list.Count, type, this.DefaultValue));
-                    }
-
-                    var remove = this._list.First(f => f.type == type);
-
-                    this._list.Add((remove.index, type, value));
-
-                    this._list.Remove(remove);
-                }
-            }
-
-
-        }
-
-
-
         [return: MaybeNull]
         private T? GetValue<T>([NotNull] RedisValue redisValue)
         {
-            var fallbackControl = new AutoBool(true);
-
-            while (fallbackControl.IsAll(false))
+            switch (typeof(T))
             {
-                switch (typeof(T))
-                {
-                    case Type type when type == typeof(bool) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (T?)(object?)(bool?)redisValue;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(int) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (T?)(object?)(int?)redisValue;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(long) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (T?)(object?)(long?)redisValue;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(uint) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (T?)(object?)(uint?)redisValue;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(ulong) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (T?)(object?)(ulong?)redisValue;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(double) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (T?)(object?)(double?)redisValue;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(decimal) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (T?)(object?)(decimal?)redisValue;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(float) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (T?)(object?)(float?)redisValue;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(bool?) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (T?)(object?)(bool?)redisValue;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(int?) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (T?)(object?)(int?)redisValue;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(long?) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (T?)(object?)(long?)redisValue;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(uint?) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (T?)(object?)(uint?)redisValue;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(ulong?) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (T?)(object?)(ulong?)redisValue;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(double?) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (T?)(object?)(double?)redisValue;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(decimal?) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (T?)(object?)(decimal?)redisValue;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(float?) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (T?)(object?)(float?)redisValue;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(string) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (T?)(object?)(string?)redisValue;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(byte[]) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (T?)(object?)(byte[]?)redisValue;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    default:
-                        if (fallbackControl[null])
-                        {
-                            try
-                            {
-                                fallbackControl[null] = false;
-                                var bytes = (byte[]?)redisValue;
-                                var decompress = this.Database.RedisOptions.Compressor.Decompress(bytes);
-                                var obj = this.Database.RedisOptions.Serializer.Deserialize<T?>(decompress);
-                                return obj;
-                            }
-                            catch (Exception ex)
-                            {
-                                this.Logger.LogError($"GetValue<T>(...) fail to convert from json", ex);
-                            }
-                        }
-                        break;
-                };
+                case null:
+                    return default;
+                case Type type
+                    when type == typeof(string) || type == typeof(int) ||
+                        type == typeof(uint) || type == typeof(double) ||
+                        type == typeof(byte[]) || type == typeof(bool) ||
+                        type == typeof(long) || type == typeof(ulong) ||
+                        type == typeof(float) || type == typeof(ReadOnlyMemory<byte>) ||
+                        type == typeof(Memory<byte>):
+                    return (T?)redisValue.Box();
+                default:
+                    var bytes = (byte[]?)redisValue.Box();
+                    var decompress = this.Database.RedisOptions.Compressor.Decompress(bytes);
+                    var obj = this.Database.RedisOptions.Serializer.Deserialize<T?>(decompress);
+                    return obj;
             }
-
-            return default;
         }
 
-        [return: MaybeNull]
-        private RedisValue? SetValue<T>([NotNull] T source)
+        [return: NotNull]
+        private RedisValue SetValue<T>(T? source)
         {
-            var fallbackControl = new AutoBool(true);
-
-            while (fallbackControl.IsAll(false))
+            switch (source)
             {
-                switch (typeof(T))
-                {
-                    case Type type when type == typeof(bool) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (RedisValue?)(bool?)(object?)source;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(int) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (RedisValue?)(int?)(object?)source;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(long) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (RedisValue?)(long?)(object?)source;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(uint) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (RedisValue?)(uint?)(object?)source;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(ulong) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (RedisValue?)(ulong?)(object?)source;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(double) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (RedisValue?)(double?)(object?)source;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(decimal) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (RedisValue?)(double?)(object?)source;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(float) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (RedisValue)(float?)(object?)source;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(bool?) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (RedisValue?)(bool?)(object?)source;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(int?) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (RedisValue?)(int?)(object?)source;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(long?) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (RedisValue?)(long?)(object?)source;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(uint?) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (RedisValue?)(uint?)(object?)source;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(ulong?) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (RedisValue?)(ulong?)(object?)source;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(double?) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (RedisValue?)(double?)(object?)source;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(decimal?) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (RedisValue?)(double?)(object?)source;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(float?) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (RedisValue?)(float?)(object?)source;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(string) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (RedisValue?)(string?)(object?)source;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    case Type type when type == typeof(byte[]) && fallbackControl[type]:
-                        fallbackControl[type] = false;
-                        try
-                        {
-                            return (RedisValue?)(byte[]?)(object?)source;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Logger.LogError($"GetValue<T>(...) fail to convert. ({type})", ex);
-                        }
-                        break;
-                    default:
-                        if (fallbackControl[null])
-                        {
-                            try
-                            {
-                                var json = this.Database.RedisOptions.Serializer.Serialize(source);
-                                var bytes = this.Database.RedisOptions.Compressor.Compress(json);
-                                return (RedisValue?)bytes;
-                            }
-                            catch (Exception ex)
-                            {
-                                this.Logger.LogError($"SetValue<T>(...) fail to convert instance to json and serialize to byte array", ex);
-                            }
-                        }
-                        break;
-                };
+                case null:
+                    return RedisValue.Null;
+                case string v:
+                    return v;
+                case int v:
+                    return v;
+                case uint v:
+                    return v;
+                case double v:
+                    return v;
+                case byte[] v:
+                    return v;
+                case bool v:
+                    return v;
+                case long v:
+                    return v;
+                case ulong v:
+                    return v;
+                case float v:
+                    return v;
+                case ReadOnlyMemory<byte> v:
+                    return v;
+                case Memory<byte> v:
+                    return v;
+                case RedisValue v:
+                    return v;
+                default:
+                    var json = this.Database.RedisOptions.Serializer.Serialize(source);
+                    var bytes = this.Database.RedisOptions.Compressor.Compress(json);
+                    return bytes;
             }
-
-            return default;
         }
 
         #region Increment Decrement
@@ -595,8 +154,10 @@ namespace UCode.RedisDatabase
         #endregion Increment Decrement
 
 
+        
+
         [return: MaybeNull]
-        public async Task<T> GetAsync<T>([NotNull] string id)
+        public async Task<T?> GetAsync<T>([NotNull] string id)
         {
             ArgumentException.ThrowIfNullOrEmpty(id, nameof(id));
 
@@ -667,7 +228,7 @@ namespace UCode.RedisDatabase
                 try
                 {
 
-                    var result = await this.RedisDatabase.StringSetAsync(this.GetKey(id), redisValue.Value, timeToLive?.Expiration, When.Exists, this.DefaultCommandFlags);
+                    var result = await this.RedisDatabase.StringSetAsync(this.GetKey(id), redisValue, timeToLive?.Expiration, When.Exists, this.DefaultCommandFlags);
 
                     return result;
                 }
@@ -691,7 +252,7 @@ namespace UCode.RedisDatabase
             {
                 try
                 {
-                    var result = await this.RedisDatabase.StringSetAsync(this.GetKey(id), redisValue.Value, timeToLive?.Expiration, When.NotExists, this.DefaultCommandFlags);
+                    var result = await this.RedisDatabase.StringSetAsync(this.GetKey(id), redisValue, timeToLive?.Expiration, When.NotExists, this.DefaultCommandFlags);
 
                     return result;
                 }
@@ -715,7 +276,7 @@ namespace UCode.RedisDatabase
             {
                 try
                 {
-                    var result = await this.RedisDatabase.StringSetAsync(this.GetKey(id), redisValue.Value, timeToLive?.Expiration, When.Always, this.DefaultCommandFlags);
+                    var result = await this.RedisDatabase.StringSetAsync(this.GetKey(id), redisValue, timeToLive?.Expiration, When.Always, this.DefaultCommandFlags);
 
                     return result;
                 }
@@ -729,7 +290,7 @@ namespace UCode.RedisDatabase
         }
 
         [return: NotNull]
-        public async Task<bool> RemoveAsync<T>([NotNull] string id)
+        public async Task<bool> RemoveAsync([NotNull] string id)
         {
             ArgumentException.ThrowIfNullOrEmpty(id, nameof(id));
 
