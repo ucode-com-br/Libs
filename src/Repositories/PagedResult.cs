@@ -12,6 +12,11 @@ namespace UCode.Repositories
     public class PagedResult<T> : IPagedResult<T>
     {
         [JsonConstructor]
+        private PagedResult()
+        {
+
+        }
+
         public PagedResult(IEnumerable<T> results, int currentPage, int pageSize, int rowCount)
         {
             if (results is List<T> list)

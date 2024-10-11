@@ -5,9 +5,15 @@ using System.Threading.Tasks;
 
 namespace UCode.Repositories.MongoDB
 {
-    public class PagedResult<T> : IPagedResult<T>//, IReadOnlyList<T>
+    public class PagedResult<T> : IPagedResult<T>
     {
         [JsonConstructor]
+        private PagedResult()
+        {
+
+        }
+
+
         public PagedResult(IEnumerable<T> results, int currentPage, int pageSize, int rowCount)
         {
             //System.Convert.ChangeType(results, typeof(IReadOnlyList<T>))
