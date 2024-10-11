@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace UCode.Repositories.MongoDB
 {
     public class PagedResult<T> : IPagedResult<T>//, IReadOnlyList<T>
     {
+        [JsonConstructor]
         public PagedResult(IEnumerable<T> results, int currentPage, int pageSize, int rowCount)
         {
             //System.Convert.ChangeType(results, typeof(IReadOnlyList<T>))
@@ -52,6 +54,7 @@ namespace UCode.Repositories.MongoDB
 
         #region Public Properties
 
+        [JsonPropertyName("results")]
         /// <summary>
         /// Itens in the result set
         /// </summary>
@@ -66,6 +69,7 @@ namespace UCode.Repositories.MongoDB
             }
         }
 
+        [JsonPropertyName("currentPage")]
         /// <summary>
         /// Current page in the result set
         /// </summary>
@@ -74,6 +78,7 @@ namespace UCode.Repositories.MongoDB
             get; set;
         }
 
+        [JsonIgnore]
         /// <summary>
         /// Maszimum of pages in the result set
         /// </summary>
@@ -92,6 +97,7 @@ namespace UCode.Repositories.MongoDB
             set => this._pageCount = value;
         }
 
+        [JsonPropertyName("pageSize")]
         /// <summary>
         /// Total of itens per page
         /// </summary>
@@ -100,6 +106,7 @@ namespace UCode.Repositories.MongoDB
             get; set;
         }
 
+        [JsonPropertyName("rowCount")]
         /// <summary>
         /// Total of itens in the reesult set
         /// </summary>

@@ -1,11 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Text.Json.Serialization;
 
 namespace UCode.Repositories
 {
-    public class PagedResult<T> : IPagedResult<T>//, IEnumerable<T>
+    /// <summary>
+    /// Paged result
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public class PagedResult<T> : IPagedResult<T>
     {
+        [JsonConstructor]
         public PagedResult(IEnumerable<T> results, int currentPage, int pageSize, int rowCount)
         {
             if (results is List<T> list)
@@ -58,6 +64,7 @@ namespace UCode.Repositories
 
         #region Public Properties
 
+        [JsonPropertyName("results")]
         public IReadOnlyList<T> Results
         {
             get => this._results;
@@ -69,11 +76,13 @@ namespace UCode.Repositories
             }
         }
 
+        [JsonPropertyName("currentPage")]
         public int CurrentPage
         {
             get; set;
         }
 
+        [JsonIgnore]
         public int PageCount
         {
             get
@@ -89,11 +98,13 @@ namespace UCode.Repositories
             set => this._pageCount = value;
         }
 
+        [JsonPropertyName("pageSize")]
         public int PageSize
         {
             get; set;
         }
 
+        [JsonPropertyName("rowCount")]
         public int RowCount
         {
             get; set;
