@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using BinaryPack;
 
 namespace UCode.RedisDatabase.Serializer
@@ -36,8 +37,8 @@ namespace UCode.RedisDatabase.Serializer
         /// <typeparam name="T"></typeparam>
         /// <param name="source"></param>
         /// <returns></returns>
-        [return: NotNull]
-        public byte[] Serialize<T>([NotNull] T source)
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        public byte[] Serialize<T>(T source)
         {
             if (source == null || source.Equals(default))
             {
@@ -53,8 +54,8 @@ namespace UCode.RedisDatabase.Serializer
         /// <typeparam name="T"></typeparam>
         /// <param name="source"></param>
         /// <returns></returns>
-        [return: NotNull]
-        public T Deserialize<T>([NotNull] byte[] source)
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        public T Deserialize<T>(byte[]? source)
         {
             if (source == null || source.Length == 0)
             {

@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace UCode.RedisDatabase.Serializer
 {
@@ -14,7 +15,8 @@ namespace UCode.RedisDatabase.Serializer
         /// <param name="source"></param>
         /// <returns></returns>
         [return: NotNull]
-        byte[] Serialize<T>([NotNull] T source);
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        byte[] Serialize<T>(T source);
 
         /// <summary>
         /// Deserialize byte array to object
@@ -22,8 +24,9 @@ namespace UCode.RedisDatabase.Serializer
         /// <typeparam name="T"></typeparam>
         /// <param name="source"></param>
         /// <returns></returns>
-        [return: NotNull]
-        T Deserialize<T>([NotNull] byte[]? source);
+        [return: MaybeNull]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        T? Deserialize<T>(byte[]? source);
     }
 
 

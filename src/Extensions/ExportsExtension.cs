@@ -1,17 +1,14 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Data;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
-using NPOI.SS.Formula.Functions;
+using CsvHelper;
 using NPOI.SS.UserModel;
-using NPOI.XSSF.Streaming.Values;
 using NPOI.XSSF.UserModel;
 
 namespace UCode.Extensions
@@ -21,6 +18,50 @@ namespace UCode.Extensions
     /// </summary>
     public static class ExportsExtension
     {
+        /// <summary>
+        /// Generate Csf file
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="itens"></param>
+        /// <param name="configureAction"></param>
+        /// <returns></returns>
+        public static MemoryStream ToCsv<T>(this IEnumerable<T> itens, Action<CsvHelper.Configuration.CsvConfiguration>? configureAction = null)
+        {
+            var result = new MemoryStream();
+
+            using (var writer = new StreamWriter(result, leaveOpen: true))
+            {
+                var config = new CsvHelper.Configuration.CsvConfiguration(CultureInfo.InvariantCulture);
+
+                configureAction?.Invoke(config);
+
+                using (var csv = new CsvWriter(writer, config, true))
+                {
+                    var properties = typeof(T).GetProperties();
+                    foreach (var property in properties)
+                    {
+                        csv.WriteField(property.Name);
+                    }
+                    csv.NextRecord();
+
+                    foreach (var item in itens)
+                    {
+                        foreach (var property in properties)
+                        {
+                            var value = property.GetValue(item);
+
+                            csv.WriteField(value);
+                        }
+                        csv.NextRecord();
+                    }
+                }
+            }
+
+            result.Position = 0;
+            return result;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool ShouldIgnore(MemberInfo? memberInfo, object obj)
         {
             if (memberInfo == null)
@@ -51,8 +92,10 @@ namespace UCode.Extensions
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static object? GetDefaultValue(Type type) => type.IsValueType ? Activator.CreateInstance(type) : null;
 
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private static void FlattenObjectInternal<T>(JsonElement jsonElement, T obj, string prefix, Action<(string Key, object value)> addAction)
         {
             var type = obj.GetType();
@@ -102,13 +145,77 @@ namespace UCode.Extensions
                     break;
 
                 case JsonValueKind.String:
-                case JsonValueKind.Number:
-                case JsonValueKind.True:
-                case JsonValueKind.False:
-                case JsonValueKind.Null:
-                    addAction((prefix, jsonElement.GetRawText()));
+                    if (jsonElement.TryGetGuid(out var guidValue))
+                    {
+                        addAction((prefix, guidValue));
+                    }
+                    else if (jsonElement.TryGetDateTimeOffset(out var datetimeoffsetValue))
+                    {
+                        addAction((prefix, datetimeoffsetValue));
+                    }
+                    else if (jsonElement.TryGetDateTime(out var datetimeValue))
+                    {
+                        addAction((prefix, datetimeValue));
+                    }
+                    else if (DateOnly.TryParse(jsonElement.GetRawText().Trim('"'), out var dateValue))
+                    {
+                        addAction((prefix, datetimeValue));
+                    }
+                    else if (jsonElement.TryGetDecimal(out var decimal2Value))
+                    {
+                        addAction((prefix, decimal2Value));
+                    }
+                    else if (jsonElement.TryGetDouble(out var doubleValue))
+                    {
+                        addAction((prefix, doubleValue));
+                    }
+                    else if (jsonElement.TryGetSingle(out var singleValue))
+                    {
+                        addAction((prefix, singleValue));
+                    }
+                    else if (jsonElement.TryGetInt64(out var int64Value))
+                    {
+                        addAction((prefix, int64Value));
+                    }
+                    else
+                    {
+                        addAction((prefix, jsonElement.GetRawText()));
+                    }
                     break;
-
+                case JsonValueKind.Number:
+                    if (jsonElement.TryGetDecimal(out var decimalValue))
+                    {
+                        addAction((prefix, decimalValue));
+                    }
+                    else if (jsonElement.TryGetDouble(out var doubleValue))
+                    {
+                        addAction((prefix, doubleValue));
+                    }
+                    else if (jsonElement.TryGetSingle(out var singleValue))
+                    {
+                        addAction((prefix, singleValue));
+                    }
+                    else if (jsonElement.TryGetInt64(out var int64Value))
+                    {
+                        addAction((prefix, int64Value));
+                    }
+                    else
+                    {
+                        addAction((prefix, jsonElement.GetInt32()));
+                    }
+                    break;
+                case JsonValueKind.True:
+                    addAction((prefix, jsonElement.GetBoolean()));
+                    break;
+                case JsonValueKind.False:
+                    addAction((prefix, jsonElement.GetBoolean()));
+                    break;
+                case JsonValueKind.Null:
+                    addAction((prefix, ""));
+                    break;
+                case JsonValueKind.Undefined:
+                    addAction((prefix, jsonElement.GetRawText().Trim('"')));
+                    break;
                 default:
                     throw new ArgumentException($"Unsupported JSON value kind: {jsonElement.ValueKind}");
             }
@@ -128,86 +235,155 @@ namespace UCode.Extensions
             var result = new MemoryStream();
 
             using (var workbook = new XSSFWorkbook(XSSFWorkbookType.XLSX))
+
             {
 
                 var excelSheet = workbook.CreateSheet(sheetName);
+
                 var rowColumn = excelSheet.CreateRow(0);
 
                 var rowIndex = 1;
 
+                var headerStyle = workbook.CreateCellStyle();
+                var headerFont = workbook.CreateFont();
+                headerFont.IsBold = true;
+                headerFont.FontHeightInPoints = 12;
+                headerStyle.SetFont(headerFont);
+                headerStyle.FillForegroundColor = NPOI.HSSF.Util.HSSFColor.Grey25Percent.Index;
+                headerStyle.FillPattern = FillPattern.SolidForeground;
+
                 var actionAdd = new Action<(string Key, object value)>(((string Key, object Value) args) =>
+
                 {
+
                     if (!columns.Contains(args.Key))
                     {
                         columns.Add(args.Key);
-                        rowColumn.CreateCell(columns.Count - 1).SetCellValue(args.Key);
+                        var cell = rowColumn.CreateCell(columns.Count - 1);
+                        cell.SetCellValue(args.Key);
+                        cell.CellStyle = headerStyle;
                     }
 
                     var colIndex = columns.IndexOf(args.Key);
 
-                    var row = excelSheet.CreateRow(rowIndex);
+                    var row = excelSheet.GetRow(rowIndex) ?? excelSheet.CreateRow(rowIndex);
 
                     if (args.Value == null)
+
                     {
+
                         row.CreateCell(colIndex).SetCellType(CellType.Blank);
+
                         row.CreateCell(colIndex).SetBlank();
+
                     }
+
                     else
+
                     {
-                        var type = args.Value.GetType();
+                        var value = args.Value;
+                        var type = value.GetType();
+
+
                         if (type == typeof(int) || type == typeof(double) || type == typeof(float) || type == typeof(decimal) ||
+
                             type == typeof(long) || type == typeof(short) || type == typeof(ulong) || type == typeof(ushort) || type == typeof(uint))
                         {
+
                             row.CreateCell(colIndex).SetCellType(CellType.Numeric);
 
-                            row.CreateCell(colIndex).SetCellValue(Convert.ToDouble(args.Value));
+                            row.CreateCell(colIndex).SetCellValue(Convert.ToDouble(value));
                         }
+
                         else if (type == typeof(byte))
+
                         {
+
                             row.CreateCell(colIndex).SetCellType(CellType.Numeric);
-                            row.CreateCell(colIndex).SetCellValue(Convert.ToDouble(args.Value));
+
+                            row.CreateCell(colIndex).SetCellValue(Convert.ToDouble(value));
                         }
+
                         else if (type == typeof(string))
+
                         {
+
                             row.CreateCell(colIndex).SetCellType(CellType.String);
-                            row.CreateCell(colIndex).SetCellValue((string)args.Value);
+
+                            row.CreateCell(colIndex).SetCellValue((string)value);
+
                         }
+
                         else if (type == typeof(bool))
+
                         {
+
                             row.CreateCell(colIndex).SetCellType(CellType.Boolean);
-                            row.CreateCell(colIndex).SetCellValue((bool)args.Value);
+
+                            row.CreateCell(colIndex).SetCellValue((bool)value);
+
                         }
-                        else if (type == typeof(void)) // Ou qualquer outro tipo que você considere como "Blank"
-                        {
-                            row.CreateCell(colIndex).SetCellType(CellType.Blank);
-                            row.CreateCell(colIndex).SetBlank();
-                        }
+
                         else if (type == typeof(DateOnly))
+
                         {
-                            row.CreateCell(colIndex).SetCellValue((DateOnly)args.Value);
+
+                            var dateCell = row.CreateCell(colIndex);
+
+                            dateCell.SetCellValue(((DateOnly)value).ToDateTime(TimeOnly.MinValue));
+
+                            var style = workbook.CreateCellStyle();
+
+                            style.DataFormat = workbook.CreateDataFormat().GetFormat("dd/MM/yyyy");
+
+                            dateCell.CellStyle = style;
+
                         }
+
                         else if (type == typeof(DateTime))
+
                         {
-                            row.CreateCell(colIndex).SetCellValue((DateTime)args.Value);
+
+                            var dateCell = row.CreateCell(colIndex);
+
+                            dateCell.SetCellValue((DateTime)value);
+
+                            var style = workbook.CreateCellStyle();
+
+                            style.DataFormat = workbook.CreateDataFormat().GetFormat("dd/MM/yyyy");
+
+                            dateCell.CellStyle = style;
+
                         }
+
                         else
+
                         {
+
                             row.CreateCell(colIndex).SetCellType(CellType.Unknown);
+
                         }
+
                     }
+
                 });
 
                 foreach (var item in itens)
+
                 {
+
                     FlattenObjectInternal(JsonSerializer.SerializeToElement(item), item, "", actionAdd);
 
                     rowIndex++;
+
                 }
 
                 workbook.Write(result, true);
+
             }
 
             return result;
+
         }
     }
 }

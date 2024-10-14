@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
@@ -47,6 +48,7 @@ namespace UCode.RedisDatabase
 
 
         [return: MaybeNull]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private T? GetValue<T>([NotNull] RedisValue redisValue)
         {
             switch (typeof(T))
@@ -70,6 +72,7 @@ namespace UCode.RedisDatabase
         }
 
         [return: NotNull]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private RedisValue SetValue<T>(T? source)
         {
             switch (source)
