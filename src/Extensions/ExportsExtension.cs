@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -114,12 +115,15 @@ namespace UCode.Extensions
                         var propertyInfo = properties.FirstOrDefault(p => p.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name == propertyName || p.Name == propertyName);
                         var fieldInfo = fields.FirstOrDefault(f => f.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name == propertyName || f.Name == propertyName);
 
+                        var propertyElementName = propertyInfo?.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name;
+                        var fieldElementName = fieldInfo?.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name;
+
                         if (ShouldIgnore(propertyInfo, obj) || ShouldIgnore(fieldInfo, obj))
                         {
                             continue;
                         }
 
-                        var newPrefix = string.IsNullOrEmpty(prefix) ? propertyName : $"{prefix}.{propertyName}";
+                        var newPrefix = string.IsNullOrEmpty(prefix) ? propertyElementName ?? fieldElementName : $"{prefix}.{propertyElementName ?? fieldElementName}";
                         var value = propertyInfo?.GetValue(obj) ?? fieldInfo?.GetValue(obj);
 
                         if (value != null)
@@ -131,10 +135,13 @@ namespace UCode.Extensions
 
                 case JsonValueKind.Array:
                     int index = 0;
+                    var enumerator = ((IEnumerable)obj).GetEnumerator();
                     foreach (var arrayElement in jsonElement.EnumerateArray())
                     {
                         var newPrefix = $"{prefix}[{index}]";
-                        var value = obj.GetType().GetProperty(prefix)?.GetValue(obj) ?? obj.GetType().GetField(prefix)?.GetValue(obj);
+                        enumerator.MoveNext();
+
+                        var value = enumerator.Current;
 
                         if (value != null)
                         {
@@ -161,25 +168,9 @@ namespace UCode.Extensions
                     {
                         addAction((prefix, datetimeValue));
                     }
-                    else if (jsonElement.TryGetDecimal(out var decimal2Value))
-                    {
-                        addAction((prefix, decimal2Value));
-                    }
-                    else if (jsonElement.TryGetDouble(out var doubleValue))
-                    {
-                        addAction((prefix, doubleValue));
-                    }
-                    else if (jsonElement.TryGetSingle(out var singleValue))
-                    {
-                        addAction((prefix, singleValue));
-                    }
-                    else if (jsonElement.TryGetInt64(out var int64Value))
-                    {
-                        addAction((prefix, int64Value));
-                    }
                     else
                     {
-                        addAction((prefix, jsonElement.GetRawText()));
+                        addAction((prefix, jsonElement.GetRawText().Trim('"')));
                     }
                     break;
                 case JsonValueKind.Number:
@@ -350,9 +341,12 @@ namespace UCode.Extensions
 
                 });
 
+
                 foreach (var item in itens)
                 {
-                    FlattenObjectInternal(JsonSerializer.SerializeToElement(item), item, "", actionAdd);
+
+                    var jsonElement = JsonSerializer.SerializeToElement<T>(item);
+                    FlattenObjectInternal(jsonElement, item, "", actionAdd);
 
                     rowIndex++;
                 }
@@ -364,4 +358,6 @@ namespace UCode.Extensions
 
         }
     }
+
+
 }
