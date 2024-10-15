@@ -284,9 +284,12 @@ namespace UCode.Extensions
                         var value = args.Value;
                         var type = value.GetType();
 
+                        if (type == typeof(void))
+                        {
+                            return;
+                        }
 
                         if (type == typeof(int) || type == typeof(double) || type == typeof(float) || type == typeof(decimal) ||
-
                             type == typeof(long) || type == typeof(short) || type == typeof(ulong) || type == typeof(ushort) || type == typeof(uint))
                         {
 
@@ -294,40 +297,26 @@ namespace UCode.Extensions
 
                             row.CreateCell(colIndex).SetCellValue(Convert.ToDouble(value));
                         }
-
                         else if (type == typeof(byte))
-
                         {
-
                             row.CreateCell(colIndex).SetCellType(CellType.Numeric);
 
                             row.CreateCell(colIndex).SetCellValue(Convert.ToDouble(value));
                         }
-
                         else if (type == typeof(string))
-
                         {
-
                             row.CreateCell(colIndex).SetCellType(CellType.String);
 
                             row.CreateCell(colIndex).SetCellValue((string)value);
-
                         }
-
                         else if (type == typeof(bool))
-
                         {
-
                             row.CreateCell(colIndex).SetCellType(CellType.Boolean);
 
                             row.CreateCell(colIndex).SetCellValue((bool)value);
-
                         }
-
                         else if (type == typeof(DateOnly))
-
                         {
-
                             var dateCell = row.CreateCell(colIndex);
 
                             dateCell.SetCellValue(((DateOnly)value).ToDateTime(TimeOnly.MinValue));
@@ -337,13 +326,9 @@ namespace UCode.Extensions
                             style.DataFormat = workbook.CreateDataFormat().GetFormat("dd/MM/yyyy");
 
                             dateCell.CellStyle = style;
-
                         }
-
                         else if (type == typeof(DateTime))
-
                         {
-
                             var dateCell = row.CreateCell(colIndex);
 
                             dateCell.SetCellValue((DateTime)value);
@@ -353,15 +338,12 @@ namespace UCode.Extensions
                             style.DataFormat = workbook.CreateDataFormat().GetFormat("dd/MM/yyyy");
 
                             dateCell.CellStyle = style;
-
                         }
-
                         else
-
                         {
+                            row.CreateCell(colIndex).SetCellType(CellType.String);
 
-                            row.CreateCell(colIndex).SetCellType(CellType.Unknown);
-
+                            row.CreateCell(colIndex).SetCellValue(value.ToString());
                         }
 
                     }
@@ -369,17 +351,13 @@ namespace UCode.Extensions
                 });
 
                 foreach (var item in itens)
-
                 {
-
                     FlattenObjectInternal(JsonSerializer.SerializeToElement(item), item, "", actionAdd);
 
                     rowIndex++;
-
                 }
 
                 workbook.Write(result, true);
-
             }
 
             return result;
