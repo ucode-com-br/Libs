@@ -41,8 +41,9 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.1" />
-    <PackageReference Include="MongoDB.Driver" Version="2.29.0" />
-    <PackageReference Include="MongoDB.Driver.Core" Version="2.29.0" />
+    <PackageReference Include="MongoDB.Bson" Version="2.30.0" />
+    <PackageReference Include="MongoDB.Driver" Version="2.30.0" />
+    <PackageReference Include="MongoDB.Driver.Core" Version="2.30.0" />
     <!--<PackageReference Include="UCode.Extensions" Version="1.8.3" Condition="'$(Configuration)'!='Debug'" />
     <PackageReference Include="UCode.Repositories" Version="1.8.3" Condition="'$(Configuration)'!='Debug'" />-->
   </ItemGroup>
