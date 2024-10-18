@@ -142,7 +142,7 @@ namespace UCode.Mongo
             var mongoClientSettings = MongoClientSettings.FromConnectionString(connectionString);
 
             // Set up LINQ provider
-            mongoClientSettings.LinqProvider = MongoDB.Driver.Linq.LinqProvider.V3;
+            //mongoClientSettings.LinqProvider = MongoDB.Driver.Linq.LinqProvider.V3;
 
             // Set application name if provided
             if (!string.IsNullOrWhiteSpace(applicationName))
