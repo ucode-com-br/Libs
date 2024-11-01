@@ -388,7 +388,7 @@ namespace UCode.Mongo
         /// <param name="query">The Query object to convert.</param>
         /// <returns>A new ProjectionDefinition object.</returns>
         [return: NotNull]
-        public static implicit operator ProjectionDefinition<TDocument, TProjection>([NotNull] Query<TDocument, TProjection> query)
+        public static implicit operator MongoDB.Driver.ProjectionDefinition<TDocument, TProjection>([NotNull] Query<TDocument, TProjection> query)
         {
             // If the query is null or default, return the default ProjectionDefinition
             if (query == default)

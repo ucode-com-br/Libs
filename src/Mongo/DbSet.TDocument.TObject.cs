@@ -9,7 +9,6 @@ using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Amazon.Auth.AccessControlPolicy;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
@@ -17,7 +16,6 @@ using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using UCode.Extensions;
-using UCode.Mongo.Options;
 using UCode.Repositories;
 
 namespace UCode.Mongo
@@ -67,36 +65,35 @@ namespace UCode.Mongo
         /// </summary>
         /// <param name="contextBase">The context base.</param>
         /// <param name="collectionName">The name of the collection.</param>
-        /// <param name="timeSeriesOptions">The time series options.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public DbSet([NotNull] ContextBase contextBase, string? collectionName = null, Options.TimerSeriesOptions? timeSeriesOptions = null)
+        public DbSet([NotNull] ContextBase contextBase, string? collectionName = null,
+            Action<CreateCollectionOptions>? createCollectionOptionsAction = null,
+            Action<MongoCollectionSettings>? mongoCollectionSettingsAction = null,
+            bool forceTransaction = false)
         {
-            // If time series options are provided, create the collection if it doesn't exist
-            if (timeSeriesOptions is not null)
+            if (contextBase.CollectionNames().FirstOrDefault(f => f.Equals(collectionName, StringComparison.Ordinal)) == default)
             {
-                if (contextBase.CollectionNames().FirstOrDefault(f => f.Equals(collectionName, StringComparison.Ordinal)) == default)
-                {
-                    contextBase.Database.CreateCollection(collectionName ?? $"{nameof(TDocument)}Collection", new CreateCollectionOptions()
-                    {
-                        TimeSeriesOptions = timeSeriesOptions,
-                        ExpireAfter = TimeSpan.FromSeconds(timeSeriesOptions.ExpireAfterSeconds)
-                    });
-                }
-            };
+                var createCollectionOptions = new CreateCollectionOptions();
+
+                createCollectionOptionsAction?.Invoke(createCollectionOptions);
+
+                contextBase.Database.CreateCollection(collectionName ?? $"{nameof(TDocument)}Collection", createCollectionOptions);
+            }
 
             CollectionName = collectionName ?? $"{nameof(TDocument)}Collection";
 
+            var mongoCollectionSettings = new MongoCollectionSettings();
+
+            mongoCollectionSettingsAction?.Invoke(mongoCollectionSettings);
+
             // Initialize the MongoDB collection
-            this.MongoCollection =
-                contextBase.Database.GetCollection<TDocument>(CollectionName, new MongoCollectionSettings());
+            this.MongoCollection = contextBase.Database.GetCollection<TDocument>(CollectionName, mongoCollectionSettings);
 
             // Set the context base
             this._contextbase = contextBase;
 
             // Initialize the logger
             this.Logger = contextBase.LoggerFactory.CreateLogger<DbSet<TDocument, TObjectId>>();
-
-            //this.SetLogger(_ => _.Logger);
         }
 
         /// <summary>
@@ -114,7 +111,7 @@ namespace UCode.Mongo
 
             if (useSession)
             {
-                idxsb = await this.MongoCollection.Indexes.ListAsync(session: this._contextbase.Session, default);
+                idxsb = await this.MongoCollection.Indexes.ListAsync(session: this._contextbase.ContextSession, default);
             }
             else
             {
@@ -177,7 +174,7 @@ namespace UCode.Mongo
             if (useSession)
             {
                 // Use the session to create the indexes
-                _ = await this.MongoCollection.Indexes.CreateManyAsync(this._contextbase.Session, models);
+                _ = await this.MongoCollection.Indexes.CreateManyAsync(this._contextbase.ContextSession, models);
             }
             else
             {
@@ -190,7 +187,7 @@ namespace UCode.Mongo
         /// Returns an IQueryable of type TDocument.
         /// </summary>
         /// <returns>An IQueryable of type TDocument.</returns>
-        public IQueryable<TDocument> AsQueryable(AggregateOptions<TDocument>? aggregateOptions = null)
+        public IQueryable<TDocument> AsQueryable(AggregateOptions? aggregateOptions = null, bool forceSession = false)
         {
             IQueryable<TDocument> queryable;
 
@@ -203,10 +200,10 @@ namespace UCode.Mongo
                 queryable = this.MongoCollection.AsQueryable(option);
             }
             // If a transaction is in use
-            else if (this._contextbase.IsUseTransaction)
+            else if (this._contextbase.TransactionalContext)
             {
                 // Perform the replace operation with a session
-                queryable = this.MongoCollection.AsQueryable(this._contextbase.Session, option);
+                queryable = this.MongoCollection.AsQueryable(this._contextbase.ContextSession, option);
             }
             // If no transaction is in use
             else
@@ -296,9 +293,9 @@ namespace UCode.Mongo
             {
                 return await this.MongoCollection.CountDocumentsAsync(query, countOptions, cancellationToken) > 0;
             }
-            else if (this._contextbase.IsUseTransaction)
+            else if (this._contextbase.TransactionalContext)
             {
-                return await this.MongoCollection.CountDocumentsAsync(this._contextbase.Session, query, countOptions, cancellationToken) > 0;
+                return await this.MongoCollection.CountDocumentsAsync(this._contextbase.ContextSession, query, countOptions, cancellationToken) > 0;
             }
             else
             {
@@ -397,10 +394,10 @@ namespace UCode.Mongo
                 // Perform the find operation with the filter
                 cursor = await this.MongoCollection.FindAsync(filterSelected, options);
             }
-            else if (this._contextbase.IsUseTransaction)
+            else if (this._contextbase.TransactionalContext)
             {
                 // Perform the find operation with the session and filter
-                cursor = await this.MongoCollection.FindAsync(this._contextbase.Session, filterSelected, options);
+                cursor = await this.MongoCollection.FindAsync(this._contextbase.ContextSession, filterSelected, options);
             }
             else
             {
@@ -620,10 +617,10 @@ namespace UCode.Mongo
                 // Perform the find operation with the filter
                 cursor = await this.MongoCollection.FindAsync(filterSelected, options);
             }
-            else if (this._contextbase.IsUseTransaction)
+            else if (this._contextbase.TransactionalContext)
             {
                 // Perform the find operation with the session and filter
-                cursor = await this.MongoCollection.FindAsync(this._contextbase.Session, filterSelected, options);
+                cursor = await this.MongoCollection.FindAsync(this._contextbase.ContextSession, filterSelected, options);
             }
             else
             {
@@ -758,10 +755,10 @@ namespace UCode.Mongo
                 // Perform the find operation with the filter
                 cursor = await this.MongoCollection.FindAsync(filterSelected, options);
             }
-            else if (this._contextbase.IsUseTransaction)
+            else if (this._contextbase.TransactionalContext)
             {
                 // Perform the find operation with the session and filter
-                cursor = await this.MongoCollection.FindAsync(this._contextbase.Session, filterSelected, options);
+                cursor = await this.MongoCollection.FindAsync(this._contextbase.ContextSession, filterSelected, options);
             }
             else
             {
@@ -866,11 +863,11 @@ namespace UCode.Mongo
                 this.Logger.LogDebug($"Call \"this.MongoCollection.FindAsync(...)\" without session, filter: \"{filterSelected}\" and options: {options.JsonString()}");
                 cursor = await this.MongoCollection.FindAsync(filterSelected, options);
             }
-            else if (this._contextbase.IsUseTransaction)
+            else if (this._contextbase.TransactionalContext)
             {
                 // Perform the find operation with the session and filter
                 this.Logger.LogDebug($"Call \"this.MongoCollection.FindAsync(...)\" with session, filter: \"{filterSelected}\" and options: {options.JsonString()}");
-                cursor = await this.MongoCollection.FindAsync(this._contextbase.Session, filterSelected, options);
+                cursor = await this.MongoCollection.FindAsync(this._contextbase.ContextSession, filterSelected, options);
             }
             else
             {
@@ -945,10 +942,10 @@ namespace UCode.Mongo
                 result = await this.MongoCollection.FindOneAndUpdateAsync(filter, update, fouOptions, cancellationToken);
             }
             // If a transaction is in use
-            else if (this._contextbase.IsUseTransaction)
+            else if (this._contextbase.TransactionalContext)
             {
                 // Perform the find and update operation with a session
-                result = await this.MongoCollection.FindOneAndUpdateAsync(this._contextbase.Session, filter, update, fouOptions, cancellationToken);
+                result = await this.MongoCollection.FindOneAndUpdateAsync(this._contextbase.ContextSession, filter, update, fouOptions, cancellationToken);
             }
             // If no transaction is in use
             else
@@ -989,10 +986,10 @@ namespace UCode.Mongo
                 result = await this.MongoCollection.FindOneAndUpdateAsync(filter, _contextbase.BeforeUpdateInternal<TDocument, TObjectId>(update), fouOptions, cancellationToken);
             }
             // If a transaction is in use
-            else if (this._contextbase.IsUseTransaction)
+            else if (this._contextbase.TransactionalContext)
             {
                 // Perform the find and update operation with a session
-                result = await this.MongoCollection.FindOneAndUpdateAsync(this._contextbase.Session, filter, _contextbase.BeforeUpdateInternal<TDocument, TObjectId>(update), fouOptions, cancellationToken);
+                result = await this.MongoCollection.FindOneAndUpdateAsync(this._contextbase.ContextSession, filter, _contextbase.BeforeUpdateInternal<TDocument, TObjectId>(update), fouOptions, cancellationToken);
             }
             // If no transaction is in use
             else
@@ -1035,10 +1032,10 @@ namespace UCode.Mongo
                 result = await this.MongoCollection.FindOneAndUpdateAsync(filter, _contextbase.BeforeUpdateInternal<TDocument, TObjectId>(update), fouOptions, cancellationToken);
             }
             // If a transaction is in use
-            else if (this._contextbase.IsUseTransaction)
+            else if (this._contextbase.TransactionalContext)
             {
                 // Perform the find and update operation with a session
-                result = await this.MongoCollection.FindOneAndUpdateAsync(this._contextbase.Session, filter, _contextbase.BeforeUpdateInternal<TDocument, TObjectId>(update), fouOptions, cancellationToken);
+                result = await this.MongoCollection.FindOneAndUpdateAsync(this._contextbase.ContextSession, filter, _contextbase.BeforeUpdateInternal<TDocument, TObjectId>(update), fouOptions, cancellationToken);
             }
             // If no transaction is in use
             else
@@ -1077,10 +1074,10 @@ namespace UCode.Mongo
                 // Perform the update operation without a session
                 result = await this.MongoCollection.UpdateManyAsync(query, _contextbase.BeforeUpdateInternal<TDocument, TObjectId>(query.Update), options, cancellationToken);
             }
-            else if (this._contextbase.IsUseTransaction)
+            else if (this._contextbase.TransactionalContext)
             {
                 // Perform the update operation without a session
-                result = await this.MongoCollection.UpdateManyAsync(this._contextbase.Session, query, _contextbase.BeforeUpdateInternal<TDocument, TObjectId>(query.Update), options, cancellationToken);
+                result = await this.MongoCollection.UpdateManyAsync(this._contextbase.ContextSession, query, _contextbase.BeforeUpdateInternal<TDocument, TObjectId>(query.Update), options, cancellationToken);
             }
             else
             {
@@ -1115,10 +1112,10 @@ namespace UCode.Mongo
                 result = await this.MongoCollection.UpdateManyAsync(filter, update, options, cancellationToken);
             }
             // If a transaction is in use
-            else if (this._contextbase.IsUseTransaction)
+            else if (this._contextbase.TransactionalContext)
             {
                 // Perform the update operation with a session
-                result = await this.MongoCollection.UpdateManyAsync(this._contextbase.Session, filter, update, options, cancellationToken);
+                result = await this.MongoCollection.UpdateManyAsync(this._contextbase.ContextSession, filter, update, options, cancellationToken);
             }
             // If no transaction is in use
             else
@@ -1164,7 +1161,7 @@ namespace UCode.Mongo
         public async ValueTask<long> CountDocumentsAsync([NotNull] Func<IQueryable<TDocument>, IQueryable<TDocument>> preApprend, Options.AggregateOptions<TDocument>? aggregateOptions = default)
         {
             // Create a queryable from the MongoCollection using the session and default aggregate options
-            var query = this.MongoCollection.AsQueryable(this._contextbase.Session, new AggregateOptions());
+            var query = this.MongoCollection.AsQueryable(this._contextbase.ContextSession, new AggregateOptions());
 
             // Invoke the preApprend function on the queryable
             var queryAppended = preApprend.Invoke(query);
@@ -1198,10 +1195,10 @@ namespace UCode.Mongo
                 // If a transaction is in use
                 return await this.MongoCollection.CountDocumentsAsync(filterDefinition, countOptions);
             }
-            else if (this._contextbase.IsUseTransaction)
+            else if (this._contextbase.TransactionalContext)
             {
                 // Perform the count operation without a session
-                return await this.MongoCollection.CountDocumentsAsync(this._contextbase.Session, filterDefinition, countOptions);
+                return await this.MongoCollection.CountDocumentsAsync(this._contextbase.ContextSession, filterDefinition, countOptions);
             }
             else
             {
@@ -1260,10 +1257,10 @@ namespace UCode.Mongo
                 result = await this.MongoCollection.UpdateOneAsync(filterDefinition, updateDefinition, updateOptions, cancellationToken);
             }
             // If a transaction is in use
-            else if (this._contextbase.IsUseTransaction)
+            else if (this._contextbase.TransactionalContext)
             {
                 // Perform the update operation with a session
-                result = await this.MongoCollection.UpdateOneAsync(this._contextbase.Session, filterDefinition, updateDefinition, updateOptions, cancellationToken);
+                result = await this.MongoCollection.UpdateOneAsync(this._contextbase.ContextSession, filterDefinition, updateDefinition, updateOptions, cancellationToken);
             }
             // If no transaction is in use
             else
@@ -1307,10 +1304,10 @@ namespace UCode.Mongo
                 await this.MongoCollection.InsertOneAsync(_contextbase.BeforeInsertInternal<TDocument, TObjectId>(source), insertOneOptions, cancellationToken);
             }
             // If a transaction is in use
-            else if (this._contextbase.IsUseTransaction)
+            else if (this._contextbase.TransactionalContext)
             {
                 // Perform the update operation with a session
-                await this.MongoCollection.InsertOneAsync(this._contextbase.Session, _contextbase.BeforeInsertInternal<TDocument, TObjectId>(source), insertOneOptions, cancellationToken);
+                await this.MongoCollection.InsertOneAsync(this._contextbase.ContextSession, _contextbase.BeforeInsertInternal<TDocument, TObjectId>(source), insertOneOptions, cancellationToken);
             }
             // If no transaction is in use
             else
@@ -1458,10 +1455,10 @@ namespace UCode.Mongo
                 result = await this.MongoCollection.ReplaceOneAsync(filterDefinition, _contextbase.BeforeReplaceInternal<TDocument, TObjectId>(doc), replaceOptions, cancellationToken);
             }
             // If a transaction is in use
-            else if (this._contextbase.IsUseTransaction)
+            else if (this._contextbase.TransactionalContext)
             {
                 // Perform the replace operation with a session
-                result = await this.MongoCollection.ReplaceOneAsync(this._contextbase.Session, filterDefinition, _contextbase.BeforeInsertInternal<TDocument, TObjectId>(doc), replaceOptions, cancellationToken);
+                result = await this.MongoCollection.ReplaceOneAsync(this._contextbase.ContextSession, filterDefinition, _contextbase.BeforeInsertInternal<TDocument, TObjectId>(doc), replaceOptions, cancellationToken);
             }
             // If no transaction is in use
             else
@@ -1751,10 +1748,10 @@ namespace UCode.Mongo
                 // Create a cursor for the aggregation operation
                 cursor = await this.MongoCollection.AggregateAsync<TProjection>(bsonDocumentFilter, aggregateOptions, cancellationToken);
             }
-            else if (this._contextbase.IsUseTransaction)
+            else if (this._contextbase.TransactionalContext)
             {
                 // Create a cursor for the aggregation operation with the session and filter
-                cursor = await this.MongoCollection.AggregateAsync<TProjection>(this._contextbase.Session, bsonDocumentFilter, aggregateOptions, cancellationToken);
+                cursor = await this.MongoCollection.AggregateAsync<TProjection>(this._contextbase.ContextSession, bsonDocumentFilter, aggregateOptions, cancellationToken);
             }
             else
             {
@@ -1801,10 +1798,10 @@ namespace UCode.Mongo
                 // Perform the bulk write operation without a session
                 result = await this.MongoCollection.BulkWriteAsync(writeModel, bulkWriteOptions, cancellationToken);
             }
-            else if (this._contextbase.IsUseTransaction)
+            else if (this._contextbase.TransactionalContext)
             {
                 // Perform the bulk write operation with a session
-                result = await this.MongoCollection.BulkWriteAsync(this._contextbase.Session, writeModel, bulkWriteOptions, cancellationToken);
+                result = await this.MongoCollection.BulkWriteAsync(this._contextbase.ContextSession, writeModel, bulkWriteOptions, cancellationToken);
             }
             else
             {
@@ -1875,7 +1872,7 @@ namespace UCode.Mongo
         {
             if (disposing)
             {
-                this._contextbase.Session?.Dispose();
+                this._contextbase.ContextSession?.Dispose();
             }
             //(_asyncDisposableResource as IDisposable)?.Dispose();
 
@@ -1895,13 +1892,13 @@ namespace UCode.Mongo
             //}
 
             // ReSharper disable once SuspiciousTypeConversion.Global
-            if (this._contextbase.Session is IAsyncDisposable disposable)
+            if (this._contextbase.ContextSession is IAsyncDisposable disposable)
             {
                 await disposable.DisposeAsync().ConfigureAwait(false);
             }
             else
             {
-                this._contextbase.Session?.Dispose();
+                this._contextbase.ContextSession?.Dispose();
             }
 
             //_asyncDisposableResource = null;

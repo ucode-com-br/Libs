@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <CodeAnalysisRuleSet>..\..\MongoDBLegacy.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AssemblyTitle>MongoDB.Bson</AssemblyTitle>
+    <Product>MongoDB.Bson</Product>
+    <PackageId>MongoDB.Bson</PackageId>
+    <Description>Official MongoDB supported BSON library. See https://www.mongodb.com/docs/drivers/csharp/ for more details.</Description>
+    <PackageDescription>MongoDB's Official Bson Library.</PackageDescription>
+    <PackageTags>$(PackageTags);bson</PackageTags>
+    <IsPackable>true</IsPackable>
+    <NoWarn>NU5100; SYSLIB0051; SYSLIB0050</NoWarn>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="5.0.0" />
+    <PackageReference Include="System.Memory" Version="4.5.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\MongoDB.Shared\DictionaryComparer.cs" Link="Shared\DictionaryComparer.cs" />
+    <Compile Include="..\MongoDB.Shared\Hasher.cs" Link="Shared\Hasher.cs" />
+    <Compile Include="..\MongoDB.Shared\SequenceComparer.cs" Link="Shared\SequenceComparer.cs" />
+  </ItemGroup>
+
+</Project>

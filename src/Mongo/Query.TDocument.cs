@@ -4,7 +4,6 @@ using System.Linq.Expressions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using UCode.Extensions;
-using UCode.Mongo.Options;
 
 namespace UCode.Mongo
 {
@@ -216,7 +215,7 @@ namespace UCode.Mongo
         /// <param name="query">The query to convert.</param>
         /// <returns>A <see cref="ProjectionDefinition{TDocument}"/> representing the query.</returns>
         [return: NotNull]
-        public static implicit operator ProjectionDefinition<TDocument>([NotNull] Query<TDocument> query)
+        public static implicit operator MongoDB.Driver.ProjectionDefinition<TDocument>([NotNull] Query<TDocument> query)
         {
             // If the query is null, return the default value
             if (query == default)

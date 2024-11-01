@@ -29,5 +29,11 @@ namespace UCode.MongoTests
             get;
             set;
         }
+
+        public List<string> MyProperty4
+        {
+            get;
+            set;
+        } = new List<string>();
     }
 }

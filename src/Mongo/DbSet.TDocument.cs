@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-using UCode.Mongo.Options;
 
 namespace UCode.Mongo
 {
@@ -19,7 +18,7 @@ namespace UCode.Mongo
         /// <param name="collectionName">Name of the collection.</param>
         /// <param name="options">The options.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public DbSet([NotNull] ContextBase contextBase, string? collectionName = null, TimerSeriesOptions? options = null) : base(contextBase,
+        public DbSet([NotNull] ContextBase contextBase, string? collectionName = null, MongoDB.Driver.TimeSeriesOptions? options = null) : base(contextBase,
             collectionName, options)
         {
 
