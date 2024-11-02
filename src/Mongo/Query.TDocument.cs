@@ -31,7 +31,7 @@ namespace UCode.Mongo
         {
         }
 
-        internal Query(string text, FullTextSearchOptions<TDocument> fullTextSearchOptions) : base(text, fullTextSearchOptions)
+        internal Query(string text, TextSearchOptions fullTextSearchOptions) : base(text, fullTextSearchOptions)
         {
         }
         #endregion Constructors
@@ -80,7 +80,7 @@ namespace UCode.Mongo
         /// <param name="text">The text to search for.</param>
         /// <param name="fulltextSearchOptions">Options for the full-text search.</param>
         /// <returns>A new instance of the Query class.</returns>
-        public static Query<TDocument> FromText([NotNull] string text, [NotNull] FullTextSearchOptions<TDocument> fulltextSearchOptions = default) => new(Builders<TDocument>.Filter.Text(text, fulltextSearchOptions));
+        public static Query<TDocument> FromText([NotNull] string text, [NotNull] TextSearchOptions fulltextSearchOptions = default) => new(Builders<TDocument>.Filter.Text(text, fulltextSearchOptions));
         #endregion Static Methods
 
         /// <summary>

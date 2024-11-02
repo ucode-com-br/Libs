@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Net.NetworkInformation;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,6 +16,8 @@ using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
+using MongoDB.Driver.Core.Bindings;
+using Org.BouncyCastle.Crypto;
 using UCode.Extensions;
 using UCode.Repositories;
 
@@ -57,20 +60,64 @@ namespace UCode.Mongo
             get;
         }
 
+        public bool UseTransaction
+        {
+            get;
+        }
+
+        private bool InTransaction(bool? forceTransaction, out IClientSessionHandle? clientSessionHandle)
+        {
+            if (!forceTransaction.HasValue && this._contextbase.TransactionalContext)
+            {
+                clientSessionHandle = this._contextbase.StartTransaction();
+            }
+            else if (forceTransaction.HasValue && forceTransaction.Value)
+            {
+                clientSessionHandle = this._contextbase.CreateSession();
+            }
+            else
+            {
+                clientSessionHandle = null;
+            }
+
+            return clientSessionHandle == default;
+        }
+
+        private FindOptions<TDocument, TDocument> Convert(FindOptions? findOptions)
+        {
+            var opt = new FindOptions<TDocument, TDocument>();
+
+            if (findOptions != default)
+            {
+                var json = System.Text.Json.JsonSerializer.Serialize(findOptions);
+
+                opt = System.Text.Json.JsonSerializer.Deserialize<FindOptions<TDocument, TDocument>>(json)!;
+            }
+
+            return opt;
+        }
+
+        private FindOptions<TDocument, TDocument> Convert(FindOptions<TDocument>? findOptions) => findOptions ?? new FindOptions<TDocument>();
 
 
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DbSet{TDocument, TObjectId}"/> class.
+        /// This constructor sets up the MongoDB collection and the associated context based on the provided parameters.
         /// </summary>
-        /// <param name="contextBase">The context base.</param>
-        /// <param name="collectionName">The name of the collection.</param>
+        /// <param name="contextBase">The context base used for database operations.</param>
+        /// <param name="collectionName">The name of the collection. If null, a default collection name will be generated.</param>
+        /// <param name="createCollectionOptionsAction">An optional action to configure the creation options for the collection.</param>
+        /// <param name="mongoCollectionSettingsAction">An optional action to configure settings for the MongoDB collection.</param>
+        /// <param name="useTransaction">Specifies whether to use transactions for the operations in this DbSet.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public DbSet([NotNull] ContextBase contextBase, string? collectionName = null,
-            Action<CreateCollectionOptions>? createCollectionOptionsAction = null,
-            Action<MongoCollectionSettings>? mongoCollectionSettingsAction = null,
-            bool forceTransaction = false)
+                    Action<CreateCollectionOptions>? createCollectionOptionsAction = null,
+                    Action<MongoCollectionSettings>? mongoCollectionSettingsAction = null,
+                    bool useTransaction = false)
         {
+            UseTransaction = useTransaction;
+
             if (contextBase.CollectionNames().FirstOrDefault(f => f.Equals(collectionName, StringComparison.Ordinal)) == default)
             {
                 var createCollectionOptions = new CreateCollectionOptions();
@@ -96,6 +143,7 @@ namespace UCode.Mongo
             this.Logger = contextBase.LoggerFactory.CreateLogger<DbSet<TDocument, TObjectId>>();
         }
 
+
         /// <summary>
         /// Retrieves the names and fields indexed by each index in the collection.
         /// This method requires further testing.
@@ -105,21 +153,22 @@ namespace UCode.Mongo
         /// and the value is a list of the fields indexed by that index.
         /// </returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async IAsyncEnumerable<KeyValuePair<string, List<string>>> GetIndexesAsync(bool useSession = false)
+        public async IAsyncEnumerable<KeyValuePair<string, List<string>>> GetIndexesAsync(bool? forceTransaction = default,
+            CancellationToken cancellationToken = default)
         {
             IAsyncCursor<BsonDocument> idxsb = null;
 
-            if (useSession)
+            if (InTransaction(forceTransaction, out var clientSessionHandle))
             {
-                idxsb = await this.MongoCollection.Indexes.ListAsync(session: this._contextbase.ContextSession, default);
+                idxsb = await this.MongoCollection.Indexes.ListAsync(session: clientSessionHandle, cancellationToken);
             }
             else
             {
-                idxsb = await this.MongoCollection.Indexes.ListAsync();
+                idxsb = await this.MongoCollection.Indexes.ListAsync(cancellationToken);
             }
 
             // Iterate through each batch of indexes
-            while (idxsb.MoveNext())
+            while (idxsb.MoveNext(cancellationToken))
             {
                 var idxs = idxsb.Current;
 
@@ -150,6 +199,7 @@ namespace UCode.Mongo
 
         }
 
+
         /// <summary>
         /// Asynchronously creates multiple indexes in the collection.
         /// </summary>
@@ -157,7 +207,9 @@ namespace UCode.Mongo
         /// <param name="useSession">Whether to use a session for the operation. Default is false.</param>
         /// <returns>A task that represents the asynchronous operation.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async ValueTask IndexAsync([NotNull] Dictionary<IndexKeysDefinition<TDocument>, CreateIndexOptions> indexKeysDefinitions, bool useSession = false)
+        public async ValueTask IndexAsync([NotNull] Dictionary<IndexKeysDefinition<TDocument>, CreateIndexOptions> indexKeysDefinitions,
+            bool? forceTransaction = default,
+            CancellationToken cancellationToken = default)
         {
             // Create a list to hold the models
             var models = new List<CreateIndexModel<TDocument>>();
@@ -171,39 +223,35 @@ namespace UCode.Mongo
             }
 
             // Check if session should be used
-            if (useSession)
+            if (InTransaction(forceTransaction, out var clientSessionHandle))
             {
                 // Use the session to create the indexes
-                _ = await this.MongoCollection.Indexes.CreateManyAsync(this._contextbase.ContextSession, models);
+                _ = await this.MongoCollection.Indexes.CreateManyAsync(clientSessionHandle, models, cancellationToken);
             }
             else
             {
                 // Create the indexes without a session
-                _ = await this.MongoCollection.Indexes.CreateManyAsync(models);
+                _ = await this.MongoCollection.Indexes.CreateManyAsync(models, cancellationToken);
             }
         }
+
 
         /// <summary>
         /// Returns an IQueryable of type TDocument.
         /// </summary>
         /// <returns>An IQueryable of type TDocument.</returns>
-        public IQueryable<TDocument> AsQueryable(AggregateOptions? aggregateOptions = null, bool forceSession = false)
+        public IQueryable<TDocument> AsQueryable(AggregateOptions? aggregateOptions = null,
+            bool? forceTransaction = default)
         {
             IQueryable<TDocument> queryable;
 
-            AggregateOptions option = aggregateOptions ?? new AggregateOptions();
+            var option = aggregateOptions ?? new AggregateOptions();
 
-            // If the replace operation should not be performed in a transaction
-            if (aggregateOptions != null && aggregateOptions.NotPerformInTransaction)
-            {
-                // Perform the replace operation without a session
-                queryable = this.MongoCollection.AsQueryable(option);
-            }
             // If a transaction is in use
-            else if (this._contextbase.TransactionalContext)
+            if (InTransaction(forceTransaction, out var clientSessionHandle))
             {
                 // Perform the replace operation with a session
-                queryable = this.MongoCollection.AsQueryable(this._contextbase.ContextSession, option);
+                queryable = this.MongoCollection.AsQueryable(clientSessionHandle, option);
             }
             // If no transaction is in use
             else
@@ -215,6 +263,7 @@ namespace UCode.Mongo
             return queryable;
         }
 
+
         #region FirstOrDefault
 
         /// <summary>
@@ -224,16 +273,16 @@ namespace UCode.Mongo
         /// <param name="findOptions">Options for the find operation. Default is null.</param>
         /// <returns>The first document that matches the specified query, or the default value of TDocument if no matching document is found.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async ValueTask<TDocument> FirstOrDefaultAsync([NotNull] Query<TDocument> query, Options.FindOptions findOptions = default)
+        public async ValueTask<TDocument> FirstOrDefaultAsync([NotNull] Query<TDocument> query,
+            [MaybeNull] FindOptions? findOptions = default,
+            [MaybeNull] bool? forceTransaction = default,
+            [MaybeNull] CancellationToken cancellationToken = default)
         {
-            // Convert the findOptions to the correct type
-            var opt = (Options.FindOptions<TDocument, TDocument>)findOptions;
+            var opt = Convert(findOptions);
 
-            // Convert the query to the correct type
             var qry = (Query<TDocument, TDocument>)query;
 
-            // Get the first document that matches the query
-            return await this.GetOneAsync(qry, opt);
+            return await this.GetOneAsync(qry, opt, forceTransaction, cancellationToken);
         }
 
         /// <summary>
@@ -243,17 +292,18 @@ namespace UCode.Mongo
         /// <param name="findOptions">Options for the find operation. Default is null.</param>
         /// <returns>The first document that matches the specified query, or the default value of TDocument if no matching document is found.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async ValueTask<TDocument> FirstOrDefaultAsync([NotNull] Query<TDocument> query, Options.FindOptions<TDocument> findOptions = default)
+        public async ValueTask<TDocument> FirstOrDefaultAsync([NotNull] Query<TDocument> query,
+            FindOptions<TDocument>? findOptions = default,
+            [MaybeNull] bool? forceTransaction = default,
+            [MaybeNull] CancellationToken cancellationToken = default)
         {
-            // Convert the query to the correct type
-            Options.FindOptions<TDocument, TDocument> opt = findOptions;
+            var opt = Convert(findOptions);
 
-            // Convert the query to the correct type
             Query<TDocument, TDocument> qry = query;
 
-            // Get the first document that matches the query
-            return await this.GetOneAsync(qry, opt);
+            return await this.GetOneAsync(qry, opt, forceTransaction, cancellationToken);
         }
+
         /// <summary>
         /// Retrieves the first document that matches the specified query.
         /// </summary>
@@ -262,11 +312,16 @@ namespace UCode.Mongo
         /// <param name="findOptions">Options for the find operation. Default is null.</param>
         /// <returns>The first document that matches the specified query, or the default value of TDocument if no matching document is found.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async ValueTask<TProjection> FirstOrDefaultAsync<TProjection>([NotNull] Query<TDocument, TProjection> query, Options.FindOptions<TDocument, TProjection> findOptions = default) => await this.GetOneAsync(query, findOptions);
+        public async ValueTask<TProjection> FirstOrDefaultAsync<TProjection>([NotNull] Query<TDocument, TProjection> query,
+            [MaybeNull] FindOptions<TDocument, TProjection>? findOptions = default,
+            [MaybeNull] bool? forceTransaction = default,
+            [MaybeNull] CancellationToken cancellationToken = default) => await this.GetOneAsync(query, findOptions, forceTransaction, cancellationToken);
 
         #endregion
 
+
         #region Any
+
 
         /// <summary>
         /// Checks if any document matches the specified query.
@@ -276,26 +331,20 @@ namespace UCode.Mongo
         /// <param name="cancellationToken"></param>
         /// <returns>True if any document matches the query, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async ValueTask<bool> AnyAsync([NotNull] Query<TDocument> query, Options.FindOptions<TDocument>? findOptions = default, CancellationToken cancellationToken = default)
+        public async ValueTask<bool> AnyAsync([NotNull] Query<TDocument> query,
+            CountOptions? countOptions = default,
+            bool? forceTransaction = default,
+            CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            // Set default options if not provided
-            findOptions ??= new Options.FindOptions<TDocument>();
-
             // Set limit and skip options for counting
-            MongoDB.Driver.CountOptions countOptions = findOptions;
-            countOptions.Limit = 1;
-            countOptions.Skip = 0;
+            countOptions ??= new CountOptions();
 
             // Count documents and check if count is greater than 0
-            if (findOptions.NotPerformInTransaction)
+            if (InTransaction(forceTransaction, out var clientSessionHandle))
             {
-                return await this.MongoCollection.CountDocumentsAsync(query, countOptions, cancellationToken) > 0;
-            }
-            else if (this._contextbase.TransactionalContext)
-            {
-                return await this.MongoCollection.CountDocumentsAsync(this._contextbase.ContextSession, query, countOptions, cancellationToken) > 0;
+                return await this.MongoCollection.CountDocumentsAsync(clientSessionHandle, query, countOptions, cancellationToken) > 0;
             }
             else
             {
@@ -316,13 +365,16 @@ namespace UCode.Mongo
         /// <param name="findOptions">Options for the find operation. Default is null.</param>
         /// <returns>The retrieved document, or the default value of TDocument if no matching document is found.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async ValueTask<TDocument> GetAsync([NotNull] TObjectId id, [NotNull] Options.FindOptions findOptions = default)
+        public async ValueTask<TDocument> GetAsync([NotNull] TObjectId id,
+            [NotNull] FindOptions? findOptions = default,
+            [MaybeNull] bool? forceTransaction = default,
+            [MaybeNull] CancellationToken cancellationToken = default)
         {
             // Convert the find options to the correct type
-            Options.FindOptions<TDocument, TDocument> opt = findOptions;
+            var opt = Convert(findOptions);
 
             // Call the GetAsync method with the converted options
-            return await this.GetAsync(id, opt);
+            return await this.GetAsync(id, opt, forceTransaction, cancellationToken);
         }
 
         /// <summary>
@@ -332,13 +384,16 @@ namespace UCode.Mongo
         /// <param name="findOptions">Options for the find operation. Default is null.</param>
         /// <returns>The retrieved document, or the default value of TDocument if no matching document is found.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async ValueTask<TDocument> GetAsync([NotNull] TObjectId id, [NotNull] Options.FindOptions<TDocument> findOptions = default)
+        public async ValueTask<TDocument> GetAsync([NotNull] TObjectId id,
+            [MaybeNull] FindOptions<TDocument>? findOptions = default,
+            [MaybeNull] bool? forceTransaction = default,
+            [MaybeNull] CancellationToken cancellationToken = default)
         {
             // Convert the find options to the correct type
-            Options.FindOptions<TDocument, TDocument> opt = findOptions;
+            var opt = Convert(findOptions);
 
             // Call the GetAsync method with the converted options
-            return await this.GetAsync(id, opt);
+            return await this.GetAsync(id, opt, forceTransaction, cancellationToken);
         }
 
         /// <summary>
@@ -350,13 +405,15 @@ namespace UCode.Mongo
         /// <returns>The retrieved projection, or the default value of TProjection if no matching document is found.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async ValueTask<TProjection> GetAsync<TProjection>([NotNull] TObjectId id,
-            [NotNull] Options.FindOptions<TDocument, TProjection> findOptions = default)
+            [MaybeNull] FindOptions<TDocument, TProjection>? findOptions = default,
+            [MaybeNull] bool? forceTransaction = default,
+            [MaybeNull] CancellationToken cancellationToken = default)
         {
             // Create a query to find the document by its ID
             var qry = Query<TDocument, TProjection>.FromExpression(o => o.Id.Equals(id));
 
             // Call the GetOneAsync method with the query and options
-            return await this.GetOneAsync(qry, findOptions);
+            return await this.GetOneAsync(qry, findOptions, forceTransaction, cancellationToken);
         }
 
         /// <summary>
@@ -367,13 +424,16 @@ namespace UCode.Mongo
         /// <param name="findOptions">Options for the find operation. Default is null.</param>
         /// <returns>The first occurrence of the projection, or the default value of TProjection if no matching document is found.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async ValueTask<TProjection> GetOneAsync<TProjection>([NotNull] Query<TDocument, TProjection> query, [NotNull] Options.FindOptions<TDocument, TProjection> findOptions = default)
+        public async ValueTask<TProjection> GetOneAsync<TProjection>([NotNull] Query<TDocument, TProjection> query,
+            [MaybeNull] FindOptions<TDocument, TProjection>? findOptions = default,
+            [MaybeNull] bool? forceTransaction = default,
+            [MaybeNull] CancellationToken cancellationToken = default)
         {
             // Initialize the result to the default value of TProjection
             var result = default(TProjection);
 
             // Set default options if not provided
-            findOptions ??= new Options.FindOptions<TDocument, TProjection>();
+            findOptions ??= new FindOptions<TDocument, TProjection>();
 
             // Set skip and limit options for finding the first occurrence
             findOptions.Skip ??= 0;
@@ -382,30 +442,22 @@ namespace UCode.Mongo
             // Create the filter definition from the query
             FilterDefinition<TDocument> filterSelected = query;
 
-            // Create the options for the find operation
-            MongoDB.Driver.FindOptions<TDocument, TProjection> options = findOptions;
 
             // Create the cursor for the find operation
             IAsyncCursor<TProjection> cursor;
 
-            // If the find operation should not be performed in a transaction
-            if (findOptions.NotPerformInTransaction)
-            {
-                // Perform the find operation with the filter
-                cursor = await this.MongoCollection.FindAsync(filterSelected, options);
-            }
-            else if (this._contextbase.TransactionalContext)
+            if (InTransaction(forceTransaction, out var clientSessionHandle))
             {
                 // Perform the find operation with the session and filter
-                cursor = await this.MongoCollection.FindAsync(this._contextbase.ContextSession, filterSelected, options);
+                cursor = await this.MongoCollection.FindAsync(clientSessionHandle, filterSelected, findOptions, cancellationToken);
             }
             else
             {
-                cursor = await this.MongoCollection.FindAsync(filterSelected, options);
+                cursor = await this.MongoCollection.FindAsync(filterSelected, findOptions, cancellationToken);
             }
 
             // Iterate over the cursor and retrieve the first occurrence
-            while (await cursor.MoveNextAsync())
+            while (await cursor.MoveNextAsync(cancellationToken))
             {
                 foreach (var item in cursor.Current)
                 {
@@ -431,19 +483,19 @@ namespace UCode.Mongo
         /// <param name="findOptions">Options for the find operation. Default is null.</param>
         /// <returns>An asynchronous enumerable of documents matching the provided IDs.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async IAsyncEnumerable<TDocument> GetAsync([NotNull] TObjectId[] ids, Options.FindOptions? findOptions = default)
+        public async IAsyncEnumerable<TDocument> GetAsync([NotNull] TObjectId[] ids,
+            [MaybeNull] FindOptions? findOptions = default,
+            [MaybeNull] bool? forceTransaction = default,
+            [MaybeNull] CancellationToken cancellationToken = default)
         {
-            // Set default options if not provided
-            findOptions ??= new Options.FindOptions();
+            var opt = Convert(findOptions);
 
             // Create a query to find documents with IDs in the provided array
-            var qry = Query<TDocument, TDocument>.FromExpression(f => ids.Contains(f.Id));
+            var qry = Query<TDocument, TDocument>.FromExpression(f => ids.Contains(f.Id))!;
 
-            // Convert the findOptions to the correct type for the GetAsync method
-            Options.FindOptions<TDocument, TDocument> opt = findOptions;
 
             // Iterate over the results of the GetAsync method and yield each document
-            await foreach (var item in this.GetAsync<TDocument>(qry, opt))
+            await foreach (var item in this.GetAsync<TDocument>(qry, opt, forceTransaction, cancellationToken))
             {
                 yield return item;
             }
@@ -456,16 +508,16 @@ namespace UCode.Mongo
         /// <param name="findOptions">Options for the find operation. Default is null.</param>
         /// <returns>An asynchronous enumerable of documents matching the provided IDs.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async IAsyncEnumerable<TDocument> GetAsync([NotNull] TObjectId[] ids, Options.FindOptions<TDocument>? findOptions = default)
+        public async IAsyncEnumerable<TDocument> GetAsync([NotNull] TObjectId[] ids,
+            [MaybeNull] FindOptions<TDocument>? findOptions = default,
+            [MaybeNull] bool? forceTransaction = default,
+            [MaybeNull] CancellationToken cancellationToken = default)
         {
-            // Set default options if not provided
-            findOptions ??= new Options.FindOptions<TDocument>();
-
             // Create a query to find documents with IDs in the provided array
             var qry = Query<TDocument, TDocument>.FromExpression(f => ids.Contains(f.Id));
 
             // Convert the findOptions to the correct type for the GetAsync method
-            Options.FindOptions<TDocument, TDocument> opt = findOptions;
+            var opt = Convert(findOptions);
 
             // Iterate over the results of the GetAsync method and yield return each item
             await foreach (var item in this.GetAsync<TDocument>(qry, opt))
@@ -482,10 +534,13 @@ namespace UCode.Mongo
         /// <param name="findOptions">Options for the find operation. Default is null.</param>
         /// <returns>An asynchronous enumerable of documents matching the provided IDs.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async IAsyncEnumerable<TProjection> GetAsync<TProjection>([NotNull] TObjectId[] ids, Options.FindOptions<TDocument, TProjection>? findOptions = default)
+        public async IAsyncEnumerable<TProjection> GetAsync<TProjection>([NotNull] TObjectId[] ids,
+            [MaybeNull] FindOptions<TDocument, TProjection>? findOptions = default,
+            [MaybeNull] bool? forceTransaction = default,
+            [MaybeNull] CancellationToken cancellationToken = default)
         {
             // Set default options if not provided
-            findOptions ??= new Options.FindOptions<TDocument, TProjection>();
+            findOptions ??= new FindOptions<TDocument, TProjection>();
 
             // Create a query to find documents with IDs in the provided array
             var qry = Query<TDocument, TProjection>.FromExpression(f => ids.Contains(f.Id));
@@ -513,19 +568,19 @@ namespace UCode.Mongo
         /// <param name="findOptions">Options for the find operation. Default is null.</param>
         /// <returns>An asynchronous enumerable of documents matching the provided query.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async IAsyncEnumerable<TDocument> GetAsync([NotNull] Query<TDocument> filter, [NotNull] Options.FindOptions? findOptions = default)
+        public async IAsyncEnumerable<TDocument> GetAsync([NotNull] Query<TDocument> filter,
+            [MaybeNull] FindOptions? findOptions = default,
+            [MaybeNull] bool? forceTransaction = default,
+            [MaybeNull] CancellationToken cancellationToken = default)
         {
-            // Set default options if not provided
-            findOptions ??= new Options.FindOptions();
-
             // Convert the query to the correct type for the GetAsync method
             Query<TDocument, TDocument> qry = filter;
 
             // Convert the findOptions to the correct type for the GetAsync method
-            Options.FindOptions<TDocument, TDocument> opt = findOptions!;
+            var opt = Convert(findOptions);
 
             // Iterate over the results of the GetAsync method and yield return each item
-            await foreach (var item in this.GetAsync(qry, opt))
+            await foreach (var item in this.GetAsync(qry, opt, forceTransaction, cancellationToken))
             {
                 yield return item;
             }
@@ -538,19 +593,22 @@ namespace UCode.Mongo
         /// <param name="findOptions">Options for the find operation. Default is null.</param>
         /// <returns>An asynchronous enumerable of documents matching the provided query.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async IAsyncEnumerable<TDocument> GetAsync([NotNull] Query<TDocument> filter, [NotNull] Options.FindOptions<TDocument>? findOptions = default)
+        public async IAsyncEnumerable<TDocument> GetAsync([NotNull] Query<TDocument> filter,
+            [MaybeNull] FindOptions<TDocument>? findOptions = default,
+            [MaybeNull] bool? forceTransaction = default,
+            [MaybeNull] CancellationToken cancellationToken = default)
         {
             // If findOptions is null, create a new instance with default values
-            findOptions ??= new Options.FindOptions<TDocument>();
+            findOptions ??= new FindOptions<TDocument>();
 
             // Convert the filter to the correct type for the GetAsync method
             Query<TDocument, TDocument> qry = filter;
 
             // Convert the findOptions to the correct type for the GetAsync method
-            Options.FindOptions<TDocument, TDocument> opt = findOptions;
+            var opt = Convert(findOptions);
 
             // Iterate over the results of the GetAsync method and yield each document
-            await foreach (var item in this.GetAsync(qry, opt))
+            await foreach (var item in this.GetAsync(qry, opt, forceTransaction, cancellationToken))
             {
                 yield return item;
             }
@@ -566,12 +624,14 @@ namespace UCode.Mongo
         /// <returns>An asynchronous enumerable of documents matching the search criteria.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async IAsyncEnumerable<TDocument> FulltextSearchAsync([NotNull] string text,
-            [NotNull] Options.FullTextSearchOptions<TDocument> fullTextSearchOptions,
-            [NotNull] Query<TDocument>? filter = default,
-            [NotNull] Options.FindOptions<TDocument>? findOptions = default)
+            [NotNull] TextSearchOptions? fullTextSearchOptions,
+            [MaybeNull] Query<TDocument>? filter = default,
+            [MaybeNull] FindOptions<TDocument>? findOptions = default,
+            [MaybeNull] bool? forceTransaction = default,
+            [MaybeNull] CancellationToken cancellationToken = default)
         {
             // Perform the full-text search and iterate over the results
-            await foreach (var item in this.FulltextSearchAsync<TDocument>(text, fullTextSearchOptions, filter, findOptions))
+            await foreach (var item in this.FulltextSearchAsync<TDocument>(text, fullTextSearchOptions, filter, findOptions, forceTransaction, cancellationToken))
             {
                 // Yield return each item in the search results
                 yield return item;
@@ -589,12 +649,14 @@ namespace UCode.Mongo
         /// <returns>An asynchronous enumerable of documents matching the search criteria.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async IAsyncEnumerable<TProjection> FulltextSearchAsync<TProjection>([NotNull] string text,
-            [NotNull] Options.FullTextSearchOptions<TDocument> fullTextSearchOptions,
-            [NotNull] Query<TDocument, TProjection>? filter = default,
-            [NotNull] Options.FindOptions<TDocument, TProjection>? findOptions = default)
+            [NotNull] TextSearchOptions fullTextSearchOptions,
+            [MaybeNull] Query<TDocument, TProjection>? filter = default,
+            [MaybeNull] FindOptions<TDocument, TProjection>? findOptions = default,
+            [MaybeNull] bool? forceTransaction = default,
+            [MaybeNull] CancellationToken cancellationToken = default)
         {
             // Set default options if not provided
-            findOptions ??= new Options.FindOptions<TDocument, TProjection>();
+            findOptions ??= new FindOptions<TDocument, TProjection>();
 
             // Create the filter definition from the text and full-text search options
             FilterDefinition<TDocument> filterSelected = Query<TDocument, TProjection>.FromText(text, fullTextSearchOptions);
@@ -605,30 +667,23 @@ namespace UCode.Mongo
                 filterSelected += filter;
             }
 
-            // Create the options for the find operation
-            MongoDB.Driver.FindOptions<TDocument, TProjection> options = findOptions;
 
             // Create the cursor for the find operation
             IAsyncCursor<TProjection> cursor;
 
             // If the find operation should not be performed in a transaction
-            if (findOptions.NotPerformInTransaction)
-            {
-                // Perform the find operation with the filter
-                cursor = await this.MongoCollection.FindAsync(filterSelected, options);
-            }
-            else if (this._contextbase.TransactionalContext)
+            if (InTransaction(forceTransaction, out var clientSessionHandle))
             {
                 // Perform the find operation with the session and filter
-                cursor = await this.MongoCollection.FindAsync(this._contextbase.ContextSession, filterSelected, options);
+                cursor = await this.MongoCollection.FindAsync(clientSessionHandle, filterSelected, findOptions, cancellationToken);
             }
             else
             {
-                cursor = await this.MongoCollection.FindAsync(filterSelected, options);
+                cursor = await this.MongoCollection.FindAsync(filterSelected, findOptions, cancellationToken);
             }
 
             // Iterate over the cursor and retrieve the search results
-            while (await cursor.MoveNextAsync())
+            while (await cursor.MoveNextAsync(cancellationToken))
             {
                 foreach (var item in cursor.Current)
                 {
@@ -644,88 +699,21 @@ namespace UCode.Mongo
             cursor.Dispose();
         }
 
-        /*
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IEnumerable<TProjection> Queryable<TProjection>(
-            [NotNull] Expression<Func<TDocument, TProjection>> queryable, 
-            [NotNull] Options.AggregateOptions<TDocument> aggregateOptions = default)
-        {
-            if (queryable == default)
-                throw new ArgumentException($"Argument \"{nameof(queryable)}\" is null.");
-
-            aggregateOptions ??= new Options.AggregateOptions<TDocument>();
-
-            MongoDB.Driver.AggregateOptions options = aggregateOptions;
-
-            //var build = queryable.Compile();
-            //var linqProvider = MongoCollection.Database.Client.Settings.LinqProvider;
-            //var t = Type.GetType("MongoDB.Driver.Linq.Linq3Implementation.LinqProviderV3");
-            //var adapter = Activator.CreateInstance(t);
-            //linqProvider.GetAdapter().AsQueryable(MongoCollection, _contextbase.Session, aggregateOptions);
-            
-            IMongoQueryable<TDocument> mongoIquerable = MongoCollection.AsQueryable(_contextbase.Session, options);
-
-            var mongoQueryable = mongoIquerable.Provider.CreateQuery<TProjection>(queryable);
-
-            //var projection = build.Invoke(mongoIquerable);
-
-            return mongoQueryable;
-        }*/
-
-        //public IQueryable<TDocument> AsQueryable([NotNull] Options.AggregateOptions<TDocument> aggregateOptions = default)
-        //{
-        //    return MongoCollection.AsQueryable(_contextbase.Session, aggregateOptions);
-        //}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IQueryable<TDocument> AsQueryable(Func<IQueryable<TDocument>, IQueryable<TDocument>> preApprend, Options.AggregateOptions<TDocument>? aggregateOptions = default)
+        public IQueryable<TDocument> AsQueryable(Func<IQueryable<TDocument>, IQueryable<TDocument>> preApprend,
+            [MaybeNull] AggregateOptions? aggregateOptions = default,
+            [MaybeNull] bool? forceTransaction = default)
         {
             if (preApprend == default)
             {
-                return this.AsQueryable(aggregateOptions);
+                return this.AsQueryable(aggregateOptions, forceTransaction);
             }
             else
             {
-                return preApprend(this.AsQueryable(aggregateOptions));
+                return preApprend(this.AsQueryable(aggregateOptions, forceTransaction));
             }
         }
-
-        /*
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IEnumerable<TProjection> Queryable3<TProjection>(
-            [NotNull] Expression<Func<TDocument, TProjection>> queryable,
-            [NotNull] Options.AggregateOptions<TDocument> aggregateOptions = default)
-        {
-            if (queryable == default)
-                throw new ArgumentException($"Argument \"{nameof(queryable)}\" is null.");
-
-            aggregateOptions ??= new Options.AggregateOptions<TDocument>();
-
-            MongoDB.Driver.AggregateOptions options = aggregateOptions;
-
-            //var build = queryable.Compile();
-            //var linqProvider = MongoCollection.Database.Client.Settings.LinqProvider;
-            //var t = Type.GetType("MongoDB.Driver.Linq.Linq3Implementation.LinqProviderV3");
-            //var adapter = (LinqProvider)Activator.CreateInstance(t);
-
-            var linqProviderAdapterV3Type= Type.GetType("MongoDB.Driver.Linq.Linq3Implementation.LinqProviderAdapterV3");
-            var linqProviderAdapterV3 = Activator.CreateInstance(linqProviderAdapterV3Type);
-            var querableMethod = linqProviderAdapterV3Type.GetMethod("AsQueryable");
-            IMongoQueryable<TDocument> mongoIquerable = (IMongoQueryable<TDocument>)querableMethod.MakeGenericMethod(typeof(TDocument)).Invoke(linqProviderAdapterV3, new object[] { MongoCollection, _contextbase.Session, aggregateOptions });
-
-            
-            //MongoDB.Driver.Linq.Linq3Implementation.LinqProviderAdapterV3 >> MongoDB.Driver.Linq.LinqProviderAdapter
-            //linqProvider.GetAdapter().AsQueryable(MongoCollection, _contextbase.Session, aggregateOptions);
-
-            //IMongoQueryable<TDocument> mongoIquerable = MongoCollection.AsQueryable(_contextbase.Session, options);
-
-            var mongoQueryable = mongoIquerable.Provider.CreateQuery<TProjection>(queryable);
-
-            //var projection = build.Invoke(mongoIquerable);
-
-            return mongoQueryable;
-        }
-        */
 
         /// <summary>
         /// Retrieves documents from the collection based on the provided query and find options.
@@ -735,10 +723,12 @@ namespace UCode.Mongo
         /// <param name="findOptions">Options for the find operation. Default is null.</param>
         /// <returns>An asynchronous enumerable of documents matching the provided query.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async IAsyncEnumerable<TProjection> GetAsync<TProjection>([NotNull] Query<TDocument, TProjection> filter, [NotNull] Options.FindOptions<TDocument, TProjection>? findOptions = default)
+        public async IAsyncEnumerable<TProjection> GetAsync<TProjection>([NotNull] Query<TDocument, TProjection> filter,
+            [MaybeNull] FindOptions<TDocument, TProjection>? findOptions = default,
+            [MaybeNull] bool? forceTransaction = default)
         {
             // Set default options if not provided
-            findOptions ??= new Options.FindOptions<TDocument, TProjection>();
+            findOptions ??= new FindOptions<TDocument, TProjection>();
 
             // Create the filter definition from the query
             FilterDefinition<TDocument> filterSelected = filter;
@@ -750,15 +740,10 @@ namespace UCode.Mongo
             IAsyncCursor<TProjection> cursor;
 
             // If the find operation should not be performed in a transaction
-            if (findOptions.NotPerformInTransaction)
-            {
-                // Perform the find operation with the filter
-                cursor = await this.MongoCollection.FindAsync(filterSelected, options);
-            }
-            else if (this._contextbase.TransactionalContext)
+            if (InTransaction(forceTransaction, out var clientSessionHandle))
             {
                 // Perform the find operation with the session and filter
-                cursor = await this.MongoCollection.FindAsync(this._contextbase.ContextSession, filterSelected, options);
+                cursor = await this.MongoCollection.FindAsync(clientSessionHandle, filterSelected, options);
             }
             else
             {
@@ -791,7 +776,7 @@ namespace UCode.Mongo
         /// <exception cref="ArgumentNullException">Thrown if the filter or findOptions parameter is null.</exception>
         [return: NotNull]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async Task<PagedResult<TProjection>> GetPagedAsync<TProjection>([NotNull] Query<TDocument> filter, [NotNull] Options.FindOptionsPaging<TDocument>? findOptions)
+        public async Task<PagedResult<TProjection>> GetPagedAsync<TProjection>([NotNull] Query<TDocument> filter, [NotNull] FindOptionsPaging<TDocument>? findOptions)
         {
             // Convert the filter to the correct type for the GetPagedAsync method
             Query<TDocument, TProjection> qry = filter;
@@ -814,7 +799,7 @@ namespace UCode.Mongo
         /// <exception cref="ArgumentNullException">Thrown if the filter or findOptions parameter is null.</exception>
         [return: NotNull]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async Task<PagedResult<TProjection>> GetPagedAsync<TProjection>([NotNull] Query<TDocument, TProjection> filter, [NotNull] Options.FindOptionsPaging<TDocument, TProjection>? findOptions)
+        public async Task<PagedResult<TProjection>> GetPagedAsync<TProjection>([NotNull] Query<TDocument, TProjection> filter, [NotNull] FindOptionsPaging<TDocument, TProjection>? findOptions)
         {
             // Convert the filter and findOptions to strings for logging purposes
             var fstr = filter.ToString();
@@ -920,7 +905,7 @@ namespace UCode.Mongo
         /// <returns>The updated document.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async ValueTask<TDocument> FindOneAndUpdateAsync([NotNull] Query<TDocument> query,
-            [NotNull] Options.FindOneAndUpdateOptions<TDocument> options,
+            [NotNull] FindOneAndUpdateOptions<TDocument> options,
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -968,7 +953,7 @@ namespace UCode.Mongo
         /// <returns>The updated document, or null if no document matches the filter.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async ValueTask<TDocument> FindOneAndUpdateAsync([NotNull] string filter, [NotNull] string update,
-            [NotNull] Options.FindOneAndUpdateOptions<TDocument> options,
+            [NotNull] FindOneAndUpdateOptions<TDocument> options,
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -1014,7 +999,7 @@ namespace UCode.Mongo
         public async ValueTask<TDocument> FindOneAndUpdateAsync(
            [NotNull] string filter,
            [NotNull] PipelineUpdateDefinition<TDocument> update,
-           [NotNull] Options.FindOneAndUpdateOptions<TDocument>? options = default,
+           [NotNull] FindOneAndUpdateOptions<TDocument>? options = default,
            CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -1061,7 +1046,7 @@ namespace UCode.Mongo
         /// <returns>The number of modified documents, or -1 if the operation was not acknowledged.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async ValueTask<long> UpdateManyAsync([NotNull] Query<TDocument> query,
-            [NotNull] UpdateOptions<TDocument> options, CancellationToken cancellationToken = default)
+            [NotNull] UpdateOptions options, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -1098,7 +1083,7 @@ namespace UCode.Mongo
         /// <returns>The number of modified documents, or -1 if the operation was not acknowledged.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async ValueTask<long> UpdateManyAsync([NotNull] string filter, [NotNull] string update,
-            [NotNull] UpdateOptions<TDocument> options, CancellationToken cancellationToken = default)
+            [NotNull] UpdateOptions options, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -1140,7 +1125,7 @@ namespace UCode.Mongo
         /// <returns>The number of documents that match the query.</returns>
         [return: NotNull]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async ValueTask<long> CountDocumentsAsync([NotNull] Query<TDocument> query, Options.CountOptions? countOptions = default)
+        public async ValueTask<long> CountDocumentsAsync([NotNull] Query<TDocument> query, CountOptions? countOptions = default)
         {
             // If countOptions is null, create a new instance with default values
             countOptions ??= new Options.CountOptions();
@@ -1158,7 +1143,7 @@ namespace UCode.Mongo
         /// <exception cref="ArgumentNullException">Thrown if preApprend is null.</exception>
         [return: NotNull]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async ValueTask<long> CountDocumentsAsync([NotNull] Func<IQueryable<TDocument>, IQueryable<TDocument>> preApprend, Options.AggregateOptions<TDocument>? aggregateOptions = default)
+        public async ValueTask<long> CountDocumentsAsync([NotNull] Func<IQueryable<TDocument>, IQueryable<TDocument>> preApprend, AggregateOptions? aggregateOptions = default)
         {
             // Create a queryable from the MongoCollection using the session and default aggregate options
             var query = this.MongoCollection.AsQueryable(this._contextbase.ContextSession, new AggregateOptions());
@@ -1184,7 +1169,7 @@ namespace UCode.Mongo
         /// <returns>The number of documents that match the filter.</returns>
         [return: NotNull]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async ValueTask<long> CountDocumentsAsync([NotNull] FilterDefinition<TDocument> filterDefinition, Options.CountOptions? countOptions = default)
+        private async ValueTask<long> CountDocumentsAsync([NotNull] FilterDefinition<TDocument> filterDefinition, CountOptions? countOptions = default)
         {
             // If countOptions is null, create a new instance with default values
             countOptions ??= new Options.CountOptions();
@@ -1219,7 +1204,7 @@ namespace UCode.Mongo
         /// <returns>The number of modified documents, or -1 if the operation was not acknowledged.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async ValueTask<long> UpdateAddToSetAsync([NotNull] Query<TDocument> query,
-            UpdateOptions<TDocument>? updateOptions = default, CancellationToken cancellationToken = default)
+            UpdateOptions? updateOptions = default, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -1243,7 +1228,7 @@ namespace UCode.Mongo
         internal async ValueTask<long> UpdateAsync(
             [NotNull] FilterDefinition<TDocument> filterDefinition,
             [NotNull] UpdateDefinition<TDocument> updateDefinition,
-            [NotNull] Options.UpdateOptions updateOptions,
+            [NotNull] UpdateOptions updateOptions,
             CancellationToken cancellationToken = default)
         {
             // Initialize the result to null
@@ -1286,7 +1271,7 @@ namespace UCode.Mongo
         /// <param name="cancellationToken"></param>
         /// <returns>The number of inserted documents, which should always be 1.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async ValueTask<long> InsertAsync([NotNull] TDocument source, Options.InsertOneOptions? insertOneOptions = default, CancellationToken cancellationToken = default)
+        public async ValueTask<long> InsertAsync([NotNull] TDocument source, InsertOneOptions? insertOneOptions = default, CancellationToken cancellationToken = default)
         {
             // If no options were provided, create a new default options object
             insertOneOptions ??= new Options.InsertOneOptions();
@@ -1329,7 +1314,7 @@ namespace UCode.Mongo
         /// <param name="cancellationToken"></param>
         /// <returns>The number of inserted documents.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async ValueTask<long> InsertAsync([NotNull] IEnumerable<TDocument> docs, Options.InsertManyOptions? insertManyOptions = default, CancellationToken cancellationToken = default)
+        public async ValueTask<long> InsertAsync([NotNull] IEnumerable<TDocument> docs, InsertManyOptions? insertManyOptions = default, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -1362,7 +1347,7 @@ namespace UCode.Mongo
         /// <param name="cancellationToken"></param>
         /// <returns>The number of replaced documents.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async ValueTask<long> ReplaceAsync([NotNull] IEnumerable<TDocument> docs, Query<TDocument>? query = null, ReplaceOptions<TDocument>? replaceOptions = default, CancellationToken cancellationToken = default)
+        public async ValueTask<long> ReplaceAsync([NotNull] IEnumerable<TDocument> docs, Query<TDocument>? query = null, ReplaceOptions? replaceOptions = default, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -1405,7 +1390,7 @@ namespace UCode.Mongo
         /// <param name="cancellationToken"></param>
         /// <returns>The number of replaced documents.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async ValueTask<long> ReplaceAsync([NotNull] TDocument doc, ReplaceOptions<TDocument>? replaceOptions = default, CancellationToken cancellationToken = default)
+        public async ValueTask<long> ReplaceAsync([NotNull] TDocument doc, ReplaceOptions? replaceOptions = default, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -1435,7 +1420,7 @@ namespace UCode.Mongo
         /// <param name="cancellationToken"></param>
         /// <returns>The number of replaced documents. If the operation was not acknowledged, -1 is returned.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async ValueTask<long> ReplaceAsync([NotNull] Query<TDocument> query, [NotNull] TDocument doc, ReplaceOptions<TDocument>? replaceOptions = default, CancellationToken cancellationToken = default)
+        public async ValueTask<long> ReplaceAsync([NotNull] Query<TDocument> query, [NotNull] TDocument doc, ReplaceOptions? replaceOptions = default, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -1486,7 +1471,7 @@ namespace UCode.Mongo
         /// <param name="deleteOptions">Options for the delete operation. Default is null.</param>
         /// <returns>The number of deleted documents. If the operation was not acknowledged, -1 is returned.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async ValueTask<long> DeleteOneAsync([NotNull] TObjectId id, DeleteOptions<TDocument>? deleteOptions = default, CancellationToken cancellationToken = default)
+        public async ValueTask<long> DeleteOneAsync([NotNull] TObjectId id, DeleteOptions? deleteOptions = default, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -1506,7 +1491,7 @@ namespace UCode.Mongo
         /// <returns>The number of deleted documents. If the operation was not acknowledged, -1 is returned.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async ValueTask<long> DeleteAsync([NotNull] IEnumerable<TObjectId> ids,
-            DeleteOptions<TDocument>? deleteOptions = default, CancellationToken cancellationToken = default)
+            DeleteOptions? deleteOptions = default, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -1553,7 +1538,7 @@ namespace UCode.Mongo
         /// <returns>The number of deleted documents. If the operation was not acknowledged, -1 is returned.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async ValueTask<long> DeleteAsync([NotNull] Query<TDocument> query,
-            DeleteOptions<TDocument>? deleteOptions = default, CancellationToken cancellationToken = default)
+            DeleteOptions? deleteOptions = default, CancellationToken cancellationToken = default)
         {
             // Set default delete options if not provided
             deleteOptions ??= new DeleteOptions<TDocument>();
@@ -1581,7 +1566,7 @@ namespace UCode.Mongo
         /// <returns>An asynchronous enumerable of documents matching the aggregation criteria.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async IAsyncEnumerable<TDocument> AggregateFacetEnumerableAsync([NotNull] Query<TDocument> query,
-            AggregateOptions<TDocument>? aggregateOptions = default)
+            AggregateOptions? aggregateOptions = default)
         {
             // Set default aggregate options if not provided
             aggregateOptions ??= new AggregateOptions<TDocument>();
@@ -1603,7 +1588,7 @@ namespace UCode.Mongo
         /// <exception cref="Exception">Thrown if the skip or limit options are invalid or null.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async Task<(IEnumerable<TDocument> result, int skip, int limit, int total)> AggregateFacetAsync([NotNull] Query<TDocument> query,
-            AggregateOptions<TDocument>? aggregateOptions = default)
+            AggregateOptions? aggregateOptions = default)
         {
             // Set default aggregate options if not provided
             aggregateOptions ??= new AggregateOptions<TDocument>();
@@ -1691,7 +1676,7 @@ namespace UCode.Mongo
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the result of the aggregation operation.</returns>
         public async Task<IReadOnlyList<TProjection?>> AggregateAsync<TProjection>([NotNull] Query<TDocument, TProjection> query,
-            AggregateOptions<TDocument>? aggregateOptions = default, CancellationToken cancellationToken = default)
+            AggregateOptions? aggregateOptions = default, CancellationToken cancellationToken = default)
         {
             var result = new List<TProjection?>();
 
@@ -1714,7 +1699,7 @@ namespace UCode.Mongo
         /// <returns> A task that represents the asynchronous operation. The task result contains the result of the aggregation operation. </returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async IAsyncEnumerable<TProjection?> AggregateEnumerableAsync<TProjection>([NotNull] Query<TDocument, TProjection> query,
-            AggregateOptions<TDocument>? aggregateOptions = default, CancellationToken cancellationToken = default)
+            AggregateOptions? aggregateOptions = default, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -1785,7 +1770,7 @@ namespace UCode.Mongo
         /// <param name="cancellationToken"></param>
         /// <returns>The total count of documents inserted, updated, matched, or deleted.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal async ValueTask<long> BulkWriteAsync([NotNull] List<WriteModel<TDocument>> writeModel, [NotNull] Options.BulkWriteOptions bulkWriteOptions, CancellationToken cancellationToken = default)
+        internal async ValueTask<long> BulkWriteAsync([NotNull] List<WriteModel<TDocument>> writeModel, [NotNull] BulkWriteOptions bulkWriteOptions, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 

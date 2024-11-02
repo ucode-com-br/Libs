@@ -4,7 +4,6 @@ using System.Linq.Expressions;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
-using UCode.Mongo.Options;
 
 namespace UCode.Mongo
 {
@@ -35,7 +34,7 @@ namespace UCode.Mongo
 
         }
 
-        internal Query(string text, FullTextSearchOptions<TDocument> fullTextSearchOptions) : base(text, fullTextSearchOptions)
+        internal Query(string text, TextSearchOptions fullTextSearchOptions) : base(text, fullTextSearchOptions)
         {
         }
         #endregion Constructors
@@ -88,8 +87,10 @@ namespace UCode.Mongo
         /// <param name="text">The text to search for.</param>
         /// <param name="fulltextSearchOptions">The options for the full text search. Defaults to null.</param>
         /// <returns>A new instance of the Query class.</returns>
-        public static Query<TDocument, TProjection> FromText([NotNull] string text, [NotNull] Options.FullTextSearchOptions<TDocument> fulltextSearchOptions = default) => new(Builders<TDocument>.Filter.Text(text, fulltextSearchOptions));
+        public static Query<TDocument, TProjection> FromText([NotNull] string text, [NotNull] TextSearchOptions fulltextSearchOptions = default) => new(Builders<TDocument>.Filter.Text(text, fulltextSearchOptions));
         #endregion Static Methods
+
+
 
         #region Operator & | !
 
@@ -124,6 +125,7 @@ namespace UCode.Mongo
         /// <returns>The result of the operator.</returns>
         public static Query<TDocument, TProjection> operator !(Query<TDocument, TProjection> op) => !(FilterDefinition<TDocument>)op;
         #endregion Operator & | !
+
 
         #region Operator & | !
 
@@ -160,6 +162,7 @@ namespace UCode.Mongo
         public static Query<TDocument, TProjection> operator |(Query<TDocument> lhs, Query<TDocument, TProjection> rhs) => (FilterDefinition<TDocument>)lhs | (FilterDefinition<TDocument>)lhs;
 
         #endregion Operator & | !
+
 
         /// <inheritdoc/>
         public override string ToString() => base.ToString();
@@ -279,7 +282,7 @@ namespace UCode.Mongo
             if (query.FullTextSearchOptions != null)
             {
                 // Create a new Query object with the full-text search options and update
-                return new(query.FullTextSearchOptions!.Value.Item1, query.FullTextSearchOptions!.Value.Item2)
+                return new(query.FullTextSearchOptions!.Value.Item1, query.FullTextSearchOptions.Value.Item2)
                 {
                     Update = query.Update
                 };

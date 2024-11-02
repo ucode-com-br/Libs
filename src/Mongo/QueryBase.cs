@@ -6,7 +6,6 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using UCode.Extensions;
-using UCode.Mongo.Options;
 using static UCode.Extensions.ExpressionExtensions;
 
 namespace UCode.Mongo
@@ -20,7 +19,7 @@ namespace UCode.Mongo
         internal Expression<Func<TDocument, TDocument, bool>>? IncompletedExpressionQuery;
         internal Expression<Func<TDocument, bool>>? ExpressionQuery;
         internal string? jsonQuery;
-        internal (string, FullTextSearchOptions<TDocument>)? FullTextSearchOptions;
+        internal (string, TextSearchOptions)? FullTextSearchOptions;
         internal FilterDefinition<TDocument>? FilterDefinition;
 
         /// <summary>
@@ -33,7 +32,7 @@ namespace UCode.Mongo
 
         internal QueryBase([NotNull] string str) => this.jsonQuery = str;
 
-        internal QueryBase(string text, FullTextSearchOptions<TDocument> fullTextSearchOptions) => this.FullTextSearchOptions = (text, fullTextSearchOptions);
+        internal QueryBase(string text, TextSearchOptions fullTextSearchOptions) => this.FullTextSearchOptions = (text, fullTextSearchOptions);
 
         internal QueryBase([NotNull] Expression<Func<TDocument, bool>> expressionQuery) => this.ExpressionQuery = expressionQuery;
 
@@ -91,8 +90,10 @@ namespace UCode.Mongo
             // Get the document serializer for the specified type
             var documentSerializer = serializerRegistry.GetSerializer<T>();
 
+            var renderArgs = new RenderArgs<T>(documentSerializer, serializerRegistry, renderForFind: true);
+
             // Render the filter using the document serializer and serializer registry
-            return filter.Render(documentSerializer, serializerRegistry);
+            return filter.Render(renderArgs);
         }
 
         /// <summary>
