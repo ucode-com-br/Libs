@@ -19,6 +19,7 @@ using MongoDB.Driver;
 using MongoDB.Driver.Core.Bindings;
 using Org.BouncyCastle.Crypto;
 using UCode.Extensions;
+using UCode.Mongo.Options;
 using UCode.Repositories;
 
 namespace UCode.Mongo
@@ -34,6 +35,7 @@ namespace UCode.Mongo
         where TDocument : IObjectId<TObjectId>
         where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
     {
+        #region Fields
         /// <summary>
         /// The MongoDB collection associated with this DbSet.
         /// </summary>
@@ -64,7 +66,9 @@ namespace UCode.Mongo
         {
             get;
         }
+        #endregion Fields
 
+        #region private methods
         private bool InTransaction(bool? forceTransaction, out IClientSessionHandle? clientSessionHandle)
         {
             if (!forceTransaction.HasValue && this._contextbase.TransactionalContext)
@@ -83,6 +87,21 @@ namespace UCode.Mongo
             return clientSessionHandle == default;
         }
 
+        private FindOptionsPaging<TDocument, TProjection> Convert<TProjection>(FindOptionsPaging<TDocument>? findOptionsPaging)
+        {
+            var opt = new FindOptionsPaging<TDocument, TProjection>();
+
+            if (findOptionsPaging != default)
+            {
+                var json = System.Text.Json.JsonSerializer.Serialize(findOptionsPaging);
+
+                opt = System.Text.Json.JsonSerializer.Deserialize<FindOptionsPaging<TDocument, TProjection>>(json)!;
+            }
+
+            return opt;
+        }
+
+
         private FindOptions<TDocument, TDocument> Convert(FindOptions? findOptions)
         {
             var opt = new FindOptions<TDocument, TDocument>();
@@ -98,9 +117,9 @@ namespace UCode.Mongo
         }
 
         private FindOptions<TDocument, TDocument> Convert(FindOptions<TDocument>? findOptions) => findOptions ?? new FindOptions<TDocument>();
+        #endregion private methods
 
-
-
+        #region constructor
         /// <summary>
         /// Initializes a new instance of the <see cref="DbSet{TDocument, TObjectId}"/> class.
         /// This constructor sets up the MongoDB collection and the associated context based on the provided parameters.
@@ -142,8 +161,9 @@ namespace UCode.Mongo
             // Initialize the logger
             this.Logger = contextBase.LoggerFactory.CreateLogger<DbSet<TDocument, TObjectId>>();
         }
+        #endregion constructor
 
-
+        #region index methods
         /// <summary>
         /// Retrieves the names and fields indexed by each index in the collection.
         /// This method requires further testing.
@@ -234,8 +254,9 @@ namespace UCode.Mongo
                 _ = await this.MongoCollection.Indexes.CreateManyAsync(models, cancellationToken);
             }
         }
+        #endregion index methods
 
-
+        #region queryable
         /// <summary>
         /// Returns an IQueryable of type TDocument.
         /// </summary>
@@ -262,6 +283,7 @@ namespace UCode.Mongo
 
             return queryable;
         }
+        #endregion queryable
 
 
         #region FirstOrDefault
@@ -321,7 +343,6 @@ namespace UCode.Mongo
 
 
         #region Any
-
 
         /// <summary>
         /// Checks if any document matches the specified query.
@@ -552,14 +573,6 @@ namespace UCode.Mongo
             }
         }
 
-        //public IEnumerable<TProjection> Get<TProjection>([NotNull] Query<TDocument, TProjection> filter, [NotNull] Options.FindOptions<TDocument, TProjection> findOptions)
-        //{
-        //    var enumerable = await GetAsync<TProjection>(filter, findOptions).ToIEnumerable();
-        //    foreach (var item in enumerable)
-        //    {
-        //        yield return item;
-        //    }
-        //}
 
         /// <summary>
         /// Retrieves documents from the collection based on the provided query and find options.
@@ -672,7 +685,7 @@ namespace UCode.Mongo
             IAsyncCursor<TProjection> cursor;
 
             // If the find operation should not be performed in a transaction
-            if (InTransaction(forceTransaction, out var clientSessionHandle))
+            if (this.InTransaction(forceTransaction, out var clientSessionHandle))
             {
                 // Perform the find operation with the session and filter
                 cursor = await this.MongoCollection.FindAsync(clientSessionHandle, filterSelected, findOptions, cancellationToken);
@@ -725,7 +738,8 @@ namespace UCode.Mongo
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async IAsyncEnumerable<TProjection> GetAsync<TProjection>([NotNull] Query<TDocument, TProjection> filter,
             [MaybeNull] FindOptions<TDocument, TProjection>? findOptions = default,
-            [MaybeNull] bool? forceTransaction = default)
+            [MaybeNull] bool? forceTransaction = default,
+            [MaybeNull] CancellationToken cancellationToken = default)
         {
             // Set default options if not provided
             findOptions ??= new FindOptions<TDocument, TProjection>();
@@ -776,13 +790,16 @@ namespace UCode.Mongo
         /// <exception cref="ArgumentNullException">Thrown if the filter or findOptions parameter is null.</exception>
         [return: NotNull]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async Task<PagedResult<TProjection>> GetPagedAsync<TProjection>([NotNull] Query<TDocument> filter, [NotNull] FindOptionsPaging<TDocument>? findOptions)
+        public async Task<PagedResult<TProjection>> GetPagedAsync<TProjection>([NotNull] Query<TDocument> filter,
+            [MaybeNull] FindOptionsPaging<TDocument>? findOptions,
+            [MaybeNull] bool? forceTransaction = default,
+            [MaybeNull] CancellationToken cancellationToken = default)
         {
             // Convert the filter to the correct type for the GetPagedAsync method
             Query<TDocument, TProjection> qry = filter;
 
             // Convert the findOptions to the correct type for the GetPagedAsync method
-            Options.FindOptionsPaging<TDocument, TProjection> opt = findOptions;
+            var opt = Convert<TProjection>(findOptions);
 
             // Call the GetPagedAsync method with the converted filter and findOptions
             return await this.GetPagedAsync(qry, opt);
@@ -799,7 +816,10 @@ namespace UCode.Mongo
         /// <exception cref="ArgumentNullException">Thrown if the filter or findOptions parameter is null.</exception>
         [return: NotNull]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async Task<PagedResult<TProjection>> GetPagedAsync<TProjection>([NotNull] Query<TDocument, TProjection> filter, [NotNull] FindOptionsPaging<TDocument, TProjection>? findOptions)
+        public async Task<PagedResult<TProjection>> GetPagedAsync<TProjection>([NotNull] Query<TDocument, TProjection> filter,
+            [MaybeNull] FindOptionsPaging<TDocument, TProjection>? findOptions,
+            [MaybeNull] bool? forceTransaction = default,
+            [MaybeNull] CancellationToken cancellationToken = default)
         {
             // Convert the filter and findOptions to strings for logging purposes
             var fstr = filter.ToString();
@@ -832,33 +852,29 @@ namespace UCode.Mongo
             MongoDB.Driver.FindOptions<TDocument, TProjection> options = findOptions;
 
             // Create the count options from the find options and set the limit and skip options to null
-            var countOptions = findOptions.CopyTo<Options.IOptions, Options.CountOptions>();
-            countOptions.Limit = null;
-            countOptions.Skip = null;
+            var countOptions = new CountOptions
+            {
+                Limit = null,
+                Skip = null,
+                Collation = options.Collation,
+                Comment = options.Comment,
+                Hint = options.Hint,
+                MaxTime = options.MaxTime
+            };
 
             // Asynchronously count the number of documents that match the specified filter
-            var total = Convert.ToInt32(await this.CountDocumentsAsync((FilterDefinition<TDocument>)filter, countOptions));
+            var total = System.Convert.ToInt32(await this.CountDocumentsAsync((FilterDefinition<TDocument>)filter, countOptions));
 
             IAsyncCursor<TProjection> cursor;
 
             // If the find operation should not be performed in a transaction
-            if (findOptions.NotPerformInTransaction)
+            if (this.InTransaction(forceTransaction, out var clientSessionHandle))
             {
-                // Perform the find operation with the filter
-                this.Logger.LogDebug($"Call \"this.MongoCollection.FindAsync(...)\" without session, filter: \"{filterSelected}\" and options: {options.JsonString()}");
-                cursor = await this.MongoCollection.FindAsync(filterSelected, options);
-            }
-            else if (this._contextbase.TransactionalContext)
-            {
-                // Perform the find operation with the session and filter
-                this.Logger.LogDebug($"Call \"this.MongoCollection.FindAsync(...)\" with session, filter: \"{filterSelected}\" and options: {options.JsonString()}");
-                cursor = await this.MongoCollection.FindAsync(this._contextbase.ContextSession, filterSelected, options);
+                cursor = await this.MongoCollection.FindAsync(clientSessionHandle, filterSelected, options, cancellationToken);
             }
             else
             {
-                // Perform the find operation with the filter
-                this.Logger.LogDebug($"Call \"this.MongoCollection.FindAsync(...)\" without session, filter: \"{filterSelected}\" and options: {options.JsonString()}");
-                cursor = await this.MongoCollection.FindAsync(filterSelected, options);
+                cursor = await this.MongoCollection.FindAsync(filterSelected, options, cancellationToken);
             }
 
             // Create an array to hold the items
@@ -866,7 +882,7 @@ namespace UCode.Mongo
 
             var lastPos = 0;
             // Iterate over the cursor and retrieve the items
-            while (await cursor.MoveNextAsync())
+            while (await cursor.MoveNextAsync(cancellationToken))
             {
                 foreach (var item in cursor.Current)
                 {
@@ -889,7 +905,7 @@ namespace UCode.Mongo
             #endregion find
 
             // Perform the find operation and return the result
-            return new PagedResult<TProjection>(itens, Convert.ToInt32(findOptions.CurrentPage), Convert.ToInt32(findOptions.PageSize), total);
+            return new PagedResult<TProjection>(itens, System.Convert.ToInt32(findOptions.CurrentPage), System.Convert.ToInt32(findOptions.PageSize), total);
         }
 
         #endregion
@@ -905,13 +921,14 @@ namespace UCode.Mongo
         /// <returns>The updated document.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async ValueTask<TDocument> FindOneAndUpdateAsync([NotNull] Query<TDocument> query,
-            [NotNull] FindOneAndUpdateOptions<TDocument> options,
-            CancellationToken cancellationToken = default)
+            [MaybeNull] FindOneAndUpdateOptions<TDocument> options,
+            [MaybeNull] bool? forceTransaction = default,
+            [MaybeNull] CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             // Create a copy of the options to avoid modifying the original
-            MongoDB.Driver.FindOneAndUpdateOptions<TDocument> fouOptions = options;
+            MongoDB.Driver.FindOneAndUpdateOptions<TDocument> findOneAndUpdateOptions = options;
 
             // Declare a variable to hold the result
             TDocument result;
@@ -921,22 +938,16 @@ namespace UCode.Mongo
             UpdateDefinition<TDocument> update = _contextbase.BeforeUpdateInternal<TDocument, TObjectId>(query.Update);
 
             // If the operation should not be performed in a transaction
-            if (options.NotPerformInTransaction)
-            {
-                // Perform the find and update operation without a session
-                result = await this.MongoCollection.FindOneAndUpdateAsync(filter, update, fouOptions, cancellationToken);
-            }
-            // If a transaction is in use
-            else if (this._contextbase.TransactionalContext)
+            if (this.InTransaction(forceTransaction, out var clientSessionHandle))
             {
                 // Perform the find and update operation with a session
-                result = await this.MongoCollection.FindOneAndUpdateAsync(this._contextbase.ContextSession, filter, update, fouOptions, cancellationToken);
+                result = await this.MongoCollection.FindOneAndUpdateAsync(clientSessionHandle, filter, update, findOneAndUpdateOptions, cancellationToken);
             }
             // If no transaction is in use
             else
             {
                 // Perform the find and update operation without a session
-                result = await this.MongoCollection.FindOneAndUpdateAsync(filter, update, fouOptions, cancellationToken);
+                result = await this.MongoCollection.FindOneAndUpdateAsync(filter, update, findOneAndUpdateOptions, cancellationToken);
             }
 
             // Return the updated document
@@ -954,7 +965,8 @@ namespace UCode.Mongo
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async ValueTask<TDocument> FindOneAndUpdateAsync([NotNull] string filter, [NotNull] string update,
             [NotNull] FindOneAndUpdateOptions<TDocument> options,
-            CancellationToken cancellationToken = default)
+            [MaybeNull] bool? forceTransaction = default,
+            [MaybeNull] CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -965,16 +977,10 @@ namespace UCode.Mongo
             TDocument result;
 
             // If the operation should not be performed in a transaction
-            if (options.NotPerformInTransaction)
-            {
-                // Perform the find and update operation without a session
-                result = await this.MongoCollection.FindOneAndUpdateAsync(filter, _contextbase.BeforeUpdateInternal<TDocument, TObjectId>(update), fouOptions, cancellationToken);
-            }
-            // If a transaction is in use
-            else if (this._contextbase.TransactionalContext)
+            if (this.InTransaction(forceTransaction, out var clientSessionHandle))
             {
                 // Perform the find and update operation with a session
-                result = await this.MongoCollection.FindOneAndUpdateAsync(this._contextbase.ContextSession, filter, _contextbase.BeforeUpdateInternal<TDocument, TObjectId>(update), fouOptions, cancellationToken);
+                result = await this.MongoCollection.FindOneAndUpdateAsync(clientSessionHandle, filter, _contextbase.BeforeUpdateInternal<TDocument, TObjectId>(update), fouOptions, cancellationToken);
             }
             // If no transaction is in use
             else
@@ -999,13 +1005,14 @@ namespace UCode.Mongo
         public async ValueTask<TDocument> FindOneAndUpdateAsync(
            [NotNull] string filter,
            [NotNull] PipelineUpdateDefinition<TDocument> update,
-           [NotNull] FindOneAndUpdateOptions<TDocument>? options = default,
-           CancellationToken cancellationToken = default)
+           [MaybeNull] FindOneAndUpdateOptions<TDocument>? options = default,
+           [MaybeNull] bool? forceTransaction = default,
+           [MaybeNull] CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             // Create a copy of the options to avoid modifying the original
-            MongoDB.Driver.FindOneAndUpdateOptions<TDocument> fouOptions = options ?? new Options.FindOneAndUpdateOptions<TDocument>();
+            MongoDB.Driver.FindOneAndUpdateOptions<TDocument> fouOptions = options ?? new FindOneAndUpdateOptions<TDocument>();
 
             // Declare a variable to hold the result
             TDocument result;
