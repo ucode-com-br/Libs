@@ -3,15 +3,15 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace UCode.Mongo
 {
-    /// <summary>
-    /// Represents the result of an aggregation operation on a collection.
-    /// </summary>
-    /// <typeparam name="T">The type of the projection.</typeparam>
     internal sealed record FacedAggregate<T>
     {
         /// <summary>
-        /// Gets or sets the result of the aggregation operation.
+        /// Represents the result of a database operation, containing a collection of items.
         /// </summary>
+        /// <typeparam name="T">The type of items in the result collection.</typeparam>
+        /// <returns>
+        /// An <see cref="IEnumerable{T}"/> collection containing the result items.
+        /// </returns>
         [BsonRequired]
         [BsonElement("result")]
         public IEnumerable<T> Result
@@ -20,8 +20,14 @@ namespace UCode.Mongo
         }
 
         /// <summary>
-        /// Gets or sets the total count of documents matching the query.
+        /// Represents an array of total values.
         /// </summary>
+        /// <remarks>
+        /// This property is marked as required and is serialized to the BSON element named "total".
+        /// </remarks>
+        /// <returns>
+        /// A dynamic array containing the total values.
+        /// </returns>
         [BsonRequired]
         [BsonElement("total")]
         public dynamic[] Total
@@ -30,9 +36,11 @@ namespace UCode.Mongo
         }
 
         /// <summary>
-        /// Returns the total number of rows in the result.
+        /// Calculates the total number of rows based on the Total property.
         /// </summary>
-        /// <returns>The total number of rows.</returns>
+        /// <returns>
+        /// The total count of rows as an integer. Returns 0 if the Total property is null or empty.
+        /// </returns>
         public int TotalRows()
         {
             // If the Total property is null or empty, return 0.

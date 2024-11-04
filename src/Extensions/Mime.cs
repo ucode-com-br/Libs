@@ -6,15 +6,28 @@ using System.Linq;
 namespace UCode.Extensions
 {
     /// <summary>
-    /// List of known mimetype
+    /// Provides a collection of MIME type constants used for file type identification.
     /// </summary>
+    /// <remarks>
+    /// This class contains static properties representing common MIME types that can be used 
+    /// to set the content type of files in web applications.
+    /// </remarks>
     public static class Mime
     {
         /// <summary>
-        /// 
+        /// Converts a file extension to its corresponding MIME type.
+        /// If the provided extension does not start with a dot ('.'),
+        /// the method prepends a dot to the extension before looking it up.
         /// </summary>
-        /// <param name="extension"></param>
-        /// <returns></returns>
+        /// <param name="extension">
+        /// A string representing the file extension. The extension should 
+        /// include a leading dot (if not, it will be added by the method).
+        /// </param>
+        /// <returns>
+        /// A string representing the MIME type associated with the provided 
+        /// file extension. If the extension is not recognized, it returns 
+        /// "application/octet-stream" as the default MIME type.
+        /// </returns>
         [return: NotNull]
         public static string ToMimeType([NotNull] this string extension)
         {
@@ -28,12 +41,15 @@ namespace UCode.Extensions
         }
 
         /// <summary>
-        /// Verify if mime type is valid based on internal list of known extensions
+        /// Converts a given MIME type to its corresponding file extension.
         /// </summary>
-        /// <param name="mimetype"></param>
-        /// <param name="dot"></param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentException"></exception>
+        /// <param name="mimetype">The MIME type to convert to a file extension. This value must not be null or empty.</param>
+        /// <returns>
+        /// The file extension corresponding to the specified MIME type.
+        /// </returns>
+        /// <exception cref="ArgumentException">
+        /// Thrown when the provided MIME type is null, empty, or does not match any known MIME type mappings.
+        /// </exception>
         [return: NotNull]
         public static string ToExtension([NotNull] this string mimetype)
         {
@@ -58,7 +74,10 @@ namespace UCode.Extensions
         }
 
         /// <summary>
-        /// Interrnal map for miimetype
+        /// A static readonly dictionary that maps file extensions to their corresponding MIME types.
+        /// This dictionary is initialized with a variety of common file extensions and MIME types,
+        /// allowing for case-insensitive lookups. The mappings are derived from Windows 7 Registry
+        /// and other configuration sources, with some additional entries added for completeness.
         /// </summary>
         private static readonly IDictionary<string, string> _mappings = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase)
         {

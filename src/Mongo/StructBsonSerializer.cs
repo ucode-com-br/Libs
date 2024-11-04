@@ -15,7 +15,7 @@ namespace UCode.Mongo
     {
         /// <summary>
         /// Gets the type of the value being serialized.
-        /// </summary
+        /// </summary>
         public Type ValueType => typeof(T);
 
         /// <summary>

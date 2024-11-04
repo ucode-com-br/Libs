@@ -15,17 +15,17 @@ using NPOI.XSSF.UserModel;
 namespace UCode.Extensions
 {
     /// <summary>
-    /// Exports data
+    /// This static class provides extension methods for exporting data.
     /// </summary>
     public static class ExportsExtension
     {
         /// <summary>
-        /// Generate Csf file
+        /// Converts a collection of objects to a CSV format represented as a MemoryStream.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="itens"></param>
-        /// <param name="configureAction"></param>
-        /// <returns></returns>
+        /// <typeparam name="T">The type of the objects in the collection.</typeparam>
+        /// <param name="itens">The collection of items to convert to CSV.</param>
+        /// <param name="configureAction">An optional action to configure CSV settings.</param>
+        /// <returns>A MemoryStream containing the CSV representation of the collection.</returns>
         public static MemoryStream ToCsv<T>(this IEnumerable<T> itens, Action<CsvHelper.Configuration.CsvConfiguration>? configureAction = null)
         {
             var result = new MemoryStream();
@@ -62,6 +62,17 @@ namespace UCode.Extensions
             return result;
         }
 
+        /// <summary>
+        /// Determines whether a member should be ignored based on the presence and condition of a 
+        /// <see cref="JsonIgnoreAttribute"/> on the member.
+        /// </summary>
+        /// <param name="memberInfo">The member information associated with the member to evaluate.</param>
+        /// <param name="obj">The object instance from which to get the member's value.</param>
+        /// <returns>
+        /// A boolean indicating whether the member should be ignored. Returns true if the member is 
+        /// marked with <see cref="JsonIgnoreAttribute"/> and the specified condition in the attribute is met.
+        /// Returns false otherwise.
+        /// </returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool ShouldIgnore(MemberInfo? memberInfo, object obj)
         {
@@ -93,9 +104,34 @@ namespace UCode.Extensions
             }
         }
 
+        /// <summary>
+        /// Gets the default value for a given Type.
+        /// </summary>
+        /// <param name="type">The Type for which to get the default value.</param>
+        /// <returns>
+        /// The default value of the specified type. 
+        /// Returns null if the type is a reference type; for value types, 
+        /// it returns the result of Activator.CreateInstance which is the default value of that value type.
+        /// </returns>
+        /// <remarks>
+        /// This method uses the Aggressive Inlining optimization to potentially improve performance
+        /// by reducing method call overhead when the method is invoked frequently.
+        /// </remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static object? GetDefaultValue(Type type) => type.IsValueType ? Activator.CreateInstance(type) : null;
 
+        /// <summary>
+        /// Recursively flattens a JSON object or array into a key-value representation.
+        /// </summary>
+        /// <typeparam name="T">The type of the object to flatten.</typeparam>
+        /// <param name="jsonElement">The JSON element to flatten.</param>
+        /// <param name="obj">The object that corresponds to the JSON element.</param>
+        /// <param name="prefix">The prefix to be applied to the keys.</param>
+        /// <param name="addAction">An action to execute for each key-value pair.</param>
+        /// <remarks>
+        /// This method handles JSON objects, arrays, strings, numbers, booleans, null, and undefined
+        /// value kinds, and calls the provided action for each of their flattened representations.
+        /// </remarks>
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private static void FlattenObjectInternal<T>(JsonElement jsonElement, T obj, string prefix, Action<(string Key, object value)> addAction)
         {
@@ -213,12 +249,12 @@ namespace UCode.Extensions
         }
 
         /// <summary>
-        /// Create .xslx document
+        /// Converts a collection of objects to an Excel file format (XLSX).
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="itens"></param>
-        /// <param name="sheetName"></param>
-        /// <returns></returns>
+        /// <typeparam name="T">The type of objects in the collection.</typeparam>
+        /// <param name="itens">The collection of items to be converted to Excel.</param>
+        /// <param name="sheetName">The name of the sheet in the Excel file.</param>
+        /// <returns>A <see cref="MemoryStream"/> containing the Excel file data.</returns>
         public static MemoryStream ToExcel<T>(this IEnumerable<T> itens, string sheetName)
         {
             var columns = new List<string>();

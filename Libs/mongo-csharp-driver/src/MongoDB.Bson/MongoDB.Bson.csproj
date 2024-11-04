@@ -17,7 +17,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="5.0.0" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
     <PackageReference Include="System.Memory" Version="4.5.5" />
   </ItemGroup>
 
@@ -25,6 +25,13 @@
     <Compile Include="..\MongoDB.Shared\DictionaryComparer.cs" Link="Shared\DictionaryComparer.cs" />
     <Compile Include="..\MongoDB.Shared\Hasher.cs" Link="Shared\Hasher.cs" />
     <Compile Include="..\MongoDB.Shared\SequenceComparer.cs" Link="Shared\SequenceComparer.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Update="Microsoft.SourceLink.GitHub" Version="8.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
 </Project>

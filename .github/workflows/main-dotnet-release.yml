@@ -52,6 +52,14 @@ jobs:
     - name: "Pack the project"
       run: dotnet pack --include-symbols --include-source --nologo --configuration "Release" -p:SymbolPackageFormat=snupkg -o "artifacts"
 
+    - name: "Verify Package Contents"
+      run: |
+        cd artifacts
+        for package in *.nupkg; do
+          echo "Contents of $package:"
+          unzip -l "$package"
+        done
+
     - name: "Push Package to NuGet.org"
       run: |
         cd artifacts

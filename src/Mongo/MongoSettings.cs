@@ -1,20 +1,19 @@
 using MongoDB.Driver;
 using UCode.Extensions;
 
-// ReSharper disable CommentTypo
-// ReSharper disable StringLiteralTypo
 
 namespace UCode.Mongo
 {
-    /// <summary>
-    /// Represents the settings for a MongoDB connection.
-    /// </summary>
     public record MongoSettings
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="MongoSettings"/> class.
+        /// Initializes a new instance of the <see cref="MongoSettings"/> class with a specified connection string.
+        /// Extracts the database name from the MongoDB connection string using a regular expression.
         /// </summary>
-        /// <param name="connectionString">The MongoDB connection string.</param>
+        /// <param name="connectionString">The connection string used to connect to the MongoDB database.</param>
+        /// <returns>
+        /// This constructor does not return a value. It sets the <see cref="ConnectionString"/> and <see cref="Database"/> properties based on the provided connection string.
+        /// </returns>
         public MongoSettings(string connectionString)
         {
             this.ConnectionString = connectionString;
@@ -26,8 +25,11 @@ namespace UCode.Mongo
         /// <summary>
         /// Initializes a new instance of the <see cref="MongoSettings"/> class.
         /// </summary>
-        /// <param name="connectionString">The MongoDB connection string.</param>
-        /// <param name="database">The name of the database. If not provided, it will be extracted from the connection string.</param>
+        /// <param name="connectionString">The connection string to the MongoDB database.</param>
+        /// <param name="database">The name of the database to use. If not provided, defaults to null.</param>
+        /// <returns>
+        /// Returns a new instance of the <see cref="MongoSettings"/> class with the specified connection string and database name.
+        /// </returns>
         public MongoSettings(string connectionString, string database = null)
         {
             this.ConnectionString = connectionString;
@@ -35,32 +37,39 @@ namespace UCode.Mongo
         }
 
         /// <summary>
-        /// Gets the MongoDB connection string.
+        /// Gets the connection string used to connect to the database.
         /// </summary>
+        /// <value>
+        /// A <see cref="string"/> representing the database connection string.
+        /// </value>
         public string ConnectionString
         {
             get;
         }
 
         /// <summary>
-        /// Gets the name of the database.
+        /// Represents the name of the database.
         /// </summary>
+        /// <value>
+        /// A string that contains the name of the database. This property is read-only.
+        /// </value>
         public string Database
         {
             get;
         }
 
         /// <summary>
-        /// Creates a <see cref="MongoClientSettings"/> object from the connection string.
+        /// Creates a new instance of <see cref="MongoClientSettings"/> using the specified connection string.
         /// </summary>
-        /// <returns>A new <see cref="MongoClientSettings"/> object.</returns>
+        /// <returns>
+        /// A <see cref="MongoClientSettings"/> object configured with the provided connection string.
+        /// </returns>
+        /// <remarks>
+        /// This method calls <see cref="MongoClientSettings.FromConnectionString(string)"/>
+        /// to parse the connection string and generate the settings.
+        /// </remarks>
         public MongoClientSettings CreateClientSettings() => MongoClientSettings.FromConnectionString(this.ConnectionString);
 
-        /// <summary>
-        /// Converts a <see cref="MongoSettings"/> object to a <see cref="MongoClientSettings"/> object.
-        /// </summary>
-        /// <param name="mongoSettings">The <see cref="MongoSettings"/> object to convert.</param>
-        /// <returns>A new <see cref="MongoClientSettings"/> object.</returns>
         public static explicit operator MongoClientSettings(MongoSettings mongoSettings) => mongoSettings.CreateClientSettings();
     }
 }
