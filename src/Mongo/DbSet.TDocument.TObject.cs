@@ -404,28 +404,6 @@ namespace UCode.Mongo
         }
 
 
-        /// <summary>
-        /// Asynchronously retrieves the first document that matches the specified query, 
-        /// or a default value if no documents match.
-        /// </summary>
-        /// <param name="query">The query used to filter the documents.</param>
-        /// <param name="findOptions">Optional parameters to customize the find operation.</param>
-        /// <param name="forceTransaction">Optional boolean indicating whether to force the operation within a transaction.</param>
-        /// <param name="cancellationToken">Optional token to monitor for cancellation requests.</param>
-        /// <returns>Returns a <see cref="ValueTask{TDocument}"/> representing the asynchronous operation, 
-        /// containing the first matching document or a default value if none are found.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async ValueTask<TDocument> FirstOrDefaultAsync([NotNull] Query<TDocument> query,
-            FindOptions<TDocument>? findOptions = default,
-            [MaybeNull] bool? forceTransaction = default,
-            [MaybeNull] CancellationToken cancellationToken = default)
-        {
-            var opt = ConvertInternal(findOptions);
-
-            Query<TDocument, TDocument> qry = query;
-
-            return await this.GetOneAsync(qry, opt, forceTransaction, cancellationToken);
-        }
 
 
         /// <summary>
@@ -1239,7 +1217,7 @@ namespace UCode.Mongo
             return result;
         }
 
-
+        /*
         /// <summary>
         /// Asynchronously finds a single document and updates it in the MongoDB collection.
         /// </summary>
@@ -1323,7 +1301,7 @@ namespace UCode.Mongo
             // Return the result
             return result;
         }
-
+        */
         #endregion FindOneAndUpdateAsync
 
         #region UpdateManyAsync
@@ -1858,7 +1836,7 @@ namespace UCode.Mongo
         /// </returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async ValueTask<long> ReplaceAsync([NotNull] TDocument doc,
-                    [MaybeNull] Query<TDocument> query,
+                    [MaybeNull] Query<TDocument>? query = default,
                     [MaybeNull] ReplaceOptions? replaceOptions = default,
                     [MaybeNull] bool? forceTransaction = default,
                     [MaybeNull] CancellationToken cancellationToken = default)
@@ -1881,7 +1859,7 @@ namespace UCode.Mongo
         /// <returns>A <see cref="ValueTask{ReplaceOneResult}"/> representing the asynchronous operation, with the result containing information about the replace operation.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async ValueTask<ReplaceOneResult> ReplaceOneAsync([NotNull] TDocument doc,
-                    [MaybeNull] Query<TDocument> query,
+                    [MaybeNull] Query<TDocument>? query = default,
                     [MaybeNull] ReplaceOptions? replaceOptions = default,
                     [MaybeNull] bool? forceTransaction = default,
                     [MaybeNull] CancellationToken cancellationToken = default)
