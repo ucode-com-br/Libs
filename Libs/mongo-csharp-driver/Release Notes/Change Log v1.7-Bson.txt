@@ -1,4 +1,0 @@
-BSON library changes from 1.6.1 to 1.7
-
-BsonClassMap.cs
-    added GetRegisteredClassMaps method
