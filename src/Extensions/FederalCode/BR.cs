@@ -3,8 +3,23 @@ using System.Globalization;
 
 namespace UCode.Extensions.FederalCode
 {
+    /// <summary>
+    /// The BR class contains static members and methods that 
+    /// provide functionality related to operations or utilities
+    /// within the context of a specific application domain.
+    /// </summary>
     public static class BR
     {
+        /// <summary>
+        /// Validates if the provided string is a valid Brazilian CNPJ (Cadastro Nacional da Pessoa Jurídica).
+        /// The CNPJ must contain 14 digits, and the method checks the validity based on specific rules
+        /// defined for CNPJ verification.
+        /// </summary>
+        /// <param name="cnpj">The CNPJ string to validate, which may include formatting characters like dots, dashes, or slashes.</param>
+        /// <returns>
+        /// Returns true if the CNPJ is valid; otherwise, returns false.
+        /// A CNPJ is considered valid if it follows the correct digits' formatting and calculations for verification.
+        /// </returns>
         public static bool IsCnpj(this string cnpj)
         {
             try
@@ -79,6 +94,19 @@ namespace UCode.Extensions.FederalCode
             }
         }
 
+        /// <summary>
+        /// Calculates the check digits (the last two digits) for a Brazilian CNPJ (Cadastro Nacional da Pessoa Jurídica).
+        /// This method extends the string class to provide the CNPJ digit calculation functionality.
+        /// </summary>
+        /// <param name="cnpj">A string representing the CNPJ number without its check digits. It must be 12 characters long.</param>
+        /// <returns>
+        /// A string containing the two check digits calculated for the provided CNPJ number.
+        /// The resulting string will be a combination of the calculated first and second check digits.
+        /// </returns>
+        /// <exception cref="ArgumentException">
+        /// Thrown when the provided CNPJ string length is not equal to 12.
+        /// The exception includes details about the invalid length.
+        /// </exception>
         public static string CnpjDigit(this string cnpj)
         {
             if (cnpj.Length != 12)
@@ -133,6 +161,19 @@ namespace UCode.Extensions.FederalCode
             return digito;
         }
 
+        /// <summary>
+        /// Validates a Brazilian CPF (Cadastro de Pessoas Físicas) number.
+        /// A CPF is valid if it consists of 11 digits and follows a specific checksum algorithm.
+        /// This extension method will trim the input, remove non-numeric characters, 
+        /// pad the number to ensure it has 11 digits, and then validates 
+        /// the CPF against the algorithm used for generating valid CPFs.
+        /// </summary>
+        /// <param name="cpf">The CPF number as a string that needs to be validated.</param>
+        /// <returns>
+        /// Returns true if the CPF is valid, otherwise false. 
+        /// If the input is null or does not represent a valid CPF number, 
+        /// it will return false as well.
+        /// </returns>
         public static bool IsCpf(this string cpf)
         {
             try
@@ -209,6 +250,13 @@ namespace UCode.Extensions.FederalCode
             }
         }
 
+        /// <summary>
+        /// Converts a given string to a valid CNPJ format, or returns null if the input is null or invalid.
+        /// </summary>
+        /// <param name="format">The input string that may contain a CNPJ number in an unformatted form.</param>
+        /// <returns>
+        /// A formatted CNPJ string if the input is valid; otherwise, returns null.
+        /// </returns>
         public static string? ToCnpj(string? format)
         {
             if (format == null)
@@ -226,6 +274,18 @@ namespace UCode.Extensions.FederalCode
             return null;
         }
 
+        /// <summary>
+        /// Converts a given string to a CPF (Cadastro de Pessoas Físicas) format.
+        /// If the input is null, returns null. 
+        /// Removes any asterisks from the input and pads it with leading zeros 
+        /// to ensure it has a length of 11 characters. 
+        /// If the resulting string is a valid CPF, it formats it and returns it; 
+        /// otherwise, it returns null.
+        /// </summary>
+        /// <param name="format">The input string that may contain asterisks and will be converted to CPF format.</param>
+        /// <returns>
+        /// The formatted CPF string if the input is valid; otherwise, null.
+        /// </returns>
         public static string? ToCpf(string? format)
         {
             if (format == null)
@@ -243,6 +303,15 @@ namespace UCode.Extensions.FederalCode
             return null;
         }
 
+        /// <summary>
+        /// Formats a CNPJ number by removing asterisks, padding the result with zeros,
+        /// and inserting the appropriate formatting characters if the number is valid.
+        /// </summary>
+        /// <param name="format">The CNPJ string to format, which may contain '*' characters.</param>
+        /// <returns>
+        /// A formatted CNPJ string in the format 'XX.XXX.XXX/XXXX-XX' if the input is valid,
+        /// or null if the input is null or not a valid CNPJ.
+        /// </returns>
         public static string? CnpjFormat(string? format)
         {
             if (format == null)
@@ -265,6 +334,16 @@ namespace UCode.Extensions.FederalCode
             return null;
         }
 
+        /// <summary>
+        /// Formats the provided string into a valid Brazilian CPF (Cadastro de Pessoas Físicas) format.
+        /// If the input string is null, the method returns null.
+        /// If the input string after removing asterisks does not represent a valid CPF, the method returns null.
+        /// Otherwise, it returns the CPF formatted as "###.###.###-##".
+        /// </summary>
+        /// <param name="format">A string representing the CPF, potentially containing asterisks that will be removed.</param>
+        /// <returns>
+        /// A formatted string representing the CPF if valid, or null if the input is invalid or null.
+        /// </returns>
         public static string? CpfFormat(string? format)
         {
             if (format == null)

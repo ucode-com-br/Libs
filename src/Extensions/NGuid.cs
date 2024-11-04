@@ -20,12 +20,12 @@ namespace UCode.Extensions
         /// <param name="version">The version number of the UUID to create; this value must be either
         /// 3 (for MD5 hashing) or 5 (for SHA-1 hashing).</param>
         /// <returns>A UUID derived from the namespace and name.</returns>
-#if NET6_0_OR_GREATER
+#if NET8_0_OR_GREATER
         [SkipLocalsInit]
 #endif
         public static Guid CreateFromName(Guid namespaceId, string name, int version = 5)
         {
-#if NET6_0_OR_GREATER
+#if NET8_0_OR_GREATER
             ArgumentNullException.ThrowIfNull(name);
 #else
 		if (name is null)
@@ -34,7 +34,7 @@ namespace UCode.Extensions
 
             // convert the name to a sequence of octets (as defined by the standard or conventions of its namespace) (step 3)
             // ASSUME: UTF-8 encoding is always appropriate
-#if NET6_0_OR_GREATER
+#if NET8_0_OR_GREATER
             Span<byte> nameBytes = name.Length < 500 ? stackalloc byte[name.Length * 3] : new byte[name.Length * 3];
             nameBytes = nameBytes[..Encoding.UTF8.GetBytes(name.AsSpan(), nameBytes)];
             return CreateFromName(namespaceId, nameBytes, version);
@@ -53,7 +53,7 @@ namespace UCode.Extensions
         /// 3 (for MD5 hashing) or 5 (for SHA-1 hashing).</param>
         /// <returns>A UUID derived from the namespace and name.</returns>
         public static Guid CreateFromName(Guid namespaceId, byte[] name, int version = 5) =>
-#if NET6_0_OR_GREATER
+#if NET8_0_OR_GREATER
             CreateFromName(namespaceId, name.AsSpan(), version);
 #else
 		if (version is not (3 or 5))
@@ -89,7 +89,7 @@ namespace UCode.Extensions
 #endif
 
 
-#if NET6_0_OR_GREATER
+#if NET8_0_OR_GREATER
         /// <summary>
         /// Creates a name-based UUID using the algorithm from <a href="https://datatracker.ietf.org/doc/html/rfc4122#section-4.3">RFC 4122 §4.3</a>.
         /// </summary>
@@ -173,7 +173,7 @@ namespace UCode.Extensions
         /// <param name="timestamp">The timestamp to be used to fill the <c>time_high</c>, <c>time_mid</c>, and <c>time_low</c> fields of the UUID.</param>
         /// <returns>A new time-based Version 6 UUID.</returns>
         /// <remarks>This method is based on <a href="https://datatracker.ietf.org/doc/html/draft-ietf-uuidrev-rfc4122bis-07#name-uuid-version-6">draft-ietf-uuidrev-rfc4122bis-07</a> and is subject to change.</remarks>
-#if NET6_0_OR_GREATER
+#if NET8_0_OR_GREATER
         [SkipLocalsInit]
 #endif
         private static Guid CreateVersion6(DateTimeOffset timestamp)
@@ -190,7 +190,7 @@ namespace UCode.Extensions
             var timeLow = (ushort)((ticks & 0xFFF) | 0x6000u);
 
             // "The clock sequence and node bits SHOULD be reset to a pseudo-random value for each new UUIDv6 generated"
-#if NET6_0_OR_GREATER
+#if NET8_0_OR_GREATER
             Span<byte> bytes = stackalloc byte[8];
             RandomNumberGenerator.Fill(bytes);
 #else
@@ -210,12 +210,12 @@ namespace UCode.Extensions
         /// <param name="guid">The Version 1 UUID to convert.</param>
         /// <returns>A UUID in Version 6 format, with the timestamp in MSB order.</returns>
         /// <remarks>This method is based on <a href="https://datatracker.ietf.org/doc/html/draft-ietf-uuidrev-rfc4122bis-07#name-uuid-version-6">draft-ietf-uuidrev-rfc4122bis-07</a> and is subject to change.</remarks>
-#if NET6_0_OR_GREATER
+#if NET8_0_OR_GREATER
         [SkipLocalsInit]
 #endif
         public static Guid CreateVersion6FromVersion1(Guid guid)
         {
-#if NET6_0_OR_GREATER
+#if NET8_0_OR_GREATER
             Span<byte> guidBytes = stackalloc byte[16];
             guid.TryWriteBytes(guidBytes);
 #else
@@ -280,7 +280,7 @@ namespace UCode.Extensions
         /// <param name="timestamp">The timestamp to be used to fill the <c>unix_ts_ms</c> field of the UUID.</param>
         /// <returns>A new time-based Version 7 UUID.</returns>
         /// <remarks>This method is based on <a href="https://datatracker.ietf.org/doc/html/draft-ietf-uuidrev-rfc4122bis-07#name-uuid-version-7">draft-ietf-uuidrev-rfc4122bis-07</a> and is subject to change.</remarks>
-#if NET6_0_OR_GREATER
+#if NET8_0_OR_GREATER
         [SkipLocalsInit]
 #endif
         private static Guid CreateVersion7(DateTimeOffset timestamp)
@@ -296,7 +296,7 @@ namespace UCode.Extensions
             var timeLow = (ushort)unixMilliseconds;
 
             // "... and filling the remaining 74 bits, excluding the required version and variant bits, with random bits"
-#if NET6_0_OR_GREATER
+#if NET8_0_OR_GREATER
             Span<byte> bytes = stackalloc byte[10];
             RandomNumberGenerator.Fill(bytes);
 #else
@@ -327,7 +327,7 @@ namespace UCode.Extensions
         /// This method is based on <a href="https://datatracker.ietf.org/doc/html/draft-ietf-uuidrev-rfc4122bis-07#name-uuid-version-8">draft-ietf-uuidrev-rfc4122bis-07</a> and is subject to change.</remarks>
         public static Guid CreateVersion8(byte[] bytes)
         {
-#if NET6_0_OR_GREATER
+#if NET8_0_OR_GREATER
             ArgumentNullException.ThrowIfNull(bytes);
             return CreateVersion8(bytes.AsSpan());
 #else
@@ -351,7 +351,7 @@ namespace UCode.Extensions
 #endif
         }
 
-#if NET6_0_OR_GREATER
+#if NET8_0_OR_GREATER
         /// <summary>
         /// Creates a Version 8 UUID from 122 bits of the specified input. All byte values will be copied to the returned
         /// <see cref="Guid"/> except for the reserved <c>version</c> and <c>variant</c> bits, which will be set to 8
@@ -398,7 +398,7 @@ namespace UCode.Extensions
         /// <returns>A version 8 UUID formed by hashing the hash space ID, namespace ID, and name.</returns>
         /// <remarks>This method is based on <a href="https://datatracker.ietf.org/doc/html/draft-ietf-uuidrev-rfc4122bis-07#name-name-based-uuid-generation">draft-ietf-uuidrev-rfc4122bis-07</a> and is subject to change.</remarks>
         public static Guid CreateVersion8FromName(HashAlgorithmName hashAlgorithmName, Guid namespaceId, byte[] name) =>
-#if NET6_0_OR_GREATER
+#if NET8_0_OR_GREATER
             CreateVersion8FromName(hashAlgorithmName, namespaceId, name.AsSpan());
 #else
 		var (hashSpaceId, algorithm) = GetHashSpaceAndAlgorithm(hashAlgorithmName);
@@ -432,7 +432,7 @@ namespace UCode.Extensions
 #endif
 
 
-#if NET6_0_OR_GREATER
+#if NET8_0_OR_GREATER
         /// <summary>
         /// Creates a Version 8 UUID from a name in the specified namespace using the specified hash algorithm, according to the algorithm
         /// in <a href="https://datatracker.ietf.org/doc/html/draft-ietf-uuidrev-rfc4122bis-07#name-name-based-uuid-generation">draft-ietf-uuidrev-rfc4122bis-07, section 6.5</a>.

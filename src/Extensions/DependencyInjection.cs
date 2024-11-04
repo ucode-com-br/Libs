@@ -51,34 +51,7 @@ namespace UCode.Extensions
         public static void SetLogger<T>([NotNull] this ILogger logger) => logger = CreateLogger<T>();
 
         public static void SetLogger<T>([NotNull] this T instance, Expression<Func<T, ILogger<T>>> expression) => x(instance, expression);
-        //{
-        //    Logger.LogDebug($"Call: {nameof(SetLogger)}<T>(...) with ILogger<T>");
-
-
-        //    var body = expression.Body as MemberExpression;
-        //    var member = body.Member;
-
-        //    if (member != null)
-        //    {
-        //        if (member is PropertyInfo propertyInfo)
-        //        {
-        //            propertyInfo.SetValue(instance, LoggerFactory.CreateLogger<T>());
-        //        }
-        //        else if (member is FieldInfo fieldInfo)
-        //        {
-        //            fieldInfo.SetValue(instance, LoggerFactory.CreateLogger<T>());
-        //        }
-        //        else
-        //        {
-        //            throw new ArgumentException("The member need a property or field", nameof(expression));
-        //        }
-        //    }
-        //    else
-        //    {
-
-        //        throw new ArgumentException("Expression is not a member access", nameof(expression));
-        //    }
-        //}
+        
 
         private static void x<T, TE>(T instance, Expression<TE> expression) where TE : Delegate
         {
@@ -135,34 +108,7 @@ namespace UCode.Extensions
         }
 
         public static void SetLogger<T>(this T instance, Expression<Func<T, ILogger>> expression) => x(instance, expression);
-        //{
-        //    Logger.LogDebug($"Call: {nameof(SetLogger)}<T>(...) with ILogger");
-
-
-        //    var body = expression.Body as MemberExpression;
-        //    var member = body.Member;
-
-        //    if (member != null)
-        //    {
-        //        if (member is PropertyInfo propertyInfo)
-        //        {
-        //            propertyInfo.SetValue(instance, LoggerFactory.CreateLogger<T>());
-        //        }
-        //        else if (member is FieldInfo fieldInfo)
-        //        {
-        //            fieldInfo.SetValue(instance, LoggerFactory.CreateLogger<T>());
-        //        }
-        //        else
-        //        {
-        //            throw new ArgumentException("The member need a property or field", nameof(expression));
-        //        }
-        //    }
-        //    else
-        //    {
-
-        //        throw new ArgumentException("Expression is not a member access", nameof(expression));
-        //    }
-        //}
+        
 
 
 
