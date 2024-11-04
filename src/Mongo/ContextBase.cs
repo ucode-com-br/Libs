@@ -488,6 +488,23 @@ namespace UCode.Mongo
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
             where TDocument : IObjectId<TObjectId> => new(this, collectionName, createCollectionOptionsAction, mongoCollectionSettingsAction, useTransaction ?? this.TransactionalContext);
 
+        /// <summary>
+        /// Retrieves a DbSet of the specified document type from the database.
+        /// </summary>
+        /// <typeparam name="TDocument">The type of the document that represents the collection.</typeparam>
+        /// <param name="collectionName">An optional name of the collection. If not provided, a default is used.</param>
+        /// <param name="createCollectionOptionsAction">An optional action to configure the creation options for the collection.</param>
+        /// <param name="mongoCollectionSettingsAction">An optional action to configure the MongoDB collection settings.</param>
+        /// <param name="useTransaction">Optional value indicating whether to use a transaction.</param>
+        /// <returns>A DbSet of the specified document type.</returns>
+        /// <exception cref="InvalidOperationException">Thrown if the operation cannot be performed.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public DbSet<TDocument> GetDbSet<TDocument>(
+                    string? collectionName = null, Action<CreateCollectionOptions>? createCollectionOptionsAction = null,
+                    Action<MongoCollectionSettings>? mongoCollectionSettingsAction = null, bool? useTransaction = default)
+                    where TDocument : IObjectId => new(this, collectionName, createCollectionOptionsAction, mongoCollectionSettingsAction, useTransaction ?? this.TransactionalContext);
+
+
 
 
 
