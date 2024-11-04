@@ -23,32 +23,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
   </PropertyGroup>
-  <Target Name="ILRepack" AfterTargets="Build">
-    <ItemGroup>
-      <!-- Include the main assembly -->
-      <InputAssemblies Include="$(OutputPath)$(AssemblyName).dll" />
-      <InputAssemblies Include="$(OutputPath)$(AssemblyName).pdb" />
-      <InputAssemblies Include="$(OutputPath)$(AssemblyName).xml" />
-      <!-- Include referenced project assemblies -->
-      <InputAssemblies Include="$(OutputPath)MongoDB.Bson.dll" />
-      <InputAssemblies Include="$(OutputPath)MongoDB.Bson.pdb" />
-      <InputAssemblies Include="$(OutputPath)MongoDB.Bson.xml" />
-      <InputAssemblies Include="$(OutputPath)MongoDB.Driver.dll" />
-      <InputAssemblies Include="$(OutputPath)MongoDB.Driver.pdb" />
-      <InputAssemblies Include="$(OutputPath)MongoDB.Driver.xml" />
-      <!-- Exclude any assemblies you don't want to merge -->
-    </ItemGroup>
-    <ILRepack
-      OutputFile="$(OutputPath)$(AssemblyName).Merged.dll"
-      InputAssemblies="@(InputAssemblies)"
-      Internalize="true"
-      DebugInfo="true"
-      Verbose="true" />
-    <!-- Replace the original assembly with the merged one -->
-    <Copy SourceFiles="$(OutputPath)$(AssemblyName).Merged.dll" DestinationFiles="$(OutputPath)$(AssemblyName).dll" OverwriteReadOnlyFiles="true" />
-    <Copy SourceFiles="$(OutputPath)$(AssemblyName).Merged.pdb" DestinationFiles="$(OutputPath)$(AssemblyName).pdb" OverwriteReadOnlyFiles="true" />
-    <Copy SourceFiles="$(OutputPath)$(AssemblyName).Merged.xml" DestinationFiles="$(OutputPath)$(AssemblyName).xml" OverwriteReadOnlyFiles="true" />
-  </Target>
+  
   <Target Name="Husky" BeforeTargets="Restore;CollectPackageReferences" Condition="'$(HUSKY)' != 0">
     <Exec Command="dotnet tool restore" StandardOutputImportance="Low" StandardErrorImportance="High" />
     <Exec Condition="0 == 1" Command="husky install" StandardOutputImportance="Low" StandardErrorImportance="High" WorkingDirectory=".." />
@@ -67,15 +42,16 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.1" />
-    <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.18" PrivateAssets="All" />
+    <PackageReference Include="MongoDB.Bson" Version="3.0.0" />
+    <PackageReference Include="MongoDB.Driver" Version="3.0.0" />
     <!--<PackageReference Include="UCode.Extensions" Version="1.8.3" Condition="'$(Configuration)'!='Debug'" />
     <PackageReference Include="UCode.Repositories" Version="1.8.3" Condition="'$(Configuration)'!='Debug'" />-->
   </ItemGroup>
   <ItemGroup>
     <!--<ProjectReference Include="..\Extensions\UCode.Extensions.csproj" Condition="'$(Configuration)'=='Debug'" />
     <ProjectReference Include="..\Repositories\UCode.Repositories.csproj" Condition="'$(Configuration)'=='Debug'" />-->
-    <ProjectReference Include="..\..\Libs\mongo-csharp-driver\src\MongoDB.Bson\MongoDB.Bson.csproj" />
-    <ProjectReference Include="..\..\Libs\mongo-csharp-driver\src\MongoDB.Driver\MongoDB.Driver.csproj" />
+    <!--<ProjectReference Include="..\..\Libs\mongo-csharp-driver\src\MongoDB.Bson\MongoDB.Bson.csproj" />
+    <ProjectReference Include="..\..\Libs\mongo-csharp-driver\src\MongoDB.Driver\MongoDB.Driver.csproj" />-->
     <ProjectReference Include="..\Extensions\UCode.Extensions.csproj" />
     <ProjectReference Include="..\Repositories\UCode.Repositories.csproj" />
   </ItemGroup>
