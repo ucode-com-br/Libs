@@ -25,7 +25,7 @@ namespace UCode.Mongo
     /// The type of the object identifier. This type parameter allows for flexibility
     /// in defining what kind of identifiers are used as ObjectId.
     /// </typeparam>
-    public abstract class ObjectIdClass<TObjectId> : ObjectIdClass<TObjectId, string>
+    public abstract class ObjectIdClass<TObjectId> : ObjectIdClass<TObjectId, string>, IObjectId<TObjectId>
         where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
     {
 
@@ -241,7 +241,7 @@ namespace UCode.Mongo
     /// subclassed by other records that require the behavior of ObjectIdRecord 
     /// with string identifiers.
     /// </remarks>
-    public abstract record ObjectIdRecord : ObjectIdRecord<string, string>
+    public abstract record ObjectIdRecord : ObjectIdRecord<string, string>, IObjectId
     {
 
     }
@@ -254,7 +254,7 @@ namespace UCode.Mongo
     /// The type of the object identifier. This type must implement the <see cref="IComparable{T}"/> and 
     /// <see cref="IEquatable{T}"/> interfaces to ensure that objects of this type can be compared and checked for equality.
     /// </typeparam>
-    public abstract record ObjectIdRecord<TObjectId> : ObjectIdRecord<TObjectId, string>
+    public abstract record ObjectIdRecord<TObjectId> : ObjectIdRecord<TObjectId, string>, IObjectId<TObjectId>
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
     {
 
