@@ -3,6 +3,7 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace UCode.Mongo
 {
+
     internal sealed record FacedAggregate<T>
     {
         /// <summary>
@@ -53,4 +54,6 @@ namespace UCode.Mongo
             return (int)this.Total[0].total;
         }
     }
+
+
 }

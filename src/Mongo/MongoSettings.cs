@@ -4,6 +4,10 @@ using UCode.Extensions;
 
 namespace UCode.Mongo
 {
+    /// <summary>
+    /// This class encapsulates the settings required for connecting to a MongoDB database.
+    /// It includes properties for the connection string and database name, and provides methods to create client settings.
+    /// </summary>
     public record MongoSettings
     {
         /// <summary>
@@ -72,4 +76,5 @@ namespace UCode.Mongo
 
         public static explicit operator MongoClientSettings(MongoSettings mongoSettings) => mongoSettings.CreateClientSettings();
     }
+
 }
