@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using MongoDB.Bson.IO;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson.Serialization.Options;
-using NPOI.Util;
 
 namespace UCode.Mongo
 {
@@ -48,14 +46,13 @@ namespace UCode.Mongo
     /// <typeparam name="TObjectId">The type of the object's ID, which must be comparable and equatable.</typeparam>
     /// <typeparam name="TUser">The type of the user who created and updated the object.</typeparam>
     public interface IObjectId<TObjectId, TUser>
-            where TUser : notnull
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
     {
         /// <summary>
         /// Gets or sets the ID of the object.
         /// </summary>
         [BsonId]
-        public TObjectId Id
+        TObjectId Id
         {
             get; set;
         }
@@ -78,7 +75,7 @@ namespace UCode.Mongo
         [JsonPropertyName("createdBy")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [BsonIgnoreIfNull]
-        public TUser? CreatedBy
+        TUser? CreatedBy
         {
             get;
             set;
@@ -98,7 +95,7 @@ namespace UCode.Mongo
         [JsonPropertyName("createdAt")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [BsonIgnoreIfNull]
-        public DateTime? CreatedAt
+        DateTime? CreatedAt
         {
             get;
             set;
@@ -120,7 +117,7 @@ namespace UCode.Mongo
         [JsonPropertyName("updatedBy")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [BsonIgnoreIfNull]
-        public TUser? UpdatedBy
+        TUser? UpdatedBy
         {
             get;
             set;
@@ -140,7 +137,7 @@ namespace UCode.Mongo
         [JsonPropertyName("updatedAt")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [BsonIgnoreIfNull]
-        public DateTime? UpdatedAt
+        DateTime? UpdatedAt
         {
             get;
             set;
@@ -161,10 +158,34 @@ namespace UCode.Mongo
         [JsonExtensionData]
         [JsonPropertyName("extraElements")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public Dictionary<string, object?>? ExtraElements
+        Dictionary<string, object?>? ExtraElements
         {
             get; set;
         }
+
+
+
+
+        /// <summary>
+        /// Soft delete, indicating whether the feature is disabled.
+        /// </summary>
+        /// <value>
+        /// Returns true if the feature is disabled; otherwise, false.
+        /// </value>
+        [JsonPropertyName("disabled")]
+        [BsonElement("disabled")]
+        [BsonRequired]
+        bool Disabled
+        {
+            get; set;
+        }
+
+
+        [JsonPropertyName("ref")]
+        [BsonElement("ref")]
+        [BsonIgnoreIfNull]
+        [BsonSerializer(typeof(GuidAsStringSerializer))]
+        Guid? Ref { get; set; }
 
 
     }

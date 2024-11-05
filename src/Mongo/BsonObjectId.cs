@@ -18,7 +18,7 @@ namespace UCode.Mongo
     /// of the IObjectId interface, ensuring compatibility with BSON 
     /// serialization and MongoDB operations.
     /// </typeparam>
-    public class BsonObjectId<TObjectId> : IObjectId<TObjectId>
+    public class BsonObjectId<TObjectId> : ObjectIdClass<TObjectId>
         where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
     {
         /// <summary>
@@ -159,6 +159,35 @@ namespace UCode.Mongo
         public Dictionary<string, object?>? ExtraElements
         {
             get; set;
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the entity is disabled.
+        /// </summary>
+        /// <value>
+        /// True if the entity is disabled; otherwise, false.
+        /// </value>
+        public bool Disabled
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// Gets or sets the reference identifier.
+        /// </summary>
+        /// <remarks>
+        /// This property may hold a unique identifier of type <see cref="Guid"/> that can be null.
+        /// It is intended to be used for categorizing or linking to another entity.
+        /// </remarks>
+        /// <value>
+        /// A nullable <see cref="Guid"/> representing the reference identifier. 
+        /// A value of <c>null</c> indicates that there is no reference identifier set.
+        /// </value>
+        public Guid? Ref
+        {
+            get;
+            set;
         }
 
 
