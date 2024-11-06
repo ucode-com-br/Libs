@@ -283,12 +283,17 @@ namespace UCode.Mongo
 
             _instanceMongoContextImplementation = new MongoContextImplementation(fullname, implimentedUnderlyingSystemType, connectionString.CalculateSha256Hash()!, this.DatabaseName);
 
+            
+
             _instanceCollectionNames = _dictionaryConstructed.AddOrUpdate(_instanceMongoContextImplementation, (key) =>
             {
-                this.MapAsync().Wait();
-                this.IndexAsync().Wait();
-                return this.Database.ListCollectionNames().ToEnumerable().Select(collectionName => $"{fullname}-{this.DatabaseName}.{collectionName}").ToList();
+                var collectionName = this.Database.ListCollectionNames().ToEnumerable().ToArray();
+
+                return collectionName.Select(collectionName => $"{fullname}-{this.DatabaseName}.{collectionName}").ToList();
             }, (key, value) => value);
+
+            this.MapAsync().Wait();
+            this.IndexAsync().Wait();
         }
 
 
