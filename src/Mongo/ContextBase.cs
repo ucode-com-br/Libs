@@ -255,7 +255,8 @@ namespace UCode.Mongo
             this.DatabaseName =
                 @"^mongodb(\+srv)?\:\/\/(((?<USER>.*)\:(?<PASSWORD>.*)\@(?<CLUSTER>.*))|((?<HOST>.+)\:(?<PORT>.+)))\/(?<DBNAME>.*)\?.*$"
                     .MatchNamedCaptures(connectionString)["DBNAME"];
-            this.Database = (IMongoDatabase)this.Client.GetDatabase(this.DatabaseName);
+
+            this.Database = this.Client.GetDatabase(this.DatabaseName);
 
             this.TransactionalContext = transactionalContext;
 
@@ -283,13 +284,13 @@ namespace UCode.Mongo
 
             _instanceMongoContextImplementation = new MongoContextImplementation(fullname, implimentedUnderlyingSystemType, connectionString.CalculateSha256Hash()!, this.DatabaseName);
 
-            
 
             _instanceCollectionNames = _dictionaryConstructed.AddOrUpdate(_instanceMongoContextImplementation, (key) =>
             {
                 var collectionName = this.Database.ListCollectionNames().ToEnumerable().ToArray();
 
-                return collectionName.Select(collectionName => $"{fullname}-{this.DatabaseName}.{collectionName}").ToList();
+                return collectionName;
+                //return collectionName.Select(collectionName => $"{fullname}-{this.DatabaseName}.{collectionName}").ToList();
             }, (key, value) => value);
 
             this.MapAsync().Wait();

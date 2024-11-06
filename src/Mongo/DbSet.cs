@@ -225,7 +225,8 @@ namespace UCode.Mongo
             UseTransaction = useTransaction;
 
             var colNames = contextBase.CollectionNames().ToArray();
-            if (contextBase.CollectionNames().All(f => !f.Equals(collectionName ?? $"{nameof(TDocument)}Collection", StringComparison.Ordinal)))
+
+            if (colNames.All(f => !f.Equals(collectionName ?? $"{nameof(TDocument)}Collection", StringComparison.Ordinal)))
             {
                 var createCollectionOptions = new CreateCollectionOptions();
 
