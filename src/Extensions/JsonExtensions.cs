@@ -267,7 +267,7 @@ namespace UCode.Extensions
             var jsonElement = JsonSerializer.Deserialize<JsonElement>(jsonObject.ToJsonString());
 
             // Obter o tipo do objeto alvo
-            var targetType = typeof(T);
+            var targetType = target.GetType();
 
             // Iterar sobre as propriedades do objeto alvo
             foreach (var property in targetType.GetProperties())
@@ -377,6 +377,22 @@ namespace UCode.Extensions
                 {
                     return resultJsonObjectExplicity;
                 }
+            }
+            else if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(IList<>))
+            {
+                var elementType = targetType.GetGenericArguments()[0];
+
+                var list = jsonElement.EnumerateArray().Select(e => JsonSerializer.Deserialize(e.GetRawText(), elementType)).ToList();
+
+                var typedList = Activator.CreateInstance(typeof(List<>).MakeGenericType(elementType))!;
+
+                var addMethod = typedList.GetType().GetMethod("Add")!;
+
+                foreach (var item in list)
+                {
+                    addMethod.Invoke(typedList, [item]);
+                }
+                return typedList;
             }
 
             // Tentar converter usando Convert
