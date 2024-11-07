@@ -18,20 +18,31 @@ namespace UCode.Mongo
     /// </remarks>
     public interface IObjectId : IObjectId<string>
     {
+        //[BsonId(IdGenerator = typeof(MongoDB.Bson.Serialization.IdGenerators.StringObjectIdGenerator))]
+        //[BsonRepresentation(BsonType.String)]
+        //string Id
+        //{
+        //    get; set;
+        //}
+
+        [BsonId(IdGenerator = typeof(IdGenerator))]
+        [BsonRepresentation(BsonType.String)]
+        public string Id
+        {
+            get; set;
+        }
     }
 
     /// <summary>
     /// Defines a generic interface for an object identifier that extends another
     /// interface, allowing for a specific type of object ID and a string representation.
     /// </summary>
-    /// <typeparam name="TObjectId">The type of the object identifier which must be 
-    /// comparable and equatable.</typeparam>
+    /// <typeparam name="TObjectId">The type of the object identifier which must be comparable and equatable.</typeparam>
     /// <remarks>
-    /// This interface can be used to enforce that types implementing it provide 
-    /// specific behaviors for comparing and equating object IDs. The requirement 
+    /// This interface can be used to enforce that types implementing it provide specific behaviors for comparing and equating object IDs. The requirement 
     /// for <typeparamref name="TObjectId"/> to implement both <see cref="IComparable{T}"/> 
     /// and <see cref="IEquatable{T}"/> ensures that users of this interface can 
-    /// perform these operations on object IDs of the specified type.
+    /// perform these operations on object IDs of the specified type. 
     /// </remarks>
     public interface IObjectId<TObjectId> : IObjectId<TObjectId, string>
         where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
@@ -51,12 +62,12 @@ namespace UCode.Mongo
         /// <summary>
         /// Gets or sets the ID of the object.
         /// </summary>
-        [BsonId]
+        [BsonId(IdGenerator = typeof(IdGenerator))]
+        [BsonRepresentation(BsonType.String)]
         TObjectId Id
         {
             get; set;
         }
-
 
 
         /// <summary>
@@ -71,8 +82,8 @@ namespace UCode.Mongo
         /// <returns>
         /// The user who created the object.
         /// </returns>
-        [BsonElement("createdBy")]
-        [JsonPropertyName("createdBy")]
+        [BsonElement("created_by")]
+        [JsonPropertyName("created_by")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [BsonIgnoreIfNull]
         TUser? CreatedBy
@@ -91,8 +102,8 @@ namespace UCode.Mongo
         /// <returns>
         /// A DateTime value representing the creation timestamp.
         /// </returns>
-        [BsonElement("createdAt")]
-        [JsonPropertyName("createdAt")]
+        [BsonElement("created_at")]
+        [JsonPropertyName("created_at")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [BsonIgnoreIfNull]
         DateTime? CreatedAt
@@ -113,8 +124,8 @@ namespace UCode.Mongo
         /// <returns>
         /// An instance of <typeparamref name="TUser"/> representing the user who updated the entity.
         /// </returns>
-        [BsonElement("updatedBy")]
-        [JsonPropertyName("updatedBy")]
+        [BsonElement("updated_by")]
+        [JsonPropertyName("updated_by")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [BsonIgnoreIfNull]
         TUser? UpdatedBy
@@ -133,8 +144,8 @@ namespace UCode.Mongo
         /// <returns>
         /// A DateTime value representing the last update timestamp.
         /// </returns>
-        [BsonElement("updatedAt")]
-        [JsonPropertyName("updatedAt")]
+        [BsonElement("updated_at")]
+        [JsonPropertyName("updated_at")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [BsonIgnoreIfNull]
         DateTime? UpdatedAt
@@ -144,26 +155,20 @@ namespace UCode.Mongo
         }
 
 
-
-
-
-
         /// <summary>
         /// Represents the extra BSON elements associated with this object.
         /// </summary>
         [BsonExtraElements]
-        [BsonElement("extraElements")]
+        [BsonElement("extra_elements")]
         [BsonDictionaryOptions(DictionaryRepresentation.Document)]
         [BsonIgnoreIfNull]
         [JsonExtensionData]
-        [JsonPropertyName("extraElements")]
+        [JsonPropertyName("extra_elements")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         Dictionary<string, object?>? ExtraElements
         {
             get; set;
         }
-
-
 
 
         /// <summary>
@@ -181,12 +186,54 @@ namespace UCode.Mongo
         }
 
 
+        /// <summary>
+        /// Gets or sets the reference identifier.
+        /// This property is of type <see cref="Guid?"/>, allowing it to hold a 
+        /// valid GUID value or <c>null</c> if no reference is set.
+        /// </summary>
+        /// <value>
+        /// A nullable <see cref="Guid"/> representing the reference identifier. 
+        /// Returns <c>null</c> if there is no reference associated with the 
+        /// property.
+        /// </value>
         [JsonPropertyName("ref")]
         [BsonElement("ref")]
         [BsonIgnoreIfNull]
         [BsonSerializer(typeof(GuidAsStringSerializer))]
-        Guid? Ref { get; set; }
+        Guid? Ref
+        {
+            get; set;
+        }
 
 
+
+        //public delegate void IdGeneratorCompletedEventHandler(IObjectId<TObjectId, TUser> sender, IdGeneratorCompletedEventArgs<TObjectId, TUser> eventArgs);
+
+        //event IdGeneratorCompletedEventHandler IdGeneratorCompleted;
+
+        void OnProcessCompleted(IdGeneratorCompletedEventArgs<TObjectId, TUser> eventArgs);
     }
+
+    public sealed class IdGeneratorCompletedEventArgs<TObjectId, TUser> : EventArgs
+        where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+    {
+        public object Container
+        {
+            get;
+            set;
+        }
+
+        public IObjectId<TObjectId, TUser> Document
+        {
+            get;
+            set;
+        }
+
+        public TObjectId Result
+        {
+            get;
+            set;
+        }
+    }
+
 }

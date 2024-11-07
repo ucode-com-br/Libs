@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using UCode.Extensions;
 using UCode.Mongo.Options;
@@ -116,7 +117,7 @@ namespace UCode.Mongo
                 clientSessionHandle = null;
             }
 
-            return clientSessionHandle == default;
+            return clientSessionHandle != default;
         }
 
         /// <summary>
@@ -218,9 +219,9 @@ namespace UCode.Mongo
         /// </returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public DbSet([NotNull] ContextBase contextBase, string? collectionName = null,
-                            Action<CreateCollectionOptions>? createCollectionOptionsAction = null,
-                            Action<MongoCollectionSettings>? mongoCollectionSettingsAction = null,
-                            bool useTransaction = false)
+            Action<CreateCollectionOptions>? createCollectionOptionsAction = null,
+            Action<MongoCollectionSettings>? mongoCollectionSettingsAction = null,
+            bool useTransaction = false)
         {
             UseTransaction = useTransaction;
 
@@ -237,7 +238,7 @@ namespace UCode.Mongo
 
             CollectionName = collectionName ?? $"{nameof(TDocument)}Collection";
 
-            var mongoCollectionSettings = new MongoCollectionSettings();
+            var mongoCollectionSettings = new MongoCollectionSettings() { AssignIdOnInsert = true };
 
             mongoCollectionSettingsAction?.Invoke(mongoCollectionSettings);
 

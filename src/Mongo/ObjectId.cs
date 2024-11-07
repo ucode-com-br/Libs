@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace UCode.Mongo
 {
@@ -42,6 +45,36 @@ namespace UCode.Mongo
     {
 
         /// <summary>
+        /// Represents a method that will handle the completion of an ID generation process.
+        /// </summary>
+        /// <typeparam name="TObjectId">The type of the object ID.</typeparam>
+        /// <typeparam name="TUser">The type of the user associated with the ID generation.</typeparam>
+        /// <param name="sender">The source of the event; typically, the object that initiated the ID generation.</param>
+        /// <param name="eventArgs">An instance of <see cref="IdGeneratorCompletedEventArgs{TObjectId, TUser}"/> that contains the event data.</param>
+        /// <remarks>
+        /// This delegate is used to define the signature for methods that will respond to the completion
+        /// of an ID generation operation, providing relevant context through the event arguments.
+        /// </remarks>
+        public delegate void IdGeneratorCompletedEventHandler(IObjectId<TObjectId, TUser> sender, IdGeneratorCompletedEventArgs<TObjectId, TUser> eventArgs);
+
+
+        /// <summary>
+        /// Occurs when the ID generation process is completed.
+        /// </summary>
+        /// <remarks>
+        /// This event can be subscribed to in order to perform actions after an ID has been generated.
+        /// </remarks>
+        public event IdGeneratorCompletedEventHandler IdGeneratorCompleted;
+
+
+        /// <summary>
+        /// Invoked when the process is completed.
+        /// </summary>
+        /// <param name="eventArgs">Event arguments containing information about the completed process.</param>
+        public virtual void OnProcessCompleted(IdGeneratorCompletedEventArgs<TObjectId, TUser> eventArgs) => IdGeneratorCompleted?.Invoke(this, eventArgs);
+
+
+        /// <summary>
         /// Represents the unique identifier for the object.
         /// </summary>
         /// <remarks>
@@ -51,6 +84,8 @@ namespace UCode.Mongo
         /// <value>
         /// The unique identifier of the object.
         /// </value>
+        [BsonId(IdGenerator = typeof(IdGenerator))]
+        [BsonRepresentation(BsonType.String)]
         public TObjectId Id
         {
             get;
@@ -63,6 +98,9 @@ namespace UCode.Mongo
         /// <value>
         /// A <typeparamref name="TUser"/> object representing the user who created the entity.
         /// </value>
+        [BsonElement("created_by")]
+        [JsonPropertyName("created_by")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public TUser CreatedBy
         {
             get;
@@ -75,6 +113,9 @@ namespace UCode.Mongo
         /// <value>
         /// A <see cref="DateTime"/> representing the creation date and time.
         /// </value>
+        [BsonElement("created_at")]
+        [JsonPropertyName("created_at")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public DateTime CreatedAt
         {
             get;
@@ -92,6 +133,9 @@ namespace UCode.Mongo
         /// This property is useful for tracking changes and maintaining an audit trail 
         /// in applications that require user accountability.
         /// </remarks>
+        [BsonElement("updated_by")]
+        [JsonPropertyName("updated_by")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public TUser? UpdatedBy
         {
             get;
@@ -107,6 +151,9 @@ namespace UCode.Mongo
         /// A nullable <see cref="DateTime"/> representing the last update time,
         /// or null if the entity has not been updated.
         /// </value>
+        [BsonElement("updated_at")]
+        [JsonPropertyName("updated_at")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public DateTime? UpdatedAt
         {
             get;
@@ -121,6 +168,9 @@ namespace UCode.Mongo
         /// <value>
         /// <c>true</c> if the object is disabled; otherwise, <c>false</c>.
         /// </value>
+        [BsonElement("disabled")]
+        [JsonPropertyName("disabled")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public bool Disabled
         {
             get;
@@ -134,11 +184,17 @@ namespace UCode.Mongo
         /// <value>
         /// A <see cref="Guid"/> value representing the reference identifier.
         /// </value>
+        [BsonElement("ref")]
+        [JsonPropertyName("ref")]
+        [BsonGuidRepresentation(MongoDB.Bson.GuidRepresentation.Standard)]
+        [BsonRepresentation(BsonType.String)]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [BsonSerializer(typeof(GuidAsStringSerializer))]
         public Guid Ref
         {
             get;
             set;
-        }
+        } = new Guid();
 
         /// <summary>
         /// Represents a collection of additional elements or properties that may be associated 
@@ -150,6 +206,9 @@ namespace UCode.Mongo
         /// is an object (which can be null). If there are no extra elements, this property 
         /// may be null.
         /// </value>
+        [BsonElement("extra_elements")]
+        [JsonPropertyName("extra_elements")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public Dictionary<string, object?>? ExtraElements
         {
             get;
@@ -270,6 +329,8 @@ namespace UCode.Mongo
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
     {
 
+
+
         /// <summary>
         /// Represents the unique identifier for the object.
         /// </summary>
@@ -280,6 +341,9 @@ namespace UCode.Mongo
         /// <value>
         /// The unique identifier of the object.
         /// </value>
+        //[BsonId]
+        [BsonId(IdGenerator = typeof(IdGenerator))]
+        [BsonRepresentation(BsonType.String)]
         public TObjectId Id
         {
             get;
@@ -292,6 +356,10 @@ namespace UCode.Mongo
         /// <value>
         /// A <typeparamref name="TUser"/> object representing the user who created the entity.
         /// </value>
+        [BsonElement("created_by")]
+        [JsonPropertyName("created_by")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [BsonIgnoreIfNull]
         public TUser CreatedBy
         {
             get;
@@ -304,6 +372,10 @@ namespace UCode.Mongo
         /// <value>
         /// A <see cref="DateTime"/> representing the creation date and time.
         /// </value>
+        [BsonElement("created_at")]
+        [JsonPropertyName("created_at")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [BsonIgnoreIfNull]
         public DateTime CreatedAt
         {
             get;
@@ -321,6 +393,10 @@ namespace UCode.Mongo
         /// This property is useful for tracking changes and maintaining an audit trail 
         /// in applications that require user accountability.
         /// </remarks>
+        [BsonElement("updated_by")]
+        [JsonPropertyName("updated_by")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [BsonIgnoreIfNull]
         public TUser? UpdatedBy
         {
             get;
@@ -336,6 +412,10 @@ namespace UCode.Mongo
         /// A nullable <see cref="DateTime"/> representing the last update time,
         /// or null if the entity has not been updated.
         /// </value>
+        [BsonElement("updated_at")]
+        [JsonPropertyName("updated_at")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [BsonIgnoreIfNull]
         public DateTime? UpdatedAt
         {
             get;
@@ -350,6 +430,10 @@ namespace UCode.Mongo
         /// <value>
         /// <c>true</c> if the object is disabled; otherwise, <c>false</c>.
         /// </value>
+        [BsonElement("disabled")]
+        [JsonPropertyName("disabled")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [BsonIgnoreIfNull]
         public bool Disabled
         {
             get;
@@ -363,6 +447,10 @@ namespace UCode.Mongo
         /// <value>
         /// A <see cref="Guid"/> value representing the reference identifier.
         /// </value>
+        [BsonElement("ref")]
+        [JsonPropertyName("ref")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [BsonIgnoreIfNull]
         public Guid Ref
         {
             get;
@@ -379,6 +467,10 @@ namespace UCode.Mongo
         /// is an object (which can be null). If there are no extra elements, this property 
         /// may be null.
         /// </value>
+        [BsonElement("extra_elements")]
+        [JsonPropertyName("extra_elements")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [BsonIgnoreIfNull]
         public Dictionary<string, object?>? ExtraElements
         {
             get;
@@ -454,6 +546,37 @@ namespace UCode.Mongo
                 }
             }
         }
+
+
+
+        /// <summary>
+        /// Represents a method that will handle the completion of an ID generation process.
+        /// </summary>
+        /// <typeparam name="TObjectId">The type of the object ID.</typeparam>
+        /// <typeparam name="TUser">The type of the user associated with the ID generation.</typeparam>
+        /// <param name="sender">The source of the event; typically, the object that initiated the ID generation.</param>
+        /// <param name="eventArgs">An instance of <see cref="IdGeneratorCompletedEventArgs{TObjectId, TUser}"/> that contains the event data.</param>
+        /// <remarks>
+        /// This delegate is used to define the signature for methods that will respond to the completion
+        /// of an ID generation operation, providing relevant context through the event arguments.
+        /// </remarks>
+        public delegate void IdGeneratorCompletedEventHandler(IObjectId<TObjectId, TUser> sender, IdGeneratorCompletedEventArgs<TObjectId, TUser> eventArgs);
+
+
+        /// <summary>
+        /// Occurs when the ID generation process is completed.
+        /// </summary>
+        /// <remarks>
+        /// This event can be subscribed to in order to perform actions after an ID has been generated.
+        /// </remarks>
+        public event IdGeneratorCompletedEventHandler IdGeneratorCompleted;
+
+
+        /// <summary>
+        /// Invoked when the process is completed.
+        /// </summary>
+        /// <param name="eventArgs">Event arguments containing information about the completed process.</param>
+        public virtual void OnProcessCompleted(IdGeneratorCompletedEventArgs<TObjectId, TUser> eventArgs) => IdGeneratorCompleted?.Invoke(this, eventArgs);
     }
 
 

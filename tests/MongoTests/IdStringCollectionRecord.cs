@@ -11,11 +11,6 @@ namespace UCode.MongoTests
 {
     public record IdStringCollectionRecord: Mongo.ObjectIdRecord
     {
-        public string Id
-        {
-            get;
-            set;
-        }
 
         public string MyProperty1
         {

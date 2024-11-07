@@ -57,7 +57,7 @@ namespace UCode.MongoTests
             _ = BsonClassMap.TryRegisterClassMap<IdStringCollectionRecord>(cm => {
                 cm.AutoMap();
 
-                cm.MapIdMember(c => c.Id).SetIdGenerator(StringObjectIdGenerator.Instance);
+                //cm.MapIdMember(c => c.Id).SetIdGenerator(StringObjectIdGenerator.Instance);
             });
         }
     }

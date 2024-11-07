@@ -6,6 +6,8 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Events;
 using UCode.Extensions;
@@ -212,6 +214,9 @@ namespace UCode.Mongo
         protected ContextBase([NotNull] ILoggerFactory loggerFactory, [NotNull] string connectionString,
                               string? applicationName = null, bool transactionalContext = false)
         {
+            //BsonSerializer.TryRegisterSerializer(new GuidSerializer(BsonType.String));
+            BsonSerializer.TryRegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
+
             // Initialize LoggerFactory
             this.LoggerFactory = loggerFactory;
 
@@ -219,6 +224,14 @@ namespace UCode.Mongo
 
             // Initialize Client
             var mongoClientSettings = MongoClientSettings.FromConnectionString(connectionString);
+
+
+            // 
+            mongoClientSettings.TranslationOptions = new ExpressionTranslationOptions()
+            {
+                EnableClientSideProjections = true,
+                CompatibilityLevel = ServerVersion.Server70
+            };
 
             // Set application name if provided
             if (!string.IsNullOrWhiteSpace(applicationName))
@@ -253,8 +266,7 @@ namespace UCode.Mongo
 
             // Initialize Database
             this.DatabaseName =
-                @"^mongodb(\+srv)?\:\/\/(((?<USER>.*)\:(?<PASSWORD>.*)\@(?<CLUSTER>.*))|((?<HOST>.+)\:(?<PORT>.+)))\/(?<DBNAME>.*)\?.*$"
-                    .MatchNamedCaptures(connectionString)["DBNAME"];
+                @"^mongodb(\+srv)?\:\/\/(((?<USER>.*)\:(?<PASSWORD>.*)\@(?<CLUSTER>.*))|((?<HOST>.+)\:(?<PORT>.+)))\/(?<DBNAME>.*)\?.*$".MatchNamedCaptures(connectionString)["DBNAME"];
 
             this.Database = this.Client.GetDatabase(this.DatabaseName);
 

@@ -28,7 +28,9 @@ namespace UCode.MongoTests
         {
             var context = new ContextImpl(_loggerFactory, ConnectionString, nameof(ContextTests), false);
 
-            var result = await context.IdStringCollection.InsertAsync(new IdStringCollectionRecord() { MyProperty1 = nameof(Test1), MyProperty2 = 1, MyProperty3 = 0x01 });
+            var doc = new IdStringCollectionRecord() { MyProperty1 = nameof(Test1), MyProperty2 = 1, MyProperty3 = 0x01 };
+
+            var result = await context.IdStringCollection.InsertAsync(doc);
 
             Assert.True(result == 1);
         }
