@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Formats.Asn1;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -11,6 +12,7 @@ using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Events;
 using UCode.Extensions;
+using ZstdSharp.Unsafe;
 
 namespace UCode.Mongo
 {
@@ -112,7 +114,6 @@ namespace UCode.Mongo
         /// during the declaration or within a constructor of the containing class.
         /// </remarks>
         public readonly string DatabaseName;
-
 
         /// <summary>
         /// Represents a logger that can be used to log messages for the <see cref="ContextBase"/> class.
@@ -305,7 +306,10 @@ namespace UCode.Mongo
                 //return collectionName.Select(collectionName => $"{fullname}-{this.DatabaseName}.{collectionName}").ToList();
             }, (key, value) => value);
 
-            this.MapAsync().Wait();
+
+            var classMaps = ReflectionRegisterClassMap();
+
+            this.MapAsync(classMaps).Wait();
 
             this.IndexAsync().Wait();
         }
@@ -488,6 +492,48 @@ namespace UCode.Mongo
 
         #endregion
 
+        private IEnumerable<BsonClassMap> ReflectionRegisterClassMap()
+        {
+            var result = GetBsonClassMaps().ToArray();
+
+            foreach (var bsonClassMap in result)
+            {
+                if (!BsonClassMap.IsClassMapRegistered(bsonClassMap.ClassType))
+                {
+                    BsonClassMap.RegisterClassMap(bsonClassMap);
+                }
+
+                yield return bsonClassMap;
+            }
+        }
+
+        private IEnumerable<BsonClassMap> GetBsonClassMaps()
+        {
+            var thisType = this.GetType();
+
+            var props = thisType.GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.GetProperty)
+                .Where(w => w.PropertyType.IsGenericType && (w.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>) || w.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<,>)));
+
+            var methods = thisType.GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
+                .Where(w => w.GetParameters().Length > 0 && w.GetParameters().All(a => a.ParameterType.IsGenericType && a.ParameterType.GetGenericTypeDefinition() == typeof(BsonClassMap<>)))
+                .Select(s => new { BsonClassMap = s.GetParameters()[0].ParameterType, BsonClassMapGeneric = s.GetParameters()[0].ParameterType.GenericTypeArguments[0], Method = s }).ToArray();
+
+            foreach (var prop in props)
+            {
+                var objectIdImplementationType = prop.PropertyType.GenericTypeArguments[0];
+
+                var bsonClassMapType = typeof(BsonClassMap<>).MakeGenericType(objectIdImplementationType);
+
+                var basonClassMap = (BsonClassMap)Activator.CreateInstance(typeof(BsonClassMap<>).MakeGenericType(objectIdImplementationType))!;
+
+                //var method = methods.SingleOrDefault(s => s.BsonClassMap == bsonClassMapType);
+
+                //_ = method?.Method.Invoke(this, [bsonClassMapType]);
+
+                yield return basonClassMap;
+            }
+        }
+
 
         /// <summary>
         /// Gets a DbSet instance for the specified document type and object ID type.
@@ -502,8 +548,10 @@ namespace UCode.Mongo
         /// <exception cref="ArgumentNullException">Thrown when any of the required parameters are null or invalid.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public DbSet<TDocument, TObjectId> GetDbSet<TDocument, TObjectId>(
-            string? collectionName = null, Action<CreateCollectionOptions>? createCollectionOptionsAction = null,
-            Action<MongoCollectionSettings>? mongoCollectionSettingsAction = null, bool? useTransaction = default)
+            string? collectionName = null,
+            Action<CreateCollectionOptions>? createCollectionOptionsAction = null,
+            Action<MongoCollectionSettings>? mongoCollectionSettingsAction = null,
+            bool? useTransaction = default)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
             where TDocument : IObjectId<TObjectId> => new(this, collectionName, createCollectionOptionsAction, mongoCollectionSettingsAction, useTransaction ?? this.TransactionalContext);
 
@@ -519,8 +567,10 @@ namespace UCode.Mongo
         /// <exception cref="InvalidOperationException">Thrown if the operation cannot be performed.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public DbSet<TDocument> GetDbSet<TDocument>(
-                    string? collectionName = null, Action<CreateCollectionOptions>? createCollectionOptionsAction = null,
-                    Action<MongoCollectionSettings>? mongoCollectionSettingsAction = null, bool? useTransaction = default)
+                    string? collectionName = null,
+                    Action<CreateCollectionOptions>? createCollectionOptionsAction = null,
+                    Action<MongoCollectionSettings>? mongoCollectionSettingsAction = null,
+                    bool? useTransaction = default)
                     where TDocument : IObjectId => new(this, collectionName, createCollectionOptionsAction, mongoCollectionSettingsAction, useTransaction ?? this.TransactionalContext);
 
 
@@ -555,7 +605,7 @@ namespace UCode.Mongo
         /// method to be awaited and facilitates asynchronous programming patterns.
         /// </returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected abstract Task MapAsync();
+        protected abstract Task MapAsync(IEnumerable<BsonClassMap> bsonClassMaps);
 
         /// <summary>
         /// Asynchronously indexes data. This method is abstract and must be implemented by any derived class.

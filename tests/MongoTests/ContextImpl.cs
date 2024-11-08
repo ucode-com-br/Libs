@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,8 @@ namespace UCode.MongoTests
 
         protected override async Task IndexAsync()
         {
+            
+
             var index = new Dictionary<IndexKeysDefinition<IdStringCollectionRecord>, CreateIndexOptions>();
 
             index.Add(new IndexKeysDefinitionBuilder<IdStringCollectionRecord>().Ascending(x => x.MyProperty1),
@@ -52,13 +55,12 @@ namespace UCode.MongoTests
         }
 
 
-        protected override async Task MapAsync()
-        {
-            _ = BsonClassMap.TryRegisterClassMap<IdStringCollectionRecord>(cm => {
-                cm.AutoMap();
 
-                //cm.MapIdMember(c => c.Id).SetIdGenerator(StringObjectIdGenerator.Instance);
-            });
+        public void Register(BsonClassMap<IdStringCollectionRecord> bsonClassMap)
+        {
+
         }
+
+
     }
 }

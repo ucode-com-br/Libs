@@ -14,6 +14,7 @@ using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
+using NPOI.OpenXml4Net.OPC.Internal.Unmarshallers;
 using UCode.Extensions;
 using UCode.Mongo.Options;
 using UCode.Repositories;
@@ -74,6 +75,8 @@ namespace UCode.Mongo
 
         private readonly ContextBase _contextbase;
 
+        private readonly IndexKeys<TDocument> _indexKeys;
+
         protected ILogger<DbSet<TDocument, TObjectId>> Logger
         {
             get;
@@ -89,6 +92,7 @@ namespace UCode.Mongo
             get;
         }
         #endregion Fields
+
 
         #region private methods
         /// <summary>
@@ -250,6 +254,10 @@ namespace UCode.Mongo
 
             // Initialize the logger
             this.Logger = contextBase.LoggerFactory.CreateLogger<DbSet<TDocument, TObjectId>>();
+
+            _indexKeys = new IndexKeys<TDocument>();
+
+            InternalIndex();
         }
         #endregion constructor
 
@@ -320,41 +328,25 @@ namespace UCode.Mongo
         }
 
 
+        private void InternalIndex(bool? forceTransaction = default)
+        {
+            var index_method = this.GetType()
+                .GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.InvokeMethod)
+                .SingleOrDefault(w => w.Name.Equals("Index", StringComparison.Ordinal) && w.GetParameters().Length == 1 && w.GetParameters()[0].ParameterType == typeof(IndexKeys<TDocument>));
+            
+            index_method?.Invoke(this, [_indexKeys]);
 
-        /// <summary>
-        /// Asynchronously creates multiple indexes on a MongoDB collection based on the provided index key definitions and options.
-        /// </summary>
-        /// <param name="indexKeysDefinitions">
-        /// A dictionary containing the index key definitions and their corresponding options.
-        /// Each key is an <see cref="IndexKeysDefinition{TDocument}"/> representing the fields to index,
-        /// and the value is a <see cref="CreateIndexOptions"/> object that specifies options for the index.
-        /// </param>
-        /// <param name="forceTransaction">
-        /// A boolean value indicating whether to force the index creation within a transaction.
-        /// If null, the method will determine whether to use a transaction based on the current context.
-        /// </param>
-        /// <param name="cancellationToken">
-        /// A <see cref="CancellationToken"/> that can be used to cancel the operation.
-        /// </param>
-        /// <returns>
-        /// A <see cref="ValueTask"/> representing the asynchronous operation.
-        /// </returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async ValueTask<bool> IndexAsync([NotNull] Dictionary<IndexKeysDefinition<TDocument>, CreateIndexOptions> indexKeysDefinitions,
+            // Create a list to hold the models
+            var models = (List<CreateIndexModel<TDocument>>)_indexKeys;
+
+            _ = this.IndexAsync(models, forceTransaction).GetAwaiter().GetResult();
+        }
+
+        
+        private async ValueTask<bool> IndexAsync([NotNull] List<CreateIndexModel<TDocument>> models,
             bool? forceTransaction = default,
             CancellationToken cancellationToken = default)
         {
-            // Create a list to hold the models
-            var models = new List<CreateIndexModel<TDocument>>();
-
-            // Iterate over the dictionary of index keys and options
-            foreach (var indexKeysDefinition in indexKeysDefinitions)
-            {
-                // Create a new model with the index key and options
-                models.Add(new CreateIndexModel<TDocument>(indexKeysDefinition.Key,
-                    indexKeysDefinition.Value ?? new CreateIndexOptions() { }));
-            }
-
             try
             {
                 // Check if session should be used
@@ -381,7 +373,7 @@ namespace UCode.Mongo
                 return false;
             }
         }
-#endregion index methods
+        #endregion index methods
 
         #region queryable
         /// <summary>
