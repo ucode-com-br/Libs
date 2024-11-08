@@ -22,7 +22,7 @@ namespace UCode.MongoTests
         public DbSet<IdStringCollectionRecord> IdStringCollection => GetDbSet<IdStringCollectionRecord>(nameof(IdStringCollectionRecord));
 
 
-        public override async Task IndexAsync()
+        protected override async Task IndexAsync()
         {
             var index = new Dictionary<IndexKeysDefinition<IdStringCollectionRecord>, CreateIndexOptions>();
 
@@ -48,11 +48,11 @@ namespace UCode.MongoTests
                         Name = "IDX_MYPROPERTY3"
                     });
 
-            await IdStringCollection.IndexAsync(index);
+            _ = await IdStringCollection.IndexAsync(index);
         }
 
 
-        public override async Task MapAsync()
+        protected override async Task MapAsync()
         {
             _ = BsonClassMap.TryRegisterClassMap<IdStringCollectionRecord>(cm => {
                 cm.AutoMap();

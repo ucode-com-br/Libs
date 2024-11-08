@@ -189,7 +189,6 @@ namespace UCode.Mongo
         [BsonGuidRepresentation(MongoDB.Bson.GuidRepresentation.Standard)]
         [BsonRepresentation(BsonType.String)]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        [BsonSerializer(typeof(GuidAsStringSerializer))]
         public Guid Ref
         {
             get;

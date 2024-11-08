@@ -306,6 +306,7 @@ namespace UCode.Mongo
             }, (key, value) => value);
 
             this.MapAsync().Wait();
+
             this.IndexAsync().Wait();
         }
 
@@ -554,7 +555,7 @@ namespace UCode.Mongo
         /// method to be awaited and facilitates asynchronous programming patterns.
         /// </returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public abstract Task MapAsync();
+        protected abstract Task MapAsync();
 
         /// <summary>
         /// Asynchronously indexes data. This method is abstract and must be implemented by any derived class.
@@ -570,7 +571,7 @@ namespace UCode.Mongo
         /// Thrown when the method is not implemented in a derived class.
         /// </exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public abstract Task IndexAsync();
+        protected abstract Task IndexAsync();
 
         /// <summary>
         /// Initiates a new client session if one is not already active.

@@ -340,7 +340,7 @@ namespace UCode.Mongo
         /// A <see cref="ValueTask"/> representing the asynchronous operation.
         /// </returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async ValueTask IndexAsync([NotNull] Dictionary<IndexKeysDefinition<TDocument>, CreateIndexOptions> indexKeysDefinitions,
+        public async ValueTask<bool> IndexAsync([NotNull] Dictionary<IndexKeysDefinition<TDocument>, CreateIndexOptions> indexKeysDefinitions,
             bool? forceTransaction = default,
             CancellationToken cancellationToken = default)
         {
@@ -355,19 +355,33 @@ namespace UCode.Mongo
                     indexKeysDefinition.Value ?? new CreateIndexOptions() { }));
             }
 
-            // Check if session should be used
-            if (InTransaction(forceTransaction, out var clientSessionHandle))
+            try
             {
-                // Use the session to create the indexes
-                _ = await this.MongoCollection.Indexes.CreateManyAsync(clientSessionHandle, models, cancellationToken);
+                // Check if session should be used
+                if (InTransaction(forceTransaction, out var clientSessionHandle))
+                {
+                    // Use the session to create the indexes
+                    _ = await this.MongoCollection.Indexes.CreateManyAsync(clientSessionHandle, models, cancellationToken);
+                }
+                else
+                {
+                    // Create the indexes without a session
+                    _ = await this.MongoCollection.Indexes.CreateManyAsync(models, cancellationToken);
+                }
+
+                return true;
             }
-            else
+            catch (Exception ex)
             {
-                // Create the indexes without a session
-                _ = await this.MongoCollection.Indexes.CreateManyAsync(models, cancellationToken);
+                if (Debugger.IsAttached)
+                {
+                    throw ex;
+                }
+
+                return false;
             }
         }
-        #endregion index methods
+#endregion index methods
 
         #region queryable
         /// <summary>
