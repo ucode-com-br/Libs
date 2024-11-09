@@ -197,14 +197,28 @@ namespace UCode.Mongo
         /// property.
         /// </value>
         [JsonPropertyName("ref")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [BsonElement("ref")]
         [BsonIgnoreIfNull]
-        [BsonSerializer(typeof(GuidAsStringSerializer))]
+        //[BsonSerializer(typeof(GuidAsStringSerializer))]
+        //[BsonGuidRepresentation(GuidRepresentation.Standard)]
+        [BsonRepresentation(BsonType.String)]
         Guid? Ref
         {
             get; set;
         }
 
+        [JsonPropertyName("tenant")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [BsonElement("tenant")]
+        [BsonIgnoreIfNull]
+        //[BsonSerializer(typeof(GuidAsStringSerializer))]
+        //[BsonGuidRepresentation(GuidRepresentation.Standard)]
+        [BsonRepresentation(BsonType.String)]
+        Guid? Tenant
+        {
+            get; set;
+        }
 
 
         //public delegate void IdGeneratorCompletedEventHandler(IObjectId<TObjectId, TUser> sender, IdGeneratorCompletedEventArgs<TObjectId, TUser> eventArgs);

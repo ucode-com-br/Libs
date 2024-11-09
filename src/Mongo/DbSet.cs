@@ -229,7 +229,7 @@ namespace UCode.Mongo
             Action<MongoCollectionSettings>? mongoCollectionSettingsAction = null,
             bool useTransaction = false)
         {
-            UseTransaction = useTransaction;
+            this.UseTransaction = useTransaction;
 
             var colNames = contextBase.CollectionNames().ToArray();
 
@@ -242,14 +242,14 @@ namespace UCode.Mongo
                 contextBase.Database.CreateCollection(collectionName ?? $"{nameof(TDocument)}Collection", createCollectionOptions);
             }
 
-            CollectionName = collectionName ?? $"{nameof(TDocument)}Collection";
+            this.CollectionName = collectionName ?? $"{nameof(TDocument)}Collection";
 
             var mongoCollectionSettings = new MongoCollectionSettings() { AssignIdOnInsert = true };
 
             mongoCollectionSettingsAction?.Invoke(mongoCollectionSettings);
 
             // Initialize the MongoDB collection
-            this.MongoCollection = contextBase.Database.GetCollection<TDocument>(CollectionName, mongoCollectionSettings);
+            this.MongoCollection = contextBase.Database.GetCollection<TDocument>(this.CollectionName, mongoCollectionSettings);
 
             // Set the context base
             this._contextbase = contextBase;
@@ -258,17 +258,62 @@ namespace UCode.Mongo
             this.Logger = contextBase.LoggerFactory.CreateLogger<DbSet<TDocument, TObjectId>>();
 
 
-            if (!this._contextbase._contextCollectionMetadata.ContainsKey(CollectionName))
+            if (!this._contextbase._contextCollectionMetadata.ContainsKey(this.CollectionName))
             {
-                this._contextbase._contextCollectionMetadata.Add(CollectionName, new ContextCollectionMetadata(CollectionName)
-                {
-                    IndexKeys = new IndexKeys<TDocument>(),
-                    BsonClassMaps = ReflectionRegisterClassMap()
-                });
-            }
-            _contextCollectionMetadata = this._contextbase._contextCollectionMetadata[CollectionName];
+                var indexKeys = new IndexKeys<TDocument>();
 
-            InternalIndex();
+                indexKeys.Hashed(x => x.Ref, (option) =>
+                {
+                    // Create the index in the background to avoid blocking other operations
+                    option.Background = true;
+                    option.Unique = true;
+                    // Name the index for easy reference
+                    option.Name = "IDX_REF";
+                });
+
+                indexKeys.Hashed(x => x.Disabled, (option) =>
+                {
+                    option.Background = true;
+                    option.Unique = false;
+                    option.Name = "IDX_DISABLED";
+                });
+
+                indexKeys.Hashed(x => x.Ref).Hashed(x => x.Disabled, (option) =>
+                {
+                    option.Background = true;
+                    option.Unique = true;
+                    option.Name = "IDX_REF_DISABLED";
+                });
+
+                indexKeys.Hashed(x => x.Tenant, (option) =>
+                {
+                    // Create the index in the background to avoid blocking other operations
+                    option.Background = true;
+                    option.Unique = false;
+                    // Name the index for easy reference
+                    option.Name = "IDX_TENANT";
+                });
+
+                indexKeys.Hashed(x => x.Tenant).Hashed(x => x.Ref).Hashed(x => x.Disabled, (option) =>
+                {
+                    option.Background = true;
+                    option.Unique = true;
+                    option.Name = "IDX_TENANT_REF_DISABLED";
+                });
+
+
+                var contextCollectionMetadata = new ContextCollectionMetadata(this.CollectionName)
+                {
+                    IndexKeys = indexKeys,
+                    BsonClassMaps = this.ReflectionRegisterClassMap()
+                };
+
+
+                this._contextbase._contextCollectionMetadata.Add(this.CollectionName, contextCollectionMetadata);
+            }
+            this._contextCollectionMetadata = this._contextbase._contextCollectionMetadata[this.CollectionName];
+
+            _ = this.InternalIndex(false);
         }
         #endregion constructor
 
@@ -390,6 +435,7 @@ namespace UCode.Mongo
             var contextbaseType = this._contextbase.GetType();
             var methods = contextbaseType
                 .GetMethods();
+
             var index_method = methods.SingleOrDefault(w => w.Name.Equals("Index", StringComparison.Ordinal) && w.GetParameters().Length == 1 && w.GetParameters()[0].ParameterType == typeof(IndexKeys<TDocument>));
             
             index_method?.Invoke(this._contextbase, [(IndexKeys<TDocument>)_contextCollectionMetadata.IndexKeys]);
