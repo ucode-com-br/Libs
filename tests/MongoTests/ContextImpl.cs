@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -21,44 +22,53 @@ namespace UCode.MongoTests
 
         public DbSet<IdStringCollectionRecord> IdStringCollection => GetDbSet<IdStringCollectionRecord>(nameof(IdStringCollectionRecord));
 
-
-        protected override async Task IndexAsync()
+        public void Map(BsonClassMap<IdStringCollectionRecord> x)
         {
-            var index = new Dictionary<IndexKeysDefinition<IdStringCollectionRecord>, CreateIndexOptions>();
 
-            index.Add(new IndexKeysDefinitionBuilder<IdStringCollectionRecord>().Ascending(x => x.MyProperty1),
-                    new CreateIndexOptions()
-                    {
-                        Background = true,
-                        Unique = false,
-                        Name = "IDX_MYPROPERTY1"
-                    });
-            index.Add(new IndexKeysDefinitionBuilder<IdStringCollectionRecord>().Ascending(x => x.MyProperty2),
-                    new CreateIndexOptions()
-                    {
-                        Background = true,
-                        Unique = false,
-                        Name = "IDX_MYPROPERTY2"
-                    });
-            index.Add(new IndexKeysDefinitionBuilder<IdStringCollectionRecord>().Ascending(x => x.MyProperty3),
-                    new CreateIndexOptions()
-                    {
-                        Background = true,
-                        Unique = false,
-                        Name = "IDX_MYPROPERTY3"
-                    });
-
-            _ = await IdStringCollection.IndexAsync(index);
         }
 
-
-        protected override async Task MapAsync()
+        public void Index(IndexKeys<IdStringCollectionRecord> x)
         {
-            _ = BsonClassMap.TryRegisterClassMap<IdStringCollectionRecord>(cm => {
-                cm.AutoMap();
 
-                //cm.MapIdMember(c => c.Id).SetIdGenerator(StringObjectIdGenerator.Instance);
-            });
         }
+
+        //protected override async Task IndexAsync()
+        //{
+
+        //    var index = new Dictionary<IndexKeysDefinition<IdStringCollectionRecord>, CreateIndexOptions>();
+
+        //    index.Add(new IndexKeysDefinitionBuilder<IdStringCollectionRecord>().Ascending(x => x.MyProperty1),
+        //            new CreateIndexOptions()
+        //            {
+        //                Background = true,
+        //                Unique = false,
+        //                Name = "IDX_MYPROPERTY1"
+        //            });
+        //    index.Add(new IndexKeysDefinitionBuilder<IdStringCollectionRecord>().Ascending(x => x.MyProperty2),
+        //            new CreateIndexOptions()
+        //            {
+        //                Background = true,
+        //                Unique = false,
+        //                Name = "IDX_MYPROPERTY2"
+        //            });
+        //    index.Add(new IndexKeysDefinitionBuilder<IdStringCollectionRecord>().Ascending(x => x.MyProperty3),
+        //            new CreateIndexOptions()
+        //            {
+        //                Background = true,
+        //                Unique = false,
+        //                Name = "IDX_MYPROPERTY3"
+        //            });
+
+        //    _ = await IdStringCollection.IndexAsync(index);
+        //}
+
+
+
+        //public void Register(BsonClassMap<IdStringCollectionRecord> bsonClassMap)
+        //{
+
+        //}
+
+
     }
 }
