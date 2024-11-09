@@ -25,7 +25,7 @@ namespace UCode.Mongo
                 // Deserializa a string como Guid
                 var stringValue = context.Reader.ReadString();
 
-                return Guid.Parse(stringValue.ToLower());
+                return string.IsNullOrWhiteSpace(stringValue) ? Guid.Empty : Guid.Parse(stringValue.ToLower(System.Globalization.CultureInfo.InvariantCulture));
             }
 
             if (currentBsonType == BsonType.Binary)
@@ -33,8 +33,14 @@ namespace UCode.Mongo
                 // Deserializa o binário como Guid
                 var binaryValue = context.Reader.ReadBinaryData();
 
+                if (binaryValue.IsGuid)
+                    return binaryValue.AsGuid;
+
                 if (binaryValue.SubType == BsonBinarySubType.UuidLegacy)
                     return binaryValue.ToGuid();
+
+                if (binaryValue.SubType == BsonBinarySubType.UuidStandard)
+                    return new Guid(binaryValue.Bytes);
 
                 throw new BsonSerializationException("Unsupported binary subtype for Guid.");
             }

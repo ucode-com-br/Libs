@@ -16,7 +16,7 @@ namespace UCode.Mongo
     /// such as in data storage or retrieval. By extending IObjectId<string>, it provides a strongly-typed
     /// contract ensuring that the identifier is consistently of the string type.
     /// </remarks>
-    public interface IObjectId : IObjectId<string>
+    public interface IObjectBase : IObjectBase<string>
     {
         //[BsonId(IdGenerator = typeof(MongoDB.Bson.Serialization.IdGenerators.StringObjectIdGenerator))]
         //[BsonRepresentation(BsonType.String)]
@@ -44,7 +44,7 @@ namespace UCode.Mongo
     /// and <see cref="IEquatable{T}"/> ensures that users of this interface can 
     /// perform these operations on object IDs of the specified type. 
     /// </remarks>
-    public interface IObjectId<TObjectId> : IObjectId<TObjectId, string>
+    public interface IObjectBase<TObjectId> : IObjectBase<TObjectId, string>
         where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
     {
 
@@ -56,7 +56,7 @@ namespace UCode.Mongo
     /// </summary>
     /// <typeparam name="TObjectId">The type of the object's ID, which must be comparable and equatable.</typeparam>
     /// <typeparam name="TUser">The type of the user who created and updated the object.</typeparam>
-    public interface IObjectId<TObjectId, TUser>
+    public interface IObjectBase<TObjectId, TUser>
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
     {
         /// <summary>
@@ -86,7 +86,7 @@ namespace UCode.Mongo
         [JsonPropertyName("created_by")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [BsonIgnoreIfNull]
-        TUser? CreatedBy
+        TUser CreatedBy
         {
             get;
             set;
@@ -106,7 +106,7 @@ namespace UCode.Mongo
         [JsonPropertyName("created_at")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [BsonIgnoreIfNull]
-        DateTime? CreatedAt
+        DateTime CreatedAt
         {
             get;
             set;
@@ -186,16 +186,17 @@ namespace UCode.Mongo
         }
 
 
-        /// <summary>
-        /// Gets or sets the reference identifier.
-        /// This property is of type <see cref="Guid?"/>, allowing it to hold a 
-        /// valid GUID value or <c>null</c> if no reference is set.
-        /// </summary>
-        /// <value>
-        /// A nullable <see cref="Guid"/> representing the reference identifier. 
-        /// Returns <c>null</c> if there is no reference associated with the 
-        /// property.
-        /// </value>
+
+
+        //public delegate void IdGeneratorCompletedEventHandler(IObjectId<TObjectId, TUser> sender, IdGeneratorCompletedEventArgs<TObjectId, TUser> eventArgs);
+
+        //event IdGeneratorCompletedEventHandler IdGeneratorCompleted;
+
+        void OnProcessCompleted(IdGeneratorCompletedEventArgs<TObjectId, TUser> eventArgs);
+    }
+
+    public interface IObjectBaseTenant
+    {
         [JsonPropertyName("ref")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [BsonElement("ref")]
@@ -203,7 +204,7 @@ namespace UCode.Mongo
         //[BsonSerializer(typeof(GuidAsStringSerializer))]
         //[BsonGuidRepresentation(GuidRepresentation.Standard)]
         [BsonRepresentation(BsonType.String)]
-        Guid? Ref
+        Guid Ref
         {
             get; set;
         }
@@ -215,18 +216,23 @@ namespace UCode.Mongo
         //[BsonSerializer(typeof(GuidAsStringSerializer))]
         //[BsonGuidRepresentation(GuidRepresentation.Standard)]
         [BsonRepresentation(BsonType.String)]
-        Guid? Tenant
+        Guid Tenant
         {
             get; set;
         }
 
+        [BsonElement("disabled")]
+        [JsonPropertyName("disabled")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [BsonIgnoreIfNull]
+        bool Disabled
+        {
+            get;
+            set;
+        }
 
-        //public delegate void IdGeneratorCompletedEventHandler(IObjectId<TObjectId, TUser> sender, IdGeneratorCompletedEventArgs<TObjectId, TUser> eventArgs);
-
-        //event IdGeneratorCompletedEventHandler IdGeneratorCompleted;
-
-        void OnProcessCompleted(IdGeneratorCompletedEventArgs<TObjectId, TUser> eventArgs);
     }
+
 
     public sealed class IdGeneratorCompletedEventArgs<TObjectId, TUser> : EventArgs
         where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
@@ -237,7 +243,7 @@ namespace UCode.Mongo
             set;
         }
 
-        public IObjectId<TObjectId, TUser> Document
+        public IObjectBase<TObjectId, TUser> Document
         {
             get;
             set;

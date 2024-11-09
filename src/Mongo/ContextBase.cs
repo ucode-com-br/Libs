@@ -363,7 +363,7 @@ namespace UCode.Mongo
         /// </summary>
         /// <typeparam name="TDocument">
         /// The type of the document being inserted, which must implement 
-        /// <see cref="IObjectId{TObjectId}"/>.
+        /// <see cref="IObjectBase{TObjectId}"/>.
         /// </typeparam>
         /// <typeparam name="TObjectId">
         /// The type of the object identifier, which must implement 
@@ -378,7 +378,7 @@ namespace UCode.Mongo
         /// </returns>
         internal TDocument BeforeInsertInternal<TDocument, TObjectId>(TDocument original)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectId<TObjectId>
+            where TDocument : IObjectBase<TObjectId>
         {
             var destination = this.BeforeInsert<TDocument, TObjectId>(original);
 
@@ -400,7 +400,7 @@ namespace UCode.Mongo
         /// <exception cref="Exception">Thrown when the destination object is null, indicating that the document cannot be updated.</exception>
         internal Update<TDocument> BeforeUpdateInternal<TDocument, TObjectId>(Update<TDocument> updateOptions)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectId<TObjectId>
+            where TDocument : IObjectBase<TObjectId>
         {
             var destination = this.BeforeUpdate<TDocument, TObjectId>(updateOptions);
 
@@ -425,7 +425,7 @@ namespace UCode.Mongo
         /// <exception cref="Exception">Thrown when the destination document is null.</exception>
         internal TDocument BeforeReplaceInternal<TDocument, TObjectId>(TDocument original)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectId<TObjectId>
+            where TDocument : IObjectBase<TObjectId>
         {
             var destination = this.BeforeReplace<TDocument, TObjectId>(original);
 
@@ -451,7 +451,7 @@ namespace UCode.Mongo
         /// <exception cref="Exception">Thrown when the destination array is null or empty, indicating a failure to save aggregation.</exception>
         internal BsonDocument[] BeforeAggregateInternal<TDocument, TObjectId, TProjection>(BsonDocument[] original)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectId<TObjectId>
+            where TDocument : IObjectBase<TObjectId>
         {
             var destination = this.BeforeAggregate<TDocument, TObjectId, TProjection>(original);
 
@@ -479,7 +479,7 @@ namespace UCode.Mongo
         /// </remarks>
         protected virtual TDocument? BeforeInsert<TDocument, TObjectId>(TDocument original)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectId<TObjectId> => original;
+            where TDocument : IObjectBase<TObjectId> => original;
 
         /// <summary>
         /// This method is a virtual method that can be overridden by derived classes. 
@@ -487,7 +487,7 @@ namespace UCode.Mongo
         /// before executing an update operation on a document.
         /// </summary>
         /// <typeparam name="TDocument">The type of the document being updated. 
-        /// Must implement the <see cref="IObjectId{TObjectId}"/> interface.</typeparam>
+        /// Must implement the <see cref="IObjectBase{TObjectId}"/> interface.</typeparam>
         /// <typeparam name="TObjectId">The type of the object ID. 
         /// Must implement both <see cref="IComparable{T}"/> and <see cref="IEquatable{T}"/> interfaces.</typeparam>
         /// <param name="updateOptions">The update options to be processed.</param>
@@ -498,14 +498,14 @@ namespace UCode.Mongo
         /// </returns>
         protected virtual Update<TDocument>? BeforeUpdate<TDocument, TObjectId>(Update<TDocument> updateOptions)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectId<TObjectId> => updateOptions;
+            where TDocument : IObjectBase<TObjectId> => updateOptions;
 
         /// <summary>
         /// Represents a method that allows for pre-processing of a document before it is replaced.
         /// This method can be overridden in derived classes to implement custom behavior.
         /// </summary>
         /// <typeparam name="TDocument">The type of the document being processed. 
-        /// It must implement the <see cref="IObjectId{TObjectId}"/> interface.</typeparam>
+        /// It must implement the <see cref="IObjectBase{TObjectId}"/> interface.</typeparam>
         /// <typeparam name="TObjectId">The type of the identifier for the document. 
         /// It must implement <see cref="IComparable{T}"/> and <see cref="IEquatable{T}"/> interfaces.</typeparam>
         /// <param name="original">The original document that is about to be replaced.</param>
@@ -514,7 +514,7 @@ namespace UCode.Mongo
         /// </returns>
         protected virtual TDocument? BeforeReplace<TDocument, TObjectId>(TDocument original)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectId<TObjectId> => original;
+            where TDocument : IObjectBase<TObjectId> => original;
 
         /// <summary>
         /// This method allows performing operations or transformations on an array of BsonDocument objects
@@ -530,7 +530,7 @@ namespace UCode.Mongo
         /// </returns>
         protected virtual BsonDocument[]? BeforeAggregate<TDocument, TObjectId, TProjection>(BsonDocument[] bsonDocuments)
                     where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-                    where TDocument : IObjectId<TObjectId> => bsonDocuments;
+                    where TDocument : IObjectBase<TObjectId> => bsonDocuments;
 
         #endregion
 
@@ -554,7 +554,7 @@ namespace UCode.Mongo
             Action<MongoCollectionSettings>? mongoCollectionSettingsAction = null,
             bool? useTransaction = default)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectId<TObjectId> => new(this, collectionName, createCollectionOptionsAction, mongoCollectionSettingsAction, useTransaction ?? this.TransactionalContext);
+            where TDocument : IObjectBase<TObjectId> => new(this, collectionName, createCollectionOptionsAction, mongoCollectionSettingsAction, useTransaction ?? this.TransactionalContext);
 
         /// <summary>
         /// Retrieves a DbSet of the specified document type from the database.
@@ -572,7 +572,7 @@ namespace UCode.Mongo
                     Action<CreateCollectionOptions>? createCollectionOptionsAction = null,
                     Action<MongoCollectionSettings>? mongoCollectionSettingsAction = null,
                     bool? useTransaction = default)
-                    where TDocument : IObjectId => new(this, collectionName, createCollectionOptionsAction, mongoCollectionSettingsAction, useTransaction ?? this.TransactionalContext);
+                    where TDocument : IObjectBase => new(this, collectionName, createCollectionOptionsAction, mongoCollectionSettingsAction, useTransaction ?? this.TransactionalContext);
 
 
 

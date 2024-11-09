@@ -28,7 +28,7 @@ namespace UCode.Mongo
 
             foreach (var item in type.GetInterfaces())
             {
-                if (item.IsGenericType && item.GetGenericTypeDefinition() == typeof(IObjectId<,>))
+                if (item.IsGenericType && item.GetGenericTypeDefinition() == typeof(IObjectBase<,>))
                 {
                     return true;
                 }
@@ -61,9 +61,9 @@ namespace UCode.Mongo
         {
             var docType = document.GetType();
 
-            Type tObjectId = docType.GetProperty(nameof(IObjectId<string, string>.Id), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance).PropertyType;
+            Type tObjectId = docType.GetProperty(nameof(IObjectBase<string, string>.Id), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance).PropertyType;
 
-            Type tUser = docType.GetProperty(nameof(IObjectId<string, string>.CreatedBy), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance).PropertyType;
+            Type tUser = docType.GetProperty(nameof(IObjectBase<string, string>.CreatedBy), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance).PropertyType;
 
             var type = typeof(IdGeneratorCompletedEventArgs<,>).MakeGenericType(tObjectId, tUser);
 
@@ -77,7 +77,7 @@ namespace UCode.Mongo
             resulProp.SetValue(eventArgs, idValue);
             containerProp.SetValue(eventArgs, container);
 
-            var onProcessCompleted = docType.GetMethod(nameof(IObjectId<string, string>.OnProcessCompleted), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            var onProcessCompleted = docType.GetMethod(nameof(IObjectBase<string, string>.OnProcessCompleted), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
 
             _ = onProcessCompleted.Invoke(document, new object[] { eventArgs });
         }
@@ -90,7 +90,7 @@ namespace UCode.Mongo
             {
                 var docType = document.GetType();
 
-                var idProp = docType.GetProperty(nameof(IObjectId<string, string>.Id), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                var idProp = docType.GetProperty(nameof(IObjectBase<string, string>.Id), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
 
                 var objectidGenerated = ObjectId.GenerateNewId();
 

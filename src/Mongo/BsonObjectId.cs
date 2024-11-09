@@ -18,7 +18,7 @@ namespace UCode.Mongo
     /// of the IObjectId interface, ensuring compatibility with BSON 
     /// serialization and MongoDB operations.
     /// </typeparam>
-    public class BsonObjectId<TObjectId> : ObjectIdClass<TObjectId>
+    public class BsonObjectId<TObjectId> : TenantClassBase<TObjectId>
         where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
     {
         /// <summary>

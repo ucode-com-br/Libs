@@ -27,7 +27,7 @@ namespace UCode.Mongo
     /// </summary>
     /// <typeparam name="TDocument">The type of document in the set.</typeparam>
     public class DbSet<TDocument> : DbSet<TDocument, string>
-        where TDocument : IObjectId<string>
+        where TDocument : IObjectBase<string>
     {
 
         /// <summary>
@@ -67,7 +67,7 @@ namespace UCode.Mongo
     /// <typeparam name="TDocument">The type of the documents in the collection.</typeparam>
     /// <typeparam name="TObjectId">The type of the object identifier.</typeparam>
     public class DbSet<TDocument, TObjectId> : IDisposable, IAsyncDisposable
-            where TDocument : IObjectId<TObjectId>
+            where TDocument : IObjectBase<TObjectId>
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
     {
         #region Fields
@@ -262,7 +262,7 @@ namespace UCode.Mongo
             {
                 var indexKeys = new IndexKeys<TDocument>();
 
-                indexKeys.Hashed(x => x.Ref, (option) =>
+                indexKeys.Ascending(x => x.Ref, (option) =>
                 {
                     // Create the index in the background to avoid blocking other operations
                     option.Background = true;
@@ -271,21 +271,21 @@ namespace UCode.Mongo
                     option.Name = "IDX_REF";
                 });
 
-                indexKeys.Hashed(x => x.Disabled, (option) =>
+                indexKeys.Ascending(x => x.Disabled, (option) =>
                 {
                     option.Background = true;
                     option.Unique = false;
                     option.Name = "IDX_DISABLED";
                 });
 
-                indexKeys.Hashed(x => x.Ref).Hashed(x => x.Disabled, (option) =>
+                indexKeys.Ascending(x => x.Ref).Ascending(x => x.Disabled, (option) =>
                 {
                     option.Background = true;
                     option.Unique = true;
                     option.Name = "IDX_REF_DISABLED";
                 });
 
-                indexKeys.Hashed(x => x.Tenant, (option) =>
+                indexKeys.Ascending(x => x.Tenant, (option) =>
                 {
                     // Create the index in the background to avoid blocking other operations
                     option.Background = true;
@@ -294,7 +294,7 @@ namespace UCode.Mongo
                     option.Name = "IDX_TENANT";
                 });
 
-                indexKeys.Hashed(x => x.Tenant).Hashed(x => x.Ref).Hashed(x => x.Disabled, (option) =>
+                indexKeys.Ascending(x => x.Tenant).Ascending(x => x.Ref).Ascending(x => x.Disabled, (option) =>
                 {
                     option.Background = true;
                     option.Unique = true;

@@ -15,7 +15,7 @@ namespace UCode.Mongo
         /// <returns>
         /// True if the <paramref name="localType"/> is a structure; otherwise, false.
         /// </returns>
-        public static bool IsStructure(this IObjectId objectId, Type localType) => IsStructur(localType);
+        public static bool IsStructure(this IObjectBase objectId, Type localType) => IsStructur(localType);
 
         /// <summary>
         /// Extension method that checks if the provided local type is a structure.
@@ -23,12 +23,12 @@ namespace UCode.Mongo
         /// <typeparam name="TObjectId">The type of the object identifier, which must implement 
         /// <see cref="IComparable{T}"/> and <see cref="IEquatable{T}"/>.</typeparam>
         /// <param name="objectId">The instance of the object identifier implementing 
-        /// <see cref="IObjectId{T}"/>.</param>
+        /// <see cref="IObjectBase{T}"/>.</param>
         /// <param name="localType">The type to check if it is a structure.</param>
         /// <returns>
         /// Returns true if the local type is a structure; otherwise, false.
         /// </returns>
-        public static bool IsStructure<TObjectId>(this IObjectId<TObjectId> objectId, Type localType)
+        public static bool IsStructure<TObjectId>(this IObjectBase<TObjectId> objectId, Type localType)
                     where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId> => IsStructur(localType);
 
         /// <summary>
@@ -36,7 +36,7 @@ namespace UCode.Mongo
         /// </summary>
         /// <param name="localType">The type to check.</param>
         /// <returns>True if the type is a structure, false otherwise.</returns>
-        public static bool IsStructure<TObjectId, TUser>(this IObjectId<TObjectId, TUser> objectId, Type localType)
+        public static bool IsStructure<TObjectId, TUser>(this IObjectBase<TObjectId, TUser> objectId, Type localType)
             where TUser : notnull
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId> => IsStructur(localType);
 
