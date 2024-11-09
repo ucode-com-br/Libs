@@ -43,6 +43,7 @@ namespace UCode.Mongo
     public abstract class ObjectIdClass<TObjectId, TUser> : IObjectId<TObjectId, TUser>
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
     {
+        private Guid? _ref;
 
         /// <summary>
         /// Represents a method that will handle the completion of an ID generation process.
@@ -178,22 +179,45 @@ namespace UCode.Mongo
         }
 
 
-        /// <summary>
-        /// Represents a unique identifier (GUID) for the reference.
-        /// </summary>
-        /// <value>
-        /// A <see cref="Guid"/> value representing the reference identifier.
-        /// </value>
-        [BsonElement("ref")]
         [JsonPropertyName("ref")]
-        [BsonGuidRepresentation(MongoDB.Bson.GuidRepresentation.Standard)]
-        [BsonRepresentation(BsonType.String)]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public Guid Ref
+        [BsonElement("ref")]
+        [BsonIgnoreIfNull]
+        //[BsonSerializer(typeof(GuidAsStringSerializer))]
+        //[BsonGuidRepresentation(GuidRepresentation.Standard)]
+        [BsonRepresentation(BsonType.String)]
+        public Guid? Ref
         {
-            get;
-            set;
-        } = new Guid();
+            get
+            {
+                if (!this._ref.HasValue)
+                {
+                    if(this.Tenant.HasValue)
+                    {
+                        this._ref = NGuid.GuidHelpers.CreateVersion8(this.Tenant.Value.ToByteArray());
+                    }
+                    else
+                    {
+                        this._ref = NGuid.GuidHelpers.CreateVersion8(this.GetType().GUID.ToByteArray());
+                    }
+                }
+
+                return this._ref;
+            }
+            set => this._ref = value;
+        }
+
+        [JsonPropertyName("tenant")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [BsonElement("tenant")]
+        [BsonIgnoreIfNull]
+        //[BsonSerializer(typeof(GuidAsStringSerializer))]
+        //[BsonGuidRepresentation(GuidRepresentation.Standard)]
+        [BsonRepresentation(BsonType.String)]
+        public Guid? Tenant
+        {
+            get; set;
+        }
 
         /// <summary>
         /// Represents a collection of additional elements or properties that may be associated 
@@ -327,7 +351,7 @@ namespace UCode.Mongo
     public abstract record ObjectIdRecord<TObjectId, TUser> : IObjectId<TObjectId, TUser>
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
     {
-
+        private Guid? _ref;
 
 
         /// <summary>
@@ -440,20 +464,46 @@ namespace UCode.Mongo
         }
 
 
-        /// <summary>
-        /// Represents a unique identifier (GUID) for the reference.
-        /// </summary>
-        /// <value>
-        /// A <see cref="Guid"/> value representing the reference identifier.
-        /// </value>
-        [BsonElement("ref")]
+        
+
         [JsonPropertyName("ref")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [BsonElement("ref")]
         [BsonIgnoreIfNull]
-        public Guid Ref
+        //[BsonSerializer(typeof(GuidAsStringSerializer))]
+        //[BsonGuidRepresentation(GuidRepresentation.Standard)]
+        [BsonRepresentation(BsonType.String)]
+        public Guid? Ref
         {
-            get;
-            set;
+            get
+            {
+                if (!this._ref.HasValue)
+                {
+                    if (this.Tenant.HasValue)
+                    {
+                        this._ref = NGuid.GuidHelpers.CreateVersion8(this.Tenant.Value.ToByteArray());
+                    }
+                    else
+                    {
+                        this._ref = NGuid.GuidHelpers.CreateVersion8(this.GetType().GUID.ToByteArray());
+                    }
+                }
+
+                return this._ref;
+            }
+            set => this._ref = value;
+        }
+
+        [JsonPropertyName("tenant")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [BsonElement("tenant")]
+        [BsonIgnoreIfNull]
+        //[BsonSerializer(typeof(GuidAsStringSerializer))]
+        //[BsonGuidRepresentation(GuidRepresentation.Standard)]
+        [BsonRepresentation(BsonType.String)]
+        public Guid? Tenant
+        {
+            get; set;
         }
 
         /// <summary>
