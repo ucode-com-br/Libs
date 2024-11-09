@@ -16,6 +16,47 @@ using ZstdSharp.Unsafe;
 
 namespace UCode.Mongo
 {
+    public struct ContextCollectionMetadata
+    {
+        internal ContextCollectionMetadata(string collectionName)
+        {
+            this.CollectionName = collectionName;
+        }
+
+        public string CollectionName
+        {
+            get;
+        }
+
+
+        public object IndexKeys
+        {
+            get; internal set;
+        }
+
+        public IEnumerable<BsonClassMap> BsonClassMaps
+        {
+            get; internal set;
+        }
+
+        public IndexDefinition<TDocument> GetIndexKeys<TDocument>()
+        {
+            return (IndexDefinition<TDocument>)IndexKeys;
+        }
+
+        public IEnumerable<BsonClassMap<TDocument>>? GetBsonClassMaps<TDocument>()
+        {
+            var x = new List<BsonClassMap<TDocument>>();
+
+            foreach (var item in BsonClassMaps)
+            {
+                x.Add((BsonClassMap<TDocument>)item);
+            }
+
+            return x;
+        }
+    }
+
 
     /// <summary>
     /// Represents the base class for context management, providing an interface for disposal.
@@ -30,6 +71,8 @@ namespace UCode.Mongo
     /// <seealso cref="IDisposable"/>
     public abstract class ContextBase : IDisposable
     {
+        internal Dictionary<string, ContextCollectionMetadata> _contextCollectionMetadata = new Dictionary<string, ContextCollectionMetadata>();
+
         /// <summary>
         /// A static readonly object used for locking purposes to ensure thread safety
         /// when accessing or modifying collection names. This lock prevents race 
@@ -72,7 +115,7 @@ namespace UCode.Mongo
         /// <value>
         /// The <c>MongoClient</c> instance that provides methods to interact with the MongoDB database.
         /// </value>
-        internal readonly MongoClient Client;
+        internal readonly MongoClient MongoClient;
 
 
         /// <summary>
@@ -263,19 +306,19 @@ namespace UCode.Mongo
             };
 
             // Initialize Client
-            this.Client = new MongoClient(mongoClientSettings);
+            this.MongoClient = new MongoClient(mongoClientSettings);
 
             // Initialize Database
             this.DatabaseName =
                 @"^mongodb(\+srv)?\:\/\/(((?<USER>.*)\:(?<PASSWORD>.*)\@(?<CLUSTER>.*))|((?<HOST>.+)\:(?<PORT>.+)))\/(?<DBNAME>.*)\?.*$".MatchNamedCaptures(connectionString)["DBNAME"];
 
-            this.Database = this.Client.GetDatabase(this.DatabaseName);
+            this.Database = this.MongoClient.GetDatabase(this.DatabaseName);
 
             this.TransactionalContext = transactionalContext;
 
             if (this.TransactionalContext)
             {
-                this.ContextSession = this.Client.StartSession();
+                this.ContextSession = this.MongoClient.StartSession();
                 this.StartTransaction();
             }
 
@@ -307,11 +350,10 @@ namespace UCode.Mongo
             }, (key, value) => value);
 
 
-            var classMaps = ReflectionRegisterClassMap();
 
-            this.MapAsync(classMaps).Wait();
+            //this.MapAsync(classMaps).Wait();
 
-            this.IndexAsync().Wait();
+            //this.IndexAsync().Wait();
         }
 
 
@@ -492,48 +534,7 @@ namespace UCode.Mongo
 
         #endregion
 
-        private IEnumerable<BsonClassMap> ReflectionRegisterClassMap()
-        {
-            var result = GetBsonClassMaps().ToArray();
-
-            foreach (var bsonClassMap in result)
-            {
-                if (!BsonClassMap.IsClassMapRegistered(bsonClassMap.ClassType))
-                {
-                    BsonClassMap.RegisterClassMap(bsonClassMap);
-                }
-
-                yield return bsonClassMap;
-            }
-        }
-
-        private IEnumerable<BsonClassMap> GetBsonClassMaps()
-        {
-            var thisType = this.GetType();
-
-            var props = thisType.GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.GetProperty)
-                .Where(w => w.PropertyType.IsGenericType && (w.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>) || w.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<,>)));
-
-            var methods = thisType.GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
-                .Where(w => w.GetParameters().Length > 0 && w.GetParameters().All(a => a.ParameterType.IsGenericType && a.ParameterType.GetGenericTypeDefinition() == typeof(BsonClassMap<>)))
-                .Select(s => new { BsonClassMap = s.GetParameters()[0].ParameterType, BsonClassMapGeneric = s.GetParameters()[0].ParameterType.GenericTypeArguments[0], Method = s }).ToArray();
-
-            foreach (var prop in props)
-            {
-                var objectIdImplementationType = prop.PropertyType.GenericTypeArguments[0];
-
-                var bsonClassMapType = typeof(BsonClassMap<>).MakeGenericType(objectIdImplementationType);
-
-                var basonClassMap = (BsonClassMap)Activator.CreateInstance(typeof(BsonClassMap<>).MakeGenericType(objectIdImplementationType))!;
-
-                //var method = methods.SingleOrDefault(s => s.BsonClassMap == bsonClassMapType);
-
-                //_ = method?.Method.Invoke(this, [bsonClassMapType]);
-
-                yield return basonClassMap;
-            }
-        }
-
+        
 
         /// <summary>
         /// Gets a DbSet instance for the specified document type and object ID type.
@@ -589,6 +590,7 @@ namespace UCode.Mongo
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IEnumerable<string> CollectionNames() => _instanceCollectionNames;
 
+        /*
         /// <summary>
         /// Represents an abstract asynchronous method that maps data.
         /// This method is intended to be implemented by derived classes 
@@ -621,7 +623,7 @@ namespace UCode.Mongo
         /// Thrown when the method is not implemented in a derived class.
         /// </exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected abstract Task IndexAsync();
+        protected abstract Task IndexAsync();*/
 
         /// <summary>
         /// Initiates a new client session if one is not already active.
@@ -638,7 +640,7 @@ namespace UCode.Mongo
                 if (!this.TransactionContextStarted || this.ContextSession == null)
                 {
                     // Start a new session
-                    this.ContextSession = this.Client.StartSession();
+                    this.ContextSession = this.MongoClient.StartSession();
                 }
             }
 
@@ -656,7 +658,7 @@ namespace UCode.Mongo
         /// An instance of <see cref="IClientSessionHandle"/> that 
         /// is used to manage the client session.
         /// </returns>
-        public IClientSessionHandle CreateSession() => this.Client.StartSession();
+        public IClientSessionHandle CreateSession() => this.MongoClient.StartSession();
 
         /// <summary>
         /// Starts a new transaction within the current client session.
@@ -768,7 +770,7 @@ namespace UCode.Mongo
                 if (disposing)
                 {
                     this.ContextSession?.Dispose();
-                    this.Client?.Dispose();
+                    this.MongoClient?.Dispose();
                     // TODO: dispose managed state (managed objects) 
                 }
 
@@ -825,9 +827,9 @@ namespace UCode.Mongo
         /// Gets the instance of the MongoClient associated with this class.
         /// </summary>
         /// <returns>A MongoClient instance that represents the connection to the MongoDB database.</returns>
-        public MongoClient GetMongoClient() => this.Client;
+        public MongoClient GetMongoClient() => this.MongoClient;
 
-        public static implicit operator MongoClient(ContextBase context) => context.Client;
+        public static implicit operator MongoClient(ContextBase context) => context.MongoClient;
 
     }
 }

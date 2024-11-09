@@ -43,9 +43,9 @@ namespace UCode.Mongo
         /// </returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public DbSet([NotNull] ContextBase contextBase, string? collectionName = null,
-                                    Action<CreateCollectionOptions>? createCollectionOptionsAction = null,
-                                    Action<MongoCollectionSettings>? mongoCollectionSettingsAction = null,
-                                    bool useTransaction = false) : base(contextBase, collectionName, createCollectionOptionsAction, mongoCollectionSettingsAction)
+            Action<CreateCollectionOptions>? createCollectionOptionsAction = null,
+            Action<MongoCollectionSettings>? mongoCollectionSettingsAction = null,
+            bool useTransaction = false) : base(contextBase, collectionName, createCollectionOptionsAction, mongoCollectionSettingsAction)
         {
 
         }
@@ -73,9 +73,11 @@ namespace UCode.Mongo
         #region Fields
         protected readonly IMongoCollection<TDocument> MongoCollection;
 
+        private ContextCollectionMetadata _contextCollectionMetadata;
+
+
         private readonly ContextBase _contextbase;
 
-        private readonly IndexKeys<TDocument> _indexKeys;
 
         protected ILogger<DbSet<TDocument, TObjectId>> Logger
         {
@@ -255,11 +257,66 @@ namespace UCode.Mongo
             // Initialize the logger
             this.Logger = contextBase.LoggerFactory.CreateLogger<DbSet<TDocument, TObjectId>>();
 
-            _indexKeys = new IndexKeys<TDocument>();
+
+            if (!this._contextbase._contextCollectionMetadata.ContainsKey(CollectionName))
+            {
+                this._contextbase._contextCollectionMetadata.Add(CollectionName, new ContextCollectionMetadata(CollectionName)
+                {
+                    IndexKeys = new IndexKeys<TDocument>(),
+                    BsonClassMaps = ReflectionRegisterClassMap()
+                });
+            }
+            _contextCollectionMetadata = this._contextbase._contextCollectionMetadata[CollectionName];
 
             InternalIndex();
         }
         #endregion constructor
+
+        private IEnumerable<BsonClassMap> ReflectionRegisterClassMap()
+        {
+            var result = GetBsonClassMaps().ToArray();
+
+            foreach (var bsonClassMap in result)
+            {
+                if (!BsonClassMap.IsClassMapRegistered(bsonClassMap.ClassType))
+                {
+                    BsonClassMap.RegisterClassMap(bsonClassMap);
+                }
+
+                yield return bsonClassMap;
+            }
+        }
+
+        private IEnumerable<BsonClassMap> GetBsonClassMaps()
+        {
+            var thisType = this._contextbase.GetType();
+
+            var props = thisType.GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.GetProperty)
+                .Where(w => w.PropertyType.IsGenericType && (w.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>) || w.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<,>)));
+
+            var methods = thisType.GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
+                .Where(w => w.Name.Equals("Map", StringComparison.Ordinal) && w.GetParameters().Length > 0 && w.GetParameters().All(a => a.ParameterType.IsGenericType && a.ParameterType.GetGenericTypeDefinition() == typeof(BsonClassMap<>)))
+                .Select(s => new { BsonClassMap = s.GetParameters()[0].ParameterType, BsonClassMapGeneric = s.GetParameters()[0].ParameterType.GenericTypeArguments[0], Method = s }).ToArray();
+
+            foreach (var prop in props)
+            {
+                var objectIdImplementationType = prop.PropertyType.GenericTypeArguments[0];
+
+                var bsonClassMapType = typeof(BsonClassMap<>).MakeGenericType(objectIdImplementationType);
+
+                var basonClassMap = (BsonClassMap)Activator.CreateInstance(typeof(BsonClassMap<>).MakeGenericType(objectIdImplementationType))!;
+
+                //var method = methods.SingleOrDefault(s => s.BsonClassMap == bsonClassMapType);
+
+                //_ = method?.Method.Invoke(this, [bsonClassMapType]);
+
+                yield return basonClassMap;
+            }
+        }
+
+
+
+
 
         #region index methods
 
@@ -328,22 +385,25 @@ namespace UCode.Mongo
         }
 
 
-        private void InternalIndex(bool? forceTransaction = default)
+        private bool InternalIndex(bool? forceTransaction = default)
         {
-            var index_method = this.GetType()
-                .GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.InvokeMethod)
-                .SingleOrDefault(w => w.Name.Equals("Index", StringComparison.Ordinal) && w.GetParameters().Length == 1 && w.GetParameters()[0].ParameterType == typeof(IndexKeys<TDocument>));
+            var contextbaseType = this._contextbase.GetType();
+            var methods = contextbaseType
+                .GetMethods();
+            var index_method = methods.SingleOrDefault(w => w.Name.Equals("Index", StringComparison.Ordinal) && w.GetParameters().Length == 1 && w.GetParameters()[0].ParameterType == typeof(IndexKeys<TDocument>));
             
-            index_method?.Invoke(this, [_indexKeys]);
+            index_method?.Invoke(this._contextbase, [(IndexKeys<TDocument>)_contextCollectionMetadata.IndexKeys]);
 
-            // Create a list to hold the models
-            var models = (List<CreateIndexModel<TDocument>>)_indexKeys;
 
-            _ = this.IndexAsync(models, forceTransaction).GetAwaiter().GetResult();
+            return this.IndexAsync((IndexKeys<TDocument>)_contextCollectionMetadata.IndexKeys, forceTransaction).GetAwaiter().GetResult();
         }
 
-        
-        private async ValueTask<bool> IndexAsync([NotNull] List<CreateIndexModel<TDocument>> models,
+        public async ValueTask<bool> IndexAsync([NotNull] IndexKeys<TDocument> indexKeys,
+            bool? forceTransaction = default,
+            CancellationToken cancellationToken = default) => await this.IndexAsync((List<CreateIndexModel<TDocument>>)indexKeys, forceTransaction, cancellationToken);
+
+
+        public async ValueTask<bool> IndexAsync([NotNull] List<CreateIndexModel<TDocument>> models,
             bool? forceTransaction = default,
             CancellationToken cancellationToken = default)
         {
