@@ -27,9 +27,29 @@ namespace UCode.MongoTests
 
         }
 
-        public void Index(IndexKeys<IdStringCollectionRecord> x)
+        public void Index(IndexKeys<IdStringCollectionRecord> index)
         {
-
+            index.Ascending(x => x.MyProperty1,
+                    (option) => 
+                    {
+                        option.Background = true;
+                        option.Unique = false;
+                        option.Name = "IDX_MYPROPERTY1";
+                    });
+            index.Ascending(x => x.MyProperty2,
+                    (option) =>
+                    {
+                        option.Background = true;
+                        option.Unique = false;
+                        option.Name = "IDX_MYPROPERTY2";
+                    });
+            index.Ascending(x => x.MyProperty3)
+                .Ascending(x => x.MyProperty2, (option) =>
+                {
+                    option.Background = true;
+                    option.Unique = false;
+                    option.Name = "IDX_MYPROPERTY3_MYPROPERTY2";
+                });
         }
 
         //protected override async Task IndexAsync()

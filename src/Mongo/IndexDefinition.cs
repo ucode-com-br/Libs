@@ -98,19 +98,21 @@ namespace UCode.Mongo
     }
 
 
-
-    /// <summary>
-    /// Represents a collection of index keys for documents of type <typeparamref name="TDocument"/>.
-    /// This class is typically used in database operations where documents need to be indexed for efficient 
-    /// retrieval and search capabilities.
-    /// </summary>
-    /// <typeparam name="TDocument">The type of the document that the index keys are associated with.</typeparam>
     public sealed class IndexKeys<TDocument>
     {
         #region private fields
-        private readonly IndexKeysDefinitionBuilder<TDocument> _indexKeysDefinitionBuilder;
+        //private readonly IndexKeysDefinitionBuilder<TDocument> _indexKeysDefinitionBuilder;
 
-        private readonly List<IndexDefinition<TDocument>> _indexDefinitions = new List<IndexDefinition<TDocument>>();
+        // only root have
+        private readonly List<IndexKeys<TDocument>>? _accumulator;
+
+        private readonly IndexKeys<TDocument>? _root;
+
+        private readonly IndexKeysDefinition<TDocument>? _indexKeysDefinition;
+
+        private readonly CreateIndexOptions? _createIndexOptions;
+
+        //private readonly List<IndexDefinition<TDocument>> _indexDefinitions = new List<IndexDefinition<TDocument>>();
         #endregion
 
         #region constructors
@@ -122,24 +124,11 @@ namespace UCode.Mongo
         /// <returns>
         /// A new instance of the <see cref="IndexKeys"/> class.
         /// </returns>
-        public IndexKeys() : this(new IndexKeysDefinitionBuilder<TDocument>())
+        public IndexKeys()
         {
-
+            _accumulator = new List<IndexKeys<TDocument>>();
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="IndexKeys"/> class.
-        /// </summary>
-        /// <param name="indexKeysDefinitionBuilder">
-        /// The builder used to define the index keys for the document of type <typeparamref name="TDocument"/>.
-        /// </param>
-        /// <returns>
-        /// This constructor does not return a value.
-        /// </returns>
-        internal IndexKeys(IndexKeysDefinitionBuilder<TDocument> indexKeysDefinitionBuilder)
-        {
-            _indexKeysDefinitionBuilder = indexKeysDefinitionBuilder;
-        }
 
         /// <summary>
         /// Initializes a new instance of the IndexKeys class.
@@ -153,10 +142,11 @@ namespace UCode.Mongo
         /// <returns>
         /// This constructor does not return a value.
         /// </returns>
-        internal IndexKeys(IndexKeysDefinitionBuilder<TDocument> indexKeysDefinitionBuilder, List<IndexDefinition<TDocument>> indexDefinitions)
+        internal IndexKeys(IndexKeysDefinition<TDocument> indexKeysDefinition, CreateIndexOptions createIndexOptions, IndexKeys<TDocument> root)
         {
-            _indexKeysDefinitionBuilder = indexKeysDefinitionBuilder;
-            _indexDefinitions = indexDefinitions;
+            _indexKeysDefinition = indexKeysDefinition;
+            _createIndexOptions = createIndexOptions;
+            _root = root;
         }
         #endregion constructors
 
@@ -175,7 +165,7 @@ namespace UCode.Mongo
         /// </returns>
         private CreateIndexOptions CreateIndexOptions(Action<CreateIndexOptions>? action = default)
         {
-            var options = new CreateIndexOptions();
+            var options = this._createIndexOptions ?? new CreateIndexOptions();
 
             action?.Invoke(options);
 
@@ -188,17 +178,24 @@ namespace UCode.Mongo
         /// <param name="id">The index keys definition to be used for the index.</param>
         /// <param name="action">An optional action to configure the index options.</param>
         /// <returns>An instance of <see cref="IndexKeys{TDocument}"/> containing the defined index keys.</returns>
-        private IndexKeys<TDocument> GetIndexDefinition(IndexKeysDefinition<TDocument> id, Action<CreateIndexOptions>? action = default)
+        private IndexKeys<TDocument> GetIndexDefinition(IndexKeysDefinition<TDocument> ikd, Action<CreateIndexOptions>? action = default)
         {
-            var item = new IndexDefinition<TDocument>() { IndexKeysDefinition = id, IndexOptions = CreateIndexOptions(action) };
+            var option = CreateIndexOptions(action);
 
-            _indexDefinitions.Add(item);
-            //var newList = new List<IndexDefinition<TDocument>>();
-            //newList.AddRange(_indexDefinitions);
-            //newList.Add(item);
-            //return new IndexKeys<TDocument>(this._indexKeysDefinitionBuilder, newList);
+            var newIndexKey = new IndexKeys<TDocument>(ikd, option, _root ?? this);
 
-            return this;
+            if (_accumulator != default)
+            {
+                _accumulator.Add(newIndexKey);
+            }
+            else
+            {
+                _ = _root!._accumulator!.Remove(this);
+                _root._accumulator.Add(newIndexKey);
+            }
+
+            return newIndexKey;
+
         }
         #endregion private method
 
@@ -217,7 +214,14 @@ namespace UCode.Mongo
         /// </returns>
         public IndexKeys<TDocument> Ascending(FieldDefinition<TDocument> field, Action<CreateIndexOptions>? action = default)
         {
-            var id = _indexKeysDefinitionBuilder.Ascending(field);
+            var id = _indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Ascending(field) : _indexKeysDefinition.Ascending(field);
+
+            return GetIndexDefinition(id, action);
+        }
+
+        public IndexKeys<TDocument> Ascending(Func<FieldDefinition<TDocument>> indexKeysDefinitionAction, Action<CreateIndexOptions>? action = default)
+        {
+            var id = _indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Ascending(indexKeysDefinitionAction.Invoke()) : _indexKeysDefinition.Ascending(indexKeysDefinitionAction.Invoke());
 
             return GetIndexDefinition(id, action);
         }
@@ -237,7 +241,7 @@ namespace UCode.Mongo
         /// </returns>
         public IndexKeys<TDocument> Ascending(Expression<Func<TDocument, object>> field, Action<CreateIndexOptions>? action = default)
         {
-            var id = _indexKeysDefinitionBuilder.Ascending(field);
+            var id = _indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Ascending(field) : _indexKeysDefinition.Ascending(field);
 
             return GetIndexDefinition(id, action);
         }
@@ -252,7 +256,7 @@ namespace UCode.Mongo
         /// </returns>
         public IndexKeys<TDocument> Combine(IndexKeysDefinition<TDocument>[] keys, Action<CreateIndexOptions>? action = default)
         {
-            var id = _indexKeysDefinitionBuilder.Combine(keys);
+            var id = _indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Combine(keys) : throw new NotImplementedException();
 
             return GetIndexDefinition(id, action);
         }
@@ -274,7 +278,7 @@ namespace UCode.Mongo
         /// </returns>
         public IndexKeys<TDocument> Combine(IEnumerable<IndexKeysDefinition<TDocument>> keys, Action<CreateIndexOptions>? action = default)
         {
-            var id = _indexKeysDefinitionBuilder.Combine(keys);
+            var id = _indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Combine(keys) : throw new NotImplementedException();
 
             return GetIndexDefinition(id, action);
         }
@@ -289,7 +293,7 @@ namespace UCode.Mongo
         /// </returns>
         public IndexKeys<TDocument> Descending(FieldDefinition<TDocument> field, Action<CreateIndexOptions>? action = default)
         {
-            var id = _indexKeysDefinitionBuilder.Descending(field);
+            var id = _indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Descending(field) : _indexKeysDefinition.Descending(field);
 
             return GetIndexDefinition(id, action);
         }
@@ -305,7 +309,7 @@ namespace UCode.Mongo
         /// </returns>
         public IndexKeys<TDocument> Descending(Expression<Func<TDocument, object>> field, Action<CreateIndexOptions>? action = default)
         {
-            var id = _indexKeysDefinitionBuilder.Descending(field);
+            var id = _indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Descending(field) : _indexKeysDefinition.Descending(field);
 
             return GetIndexDefinition(id, action);
         }
@@ -325,7 +329,7 @@ namespace UCode.Mongo
         /// </returns>
         public IndexKeys<TDocument> Geo2D(FieldDefinition<TDocument> field, Action<CreateIndexOptions>? action = default)
         {
-            var id = _indexKeysDefinitionBuilder.Geo2D(field);
+            var id = _indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Geo2D(field) : _indexKeysDefinition.Geo2D(field);
 
             return GetIndexDefinition(id, action);
         }
@@ -339,7 +343,7 @@ namespace UCode.Mongo
         /// <returns>An instance of <see cref="IndexDefinition{TDocument}"/> that represents the configured index.</returns>
         public IndexKeys<TDocument> Geo2D(Expression<Func<TDocument, object>> field, Action<CreateIndexOptions>? action = default)
         {
-            var id = _indexKeysDefinitionBuilder.Geo2D(field);
+            var id = _indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Geo2D(field) : _indexKeysDefinition.Geo2D(field);
 
             return GetIndexDefinition(id, action);
         }
@@ -354,7 +358,7 @@ namespace UCode.Mongo
         /// </returns>
         public IndexKeys<TDocument> Geo2DSphere(FieldDefinition<TDocument> field, Action<CreateIndexOptions>? action = default)
         {
-            var id = _indexKeysDefinitionBuilder.Geo2DSphere(field);
+            var id = _indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Geo2DSphere(field) : _indexKeysDefinition.Geo2DSphere(field);
 
             return GetIndexDefinition(id, action);
         }
@@ -370,7 +374,7 @@ namespace UCode.Mongo
         /// </returns>
         public IndexKeys<TDocument> Geo2DSphere(Expression<Func<TDocument, object>> field, Action<CreateIndexOptions>? action = default)
         {
-            var id = _indexKeysDefinitionBuilder.Geo2DSphere(field);
+            var id = _indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Geo2DSphere(field) : _indexKeysDefinition.Geo2DSphere(field);
 
             return GetIndexDefinition(id, action);
         }
@@ -393,7 +397,7 @@ namespace UCode.Mongo
         /// </returns>
         public IndexKeys<TDocument> Hashed(FieldDefinition<TDocument> field, Action<CreateIndexOptions>? action = default)
         {
-            var id = _indexKeysDefinitionBuilder.Hashed(field);
+            var id = _indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Hashed(field) : _indexKeysDefinition.Hashed(field);
 
             return GetIndexDefinition(id, action);
         }
@@ -408,7 +412,7 @@ namespace UCode.Mongo
         /// </returns>
         public IndexKeys<TDocument> Hashed(Expression<Func<TDocument, object>> field, Action<CreateIndexOptions>? action = default)
         {
-            var id = _indexKeysDefinitionBuilder.Hashed(field);
+            var id = _indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Hashed(field) : _indexKeysDefinition.Hashed(field);
 
             return GetIndexDefinition(id, action);
         }
@@ -427,7 +431,7 @@ namespace UCode.Mongo
         /// </returns>
         public IndexKeys<TDocument> Text(FieldDefinition<TDocument> field, Action<CreateIndexOptions>? action = default)
         {
-            var id = _indexKeysDefinitionBuilder.Hashed(field);
+            var id = _indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Hashed(field) : _indexKeysDefinition.Hashed(field);
 
             return GetIndexDefinition(id, action);
         }
@@ -446,7 +450,7 @@ namespace UCode.Mongo
         /// </returns>
         public IndexKeys<TDocument> Text(Expression<Func<TDocument, object>> field, Action<CreateIndexOptions>? action = default)
         {
-            var id = _indexKeysDefinitionBuilder.Text(field);
+            var id = _indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Text(field) : _indexKeysDefinition.Text(field);
 
             return GetIndexDefinition(id, action);
         }
@@ -467,7 +471,7 @@ namespace UCode.Mongo
         /// </returns>
         public IndexKeys<TDocument> Wildcard(FieldDefinition<TDocument> field = null, Action<CreateIndexOptions>? action = default)
         {
-            var id = _indexKeysDefinitionBuilder.Text(field);
+            var id = _indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Text(field) : _indexKeysDefinition.Text(field);
 
             return GetIndexDefinition(id, action);
         }
@@ -487,20 +491,20 @@ namespace UCode.Mongo
         /// </returns>
         public IndexKeys<TDocument> Wildcard(Expression<Func<TDocument, object>> field, Action<CreateIndexOptions>? action = default)
         {
-            var id = _indexKeysDefinitionBuilder.Wildcard(field);
+            var id = _indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Wildcard(field) : throw new NotImplementedException();
 
             return GetIndexDefinition(id, action);
         }
 
 
         #region implicit operator
-        public static implicit operator IndexKeysDefinitionBuilder<TDocument>(IndexKeys<TDocument> source) => source._indexKeysDefinitionBuilder;
+        public static implicit operator IndexDefinition<TDocument>(IndexKeys<TDocument> source) => new IndexDefinition<TDocument>(source._indexKeysDefinition, source._createIndexOptions);
 
-        public static implicit operator IndexKeys<TDocument>(IndexKeysDefinitionBuilder<TDocument> source) => new IndexKeys<TDocument>(source);
+        public static implicit operator CreateIndexModel<TDocument>(IndexKeys<TDocument> source) => ((CreateIndexModel<TDocument>)(IndexDefinition<TDocument>)source);
 
-        public static implicit operator List<IndexDefinition<TDocument>>(IndexKeys<TDocument> source) => source._indexDefinitions;
+        public static implicit operator List<IndexDefinition<TDocument>>(IndexKeys<TDocument> source) => source._accumulator != default ? source._accumulator.Select(s=>(IndexDefinition<TDocument>)s).ToList() : throw new NotSupportedException();
 
-        public static implicit operator List<CreateIndexModel<TDocument>>(IndexKeys<TDocument> source) => ((List<IndexDefinition<TDocument>>)source).Select(s => (CreateIndexModel<TDocument>)s).ToList();
+        public static implicit operator List<CreateIndexModel<TDocument>>(IndexKeys<TDocument> source) => source._accumulator != default ? source._accumulator.Select(s => (CreateIndexModel<TDocument>)s).ToList() : throw new NotSupportedException();
         #endregion implicit operator
 
     }
