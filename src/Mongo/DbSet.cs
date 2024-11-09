@@ -351,7 +351,7 @@ namespace UCode.Mongo
 
                 var basonClassMap = (BsonClassMap)Activator.CreateInstance(typeof(BsonClassMap<>).MakeGenericType(objectIdImplementationType))!;
 
-                basonClassMap.MapExtraElementsProperty("extra_elements");
+                basonClassMap.MapExtraElementsProperty("ExtraElements");
                 //var method = methods.SingleOrDefault(s => s.BsonClassMap == bsonClassMapType);
 
                 //_ = method?.Method.Invoke(this, [bsonClassMapType]);
