@@ -30,6 +30,7 @@ namespace UCode.MongoTests
 
             var doc = new IdStringCollectionRecord() { MyProperty1 = nameof(Test1), MyProperty2 = 1, MyProperty3 = 0x01 };
 
+
             var result = await context.IdStringCollection.InsertAsync(doc);
 
             Assert.True(result == 1);

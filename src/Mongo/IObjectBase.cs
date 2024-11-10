@@ -221,15 +221,15 @@ namespace UCode.Mongo
             get; set;
         }
 
-        [BsonElement("disabled")]
-        [JsonPropertyName("disabled")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        [BsonIgnoreIfNull]
-        bool Disabled
-        {
-            get;
-            set;
-        }
+        //[BsonElement("disabled")]
+        //[JsonPropertyName("disabled")]
+        //[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        //[BsonIgnoreIfNull]
+        //bool Disabled
+        //{
+        //    get;
+        //    set;
+        //}
 
     }
 

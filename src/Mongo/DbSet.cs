@@ -27,7 +27,7 @@ namespace UCode.Mongo
     /// </summary>
     /// <typeparam name="TDocument">The type of document in the set.</typeparam>
     public class DbSet<TDocument> : DbSet<TDocument, string>
-        where TDocument : IObjectBase<string>
+        where TDocument : IObjectBase<string>, IObjectBaseTenant
     {
 
         /// <summary>
@@ -67,7 +67,7 @@ namespace UCode.Mongo
     /// <typeparam name="TDocument">The type of the documents in the collection.</typeparam>
     /// <typeparam name="TObjectId">The type of the object identifier.</typeparam>
     public class DbSet<TDocument, TObjectId> : IDisposable, IAsyncDisposable
-            where TDocument : IObjectBase<TObjectId>
+            where TDocument : IObjectBase<TObjectId>, IObjectBaseTenant
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
     {
         #region Fields

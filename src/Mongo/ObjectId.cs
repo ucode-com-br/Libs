@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using SharpCompress.Compressors.Xz;
+using UCode.Extensions;
 
 namespace UCode.Mongo
 {
@@ -340,10 +342,7 @@ namespace UCode.Mongo
 
     public abstract record ObjectIdRecordBase: IObjectBaseTenant
     {
-        private static readonly Guid DEFAULT = Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff");
-
-        public void WriteRef() => this.Ref = UCode.Extensions.GuidHelpers.CreateVersion8(this.Tenant.ToByteArray());
-
+        
         [JsonPropertyName("ref")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [BsonElement("ref")]
@@ -355,7 +354,7 @@ namespace UCode.Mongo
         {
             get;
             set;
-        } = DEFAULT;
+        } = Guid.NewGuid();
 
         [JsonPropertyName("tenant")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -366,7 +365,7 @@ namespace UCode.Mongo
         {
             get;
             set;
-        } = DEFAULT;
+        } = Guid.NewGuid();
 
         /// <summary>
         /// Gets or sets a value indicating whether the current object is disabled.
