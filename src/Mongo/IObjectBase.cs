@@ -19,12 +19,6 @@ namespace UCode.Mongo
     public interface IObjectBase : IObjectBase<string>
     {
 
-        [BsonId(IdGenerator = typeof(IdGenerator))]
-        [BsonRepresentation(BsonType.String)]
-        public string Id
-        {
-            get; set;
-        }
     }
 
     /// <summary>
@@ -45,11 +39,6 @@ namespace UCode.Mongo
     }
 
 
-    /// <summary>
-    /// Defines an interface for objects that have a unique ID and track user creation and modification information.
-    /// </summary>
-    /// <typeparam name="TObjectId">The type of the object's ID, which must be comparable and equatable.</typeparam>
-    /// <typeparam name="TUser">The type of the user who created and updated the object.</typeparam>
     public interface IObjectBase<TObjectId, TUser>
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
     {
@@ -189,12 +178,12 @@ namespace UCode.Mongo
         void OnProcessCompleted(IdGeneratorCompletedEventArgs<TObjectId, TUser> eventArgs);
     }
 
+
+
     public interface IObjectBaseTenant
     {
         [JsonPropertyName("ref")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [BsonElement("ref")]
-        [BsonIgnoreIfNull]
         [BsonSerializer(typeof(GuidAsStringSerializer))]
         //[BsonGuidRepresentation(GuidRepresentation.Standard)]
         //[BsonRepresentation(BsonType.String)]
@@ -204,9 +193,7 @@ namespace UCode.Mongo
         }
 
         [JsonPropertyName("tenant")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [BsonElement("tenant")]
-        [BsonIgnoreIfNull]
         [BsonSerializer(typeof(GuidAsStringSerializer))]
         //[BsonGuidRepresentation(GuidRepresentation.Standard)]
         //[BsonRepresentation(BsonType.String)]
@@ -214,16 +201,6 @@ namespace UCode.Mongo
         {
             get; set;
         }
-
-        //[BsonElement("disabled")]
-        //[JsonPropertyName("disabled")]
-        //[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        //[BsonIgnoreIfNull]
-        //bool Disabled
-        //{
-        //    get;
-        //    set;
-        //}
 
     }
 
