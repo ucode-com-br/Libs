@@ -552,9 +552,10 @@ namespace UCode.Mongo
             string? collectionName = null,
             Action<CreateCollectionOptions>? createCollectionOptionsAction = null,
             Action<MongoCollectionSettings>? mongoCollectionSettingsAction = null,
-            bool? useTransaction = default)
+            bool? useTransaction = default,
+                    bool thowIndexExceptions = false)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId>, IObjectBaseTenant => new(this, collectionName, createCollectionOptionsAction, mongoCollectionSettingsAction, useTransaction ?? this.TransactionalContext);
+            where TDocument : IObjectBase<TObjectId>, IObjectBaseTenant => new(this, collectionName, createCollectionOptionsAction, mongoCollectionSettingsAction, useTransaction ?? this.TransactionalContext, thowIndexExceptions);
 
         /// <summary>
         /// Retrieves a DbSet of the specified document type from the database.
@@ -571,8 +572,9 @@ namespace UCode.Mongo
                     string? collectionName = null,
                     Action<CreateCollectionOptions>? createCollectionOptionsAction = null,
                     Action<MongoCollectionSettings>? mongoCollectionSettingsAction = null,
-                    bool? useTransaction = default)
-                    where TDocument : IObjectBase, IObjectBaseTenant => new(this, collectionName, createCollectionOptionsAction, mongoCollectionSettingsAction, useTransaction ?? this.TransactionalContext);
+                    bool? useTransaction = default,
+                    bool thowIndexExceptions = false)
+                    where TDocument : IObjectBase, IObjectBaseTenant => new(this, collectionName, createCollectionOptionsAction, mongoCollectionSettingsAction, useTransaction ?? this.TransactionalContext, thowIndexExceptions);
 
 
 

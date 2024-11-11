@@ -28,7 +28,8 @@ namespace UCode.Mongo
         public DbSet([NotNull] ContextBase contextBase, string? collectionName = null,
             Action<CreateCollectionOptions>? createCollectionOptionsAction = null,
             Action<MongoCollectionSettings>? mongoCollectionSettingsAction = null,
-            bool useTransaction = false) : base(contextBase, collectionName, createCollectionOptionsAction, mongoCollectionSettingsAction)
+            bool useTransaction = false,
+            bool thowIndexExceptions = false) : base(contextBase, collectionName, createCollectionOptionsAction, mongoCollectionSettingsAction, thowIndexExceptions)
         {
 
         }
@@ -137,7 +138,8 @@ namespace UCode.Mongo
         public DbSet([NotNull] ContextBase contextBase, string? collectionName = null,
             Action<CreateCollectionOptions>? createCollectionOptionsAction = null,
             Action<MongoCollectionSettings>? mongoCollectionSettingsAction = null,
-            bool useTransaction = false)
+            bool useTransaction = false,
+            bool thowIndexExceptions = false)
         {
             this.UseTransaction = useTransaction;
 
@@ -223,7 +225,7 @@ namespace UCode.Mongo
             }
             this._contextCollectionMetadata = this._contextbase._contextCollectionMetadata[this.CollectionName];
 
-            _ = this.InternalIndex(false);
+            _ = this.InternalIndex(false, thowIndexExceptions);
         }
         #endregion constructor
 
@@ -262,10 +264,7 @@ namespace UCode.Mongo
                 var basonClassMap = (BsonClassMap)Activator.CreateInstance(typeof(BsonClassMap<>).MakeGenericType(objectIdImplementationType))!;
 
                 basonClassMap.MapExtraElementsProperty("ExtraElements");
-                //var method = methods.SingleOrDefault(s => s.BsonClassMap == bsonClassMapType);
-
-                //_ = method?.Method.Invoke(this, [bsonClassMapType]);
-
+                
                 yield return basonClassMap;
             }
         }
@@ -282,7 +281,7 @@ namespace UCode.Mongo
         {
             IAsyncCursor<BsonDocument> idxsb = null;
 
-            if (InTransaction(forceTransaction, out var clientSessionHandle))
+            if (this.InTransaction(forceTransaction, out var clientSessionHandle))
             {
                 idxsb = await this.MongoCollection.Indexes.ListAsync(session: clientSessionHandle, cancellationToken);
             }
@@ -324,18 +323,28 @@ namespace UCode.Mongo
         }
 
 
-        private bool InternalIndex(bool? forceTransaction = default)
+        private bool InternalIndex(bool? forceTransaction = default, bool thowIndexExceptions = false)
         {
             var contextbaseType = this._contextbase.GetType();
-            var methods = contextbaseType
-                .GetMethods();
+            var methods = contextbaseType.GetMethods();
 
             var index_method = methods.SingleOrDefault(w => w.Name.Equals("Index", StringComparison.Ordinal) && w.GetParameters().Length == 1 && w.GetParameters()[0].ParameterType == typeof(IndexKeys<TDocument>));
             
             index_method?.Invoke(this._contextbase, [(IndexKeys<TDocument>)_contextCollectionMetadata.IndexKeys]);
 
+            try
+            {
+                return this.IndexAsync((IndexKeys<TDocument>)_contextCollectionMetadata.IndexKeys, forceTransaction).GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(exception: ex, "Fail create indexes.", _contextCollectionMetadata.IndexKeys);
 
-            return this.IndexAsync((IndexKeys<TDocument>)_contextCollectionMetadata.IndexKeys, forceTransaction).GetAwaiter().GetResult();
+                if (thowIndexExceptions)
+                    throw;
+
+                return false;
+            }
         }
 
         public async ValueTask<bool> IndexAsync([NotNull] IndexKeys<TDocument> indexKeys,
