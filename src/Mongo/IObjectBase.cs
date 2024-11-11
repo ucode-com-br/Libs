@@ -18,12 +18,6 @@ namespace UCode.Mongo
     /// </remarks>
     public interface IObjectBase : IObjectBase<string>
     {
-        //[BsonId(IdGenerator = typeof(MongoDB.Bson.Serialization.IdGenerators.StringObjectIdGenerator))]
-        //[BsonRepresentation(BsonType.String)]
-        //string Id
-        //{
-        //    get; set;
-        //}
 
         [BsonId(IdGenerator = typeof(IdGenerator))]
         [BsonRepresentation(BsonType.String)]
