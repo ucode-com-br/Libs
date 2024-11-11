@@ -195,8 +195,8 @@ namespace UCode.Mongo
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [BsonElement("ref")]
         [BsonIgnoreIfNull]
-        //[BsonSerializer(typeof(GuidAsStringSerializer))]
-        [BsonGuidRepresentation(GuidRepresentation.Standard)]
+        [BsonSerializer(typeof(GuidAsStringSerializer))]
+        //[BsonGuidRepresentation(GuidRepresentation.Standard)]
         //[BsonRepresentation(BsonType.String)]
         Guid Ref
         {
@@ -207,8 +207,8 @@ namespace UCode.Mongo
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [BsonElement("tenant")]
         [BsonIgnoreIfNull]
-        //[BsonSerializer(typeof(GuidAsStringSerializer))]
-        [BsonGuidRepresentation(GuidRepresentation.Standard)]
+        [BsonSerializer(typeof(GuidAsStringSerializer))]
+        //[BsonGuidRepresentation(GuidRepresentation.Standard)]
         //[BsonRepresentation(BsonType.String)]
         Guid Tenant
         {
