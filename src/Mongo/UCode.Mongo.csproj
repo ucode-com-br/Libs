@@ -45,11 +45,11 @@
     <PackageReference Include="MongoDB.Bson" Version="3.0.0" />
     <PackageReference Include="MongoDB.Driver" Version="3.0.0" />
     
-    <PackageReference Include="UCode.Extensions" Version="$(Version)" />
-    <PackageReference Include="UCode.Repositories" Version="$(Version)" />
+    <!--<PackageReference Include="UCode.Extensions" Version="$(Version)" />
+    <PackageReference Include="UCode.Repositories" Version="$(Version)" />-->
     
 
-    <!--<ProjectReference Include="..\Extensions\UCode.Extensions.csproj" />
-    <ProjectReference Include="..\Repositories\UCode.Repositories.csproj" />-->
+    <ProjectReference Include="..\Extensions\UCode.Extensions.csproj" />
+    <ProjectReference Include="..\Repositories\UCode.Repositories.csproj" />
   </ItemGroup>
 </Project>
