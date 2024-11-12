@@ -7,6 +7,7 @@ using MongoDB.Bson.Serialization;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.IdGenerators;
 using Polly.Simmy.Outcomes;
+using UCode.Mongo.Models;
 
 namespace UCode.Mongo
 {

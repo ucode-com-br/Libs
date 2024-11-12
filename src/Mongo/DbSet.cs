@@ -14,6 +14,7 @@ using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using UCode.Extensions;
+using UCode.Mongo.Models;
 using UCode.Mongo.Options;
 using UCode.Repositories;
 

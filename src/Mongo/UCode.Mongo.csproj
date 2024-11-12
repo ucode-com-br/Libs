@@ -8,7 +8,7 @@
     <Copyright>UCode (c) Desenvolvimento de Software 2024</Copyright>
     <IncludeSymbols>True</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <Version>3.10.19</Version>
+    <Version>3.10.20</Version>
     <Title>UCode Mongo</Title>
     <RepositoryType>git</RepositoryType>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
@@ -44,15 +44,12 @@
     <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.1" />
     <PackageReference Include="MongoDB.Bson" Version="3.0.0" />
     <PackageReference Include="MongoDB.Driver" Version="3.0.0" />
-    <!--<PackageReference Include="UCode.Extensions" Version="1.8.3" Condition="'$(Configuration)'!='Debug'" />
-    <PackageReference Include="UCode.Repositories" Version="1.8.3" Condition="'$(Configuration)'!='Debug'" />-->
-  </ItemGroup>
-  <ItemGroup>
-    <!--<ProjectReference Include="..\Extensions\UCode.Extensions.csproj" Condition="'$(Configuration)'=='Debug'" />
-    <ProjectReference Include="..\Repositories\UCode.Repositories.csproj" Condition="'$(Configuration)'=='Debug'" />-->
-    <!--<ProjectReference Include="..\..\Libs\mongo-csharp-driver\src\MongoDB.Bson\MongoDB.Bson.csproj" />
-    <ProjectReference Include="..\..\Libs\mongo-csharp-driver\src\MongoDB.Driver\MongoDB.Driver.csproj" />-->
-    <ProjectReference Include="..\Extensions\UCode.Extensions.csproj" />
-    <ProjectReference Include="..\Repositories\UCode.Repositories.csproj" />
+    
+    <PackageReference Include="UCode.Extensions" Version="$(Version)" />
+    <PackageReference Include="UCode.Repositories" Version="$(Version)" />
+    
+
+    <!--<ProjectReference Include="..\Extensions\UCode.Extensions.csproj" />
+    <ProjectReference Include="..\Repositories\UCode.Repositories.csproj" />-->
   </ItemGroup>
 </Project>

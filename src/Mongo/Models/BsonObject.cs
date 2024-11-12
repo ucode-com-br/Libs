@@ -3,15 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text.Json.Serialization;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
-using MongoDB.Bson.Serialization.Options;
-using Org.BouncyCastle.Bcpg.OpenPgp;
 
-namespace UCode.Mongo
+namespace UCode.Mongo.Models
 {
-    public class BsonObject: BsonObject<string>, IObjectBase, IObjectBaseTenant
+    public class BsonObject : BsonObject<string>, IObjectBase, IObjectBaseTenant
     {
         public BsonObject(BsonDocument bsonDocument) : base(bsonDocument)
         {
@@ -73,6 +70,8 @@ namespace UCode.Mongo
             get => Get(t => t.Disabled);
             set => Set(t => t.Disabled, value);
         }
+
+
         public Guid Ref
         {
             get => Get(t => t.Ref);
@@ -83,6 +82,8 @@ namespace UCode.Mongo
             get => Get(t => t.Tenant);
             set => Set(t => t.Tenant, value);
         }
+
+
 
 
         public BsonObject(BsonDocument bsonDocument)
@@ -104,10 +105,10 @@ namespace UCode.Mongo
         {
             if (bsonValue == null || bsonValue.IsBsonNull)
             {
-                return default(T);
+                return default;
             }
 
-            Type targetType = typeof(T);
+            var targetType = typeof(T);
 
             // Dicionário de conversões diretas para tipos primitivos
             var conversions = new Dictionary<Type, Func<BsonValue, object>>()

@@ -3,7 +3,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 
-namespace UCode.Mongo
+namespace UCode.Mongo.Serializers
 {
     /// <summary>
     /// The <see cref="Serializer"/> class provides methods for serializing and deserializing objects.

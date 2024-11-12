@@ -12,6 +12,7 @@ using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Events;
 using UCode.Extensions;
+using UCode.Mongo.Models;
 using ZstdSharp.Unsafe;
 
 namespace UCode.Mongo

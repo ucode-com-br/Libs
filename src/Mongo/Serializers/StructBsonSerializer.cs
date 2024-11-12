@@ -5,7 +5,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 
-namespace UCode.Mongo
+namespace UCode.Mongo.Serializers
 {
     /// <summary>
     /// Represents a serializer for struct types.

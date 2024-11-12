@@ -1,4 +1,5 @@
 using System;
+using UCode.Mongo.Models;
 
 namespace UCode.Mongo
 {
