@@ -9,7 +9,7 @@ using MongoDB.Bson.Serialization.Options;
 
 namespace UCode.MongoTests
 {
-    public record IdStringCollectionRecord: Mongo.TenantRecordBase
+    public record IdStringCollectionRecord: Mongo.Models.TenantRecordBase
     {
 
         public string MyProperty1
