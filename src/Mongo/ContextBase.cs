@@ -13,50 +13,11 @@ using MongoDB.Driver;
 using MongoDB.Driver.Core.Events;
 using UCode.Extensions;
 using UCode.Mongo.Models;
+using UCode.Mongo.Options;
 using ZstdSharp.Unsafe;
 
 namespace UCode.Mongo
 {
-    public struct ContextCollectionMetadata
-    {
-        internal ContextCollectionMetadata(string collectionName)
-        {
-            this.CollectionName = collectionName;
-        }
-
-        public string CollectionName
-        {
-            get;
-        }
-
-
-        public object IndexKeys
-        {
-            get; internal set;
-        }
-
-        public IEnumerable<BsonClassMap> BsonClassMaps
-        {
-            get; internal set;
-        }
-
-        public IndexDefinition<TDocument> GetIndexKeys<TDocument>()
-        {
-            return (IndexDefinition<TDocument>)IndexKeys;
-        }
-
-        public IEnumerable<BsonClassMap<TDocument>>? GetBsonClassMaps<TDocument>()
-        {
-            var x = new List<BsonClassMap<TDocument>>();
-
-            foreach (var item in BsonClassMaps)
-            {
-                x.Add((BsonClassMap<TDocument>)item);
-            }
-
-            return x;
-        }
-    }
 
 
     /// <summary>
@@ -358,103 +319,51 @@ namespace UCode.Mongo
         }
 
 
+
+
+
+
+
         #region Before
-        /// <summary>
-        /// Performs actions required before inserting a document.
-        /// </summary>
-        /// <typeparam name="TDocument">
-        /// The type of the document being inserted, which must implement 
-        /// <see cref="IObjectBase{TObjectId}"/>.
-        /// </typeparam>
-        /// <typeparam name="TObjectId">
-        /// The type of the object identifier, which must implement 
-        /// <see cref="IComparable{T}"/> and <see cref="IEquatable{T}"/>.
-        /// </typeparam>
-        /// <param name="original">
-        /// The original document that is to be processed before insertion.
-        /// </param>
-        /// <returns>
-        /// Returns the processed document of type <typeparamref name="TDocument"/>.
-        /// Throws an exception if the processed document is null.
-        /// </returns>
-        internal TDocument BeforeInsertInternal<TDocument, TObjectId>(TDocument original)
+        
+        internal TDocument BeforeInsertInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, TDocument original, OptionObject<TDocument, TProjection> option)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId>
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
         {
-            var destination = this.BeforeInsert<TDocument, TObjectId>(original);
+            var destination = this.BeforeInsert<TDocument, TObjectId, TProjection, TUser>(sender, original, option);
 
-            if (destination == null)
-            {
-                throw new Exception("cannot save null object.");
-            }
+            ArgumentNullException.ThrowIfNull(destination);
 
             return destination;
         }
 
-        /// <summary>
-        /// Performs a check before updating a document object.
-        /// </summary>
-        /// <typeparam name="TDocument">The type of the document to be updated. It must implement the IObjectId interface.</typeparam>
-        /// <typeparam name="TObjectId">The type of the object identifier for the document, which must be comparable and equatable.</typeparam>
-        /// <param name="updateOptions">An instance of Update containing the options for the update operation.</param>
-        /// <returns>An instance of Update representing the updated document information, or throws an exception if the document cannot be updated.</returns>
-        /// <exception cref="Exception">Thrown when the destination object is null, indicating that the document cannot be updated.</exception>
-        internal Update<TDocument> BeforeUpdateInternal<TDocument, TObjectId>(Update<TDocument> updateOptions)
+        internal UpdateDefinition<TDocument> BeforeUpdateInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, FilterDefinition<TDocument> filterDefinition, UpdateDefinition<TDocument> updateDefinition, OptionObject<TDocument, TProjection> option)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId>
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
         {
-            var destination = this.BeforeUpdate<TDocument, TObjectId>(updateOptions);
+            var destination = this.BeforeUpdate<TDocument, TObjectId, TProjection, TUser>(sender, filterDefinition, updateDefinition, option);
 
-            if (destination == null)
-            {
-                throw new Exception("cannot update null object.");
-            }
+            ArgumentNullException.ThrowIfNull(destination);
 
             return destination;
         }
 
-        /// <summary>
-        /// This method processes an existing document before replacing it. It calls a specific 
-        /// method to get the destination document and ensures that the destination is not null.
-        /// </summary>
-        /// <typeparam name="TDocument">The type of the document that implements IObjectId.</typeparam>
-        /// <typeparam name="TObjectId">The type of the object ID that implements IComparable and IEquatable.</typeparam>
-        /// <param name="original">The original document that is to be replaced.</param>
-        /// <returns>
-        /// The processed destination document to be used as a replacement.
-        /// </returns>
-        /// <exception cref="Exception">Thrown when the destination document is null.</exception>
-        internal TDocument BeforeReplaceInternal<TDocument, TObjectId>(TDocument original)
+        internal TDocument BeforeReplaceInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, TDocument original, FilterDefinition<TDocument> filterDefinition, OptionObject<TDocument, TProjection> option)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId>
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
         {
-            var destination = this.BeforeReplace<TDocument, TObjectId>(original);
+            var destination = this.BeforeReplace<TDocument, TObjectId, TProjection, TUser>(sender, original, filterDefinition, option);
 
-            if (destination == null)
-            {
-                throw new Exception("cannot save null object.");
-            }
+            ArgumentNullException.ThrowIfNull(destination);
 
             return destination;
         }
 
-        /// <summary>
-        /// Prepares the input BsonDocument array for aggregation by ensuring that
-        /// it is not null or empty before further processing.
-        /// </summary>
-        /// <typeparam name="TDocument">The type of the document that implements IObjectId.</typeparam>
-        /// <typeparam name="TObjectId">The type of the object ID that is comparable and equatable.</typeparam>
-        /// <typeparam name="TProjection">The type used for the projection in the aggregation.</typeparam>
-        /// <param name="original">An array of BsonDocument objects that contains the original documents to be aggregated.</param>
-        /// <returns>
-        /// An array of BsonDocument objects that have been prepared for aggregation.
-        /// </returns>
-        /// <exception cref="Exception">Thrown when the destination array is null or empty, indicating a failure to save aggregation.</exception>
-        internal BsonDocument[] BeforeAggregateInternal<TDocument, TObjectId, TProjection>(BsonDocument[] original)
+        internal BsonDocument[] BeforeAggregateInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, BsonDocument[] original, OptionObject<TDocument, TProjection> option)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId>
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
         {
-            var destination = this.BeforeAggregate<TDocument, TObjectId, TProjection>(original);
+            var destination = this.BeforeAggregate<TDocument, TObjectId, TProjection, TUser>(sender, original, option);
 
             if (destination == null || destination.Length == 0)
             {
@@ -463,6 +372,76 @@ namespace UCode.Mongo
 
             return destination;
         }
+
+        internal FilterDefinition<TDocument> BeforeFindInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, FilterDefinition<TDocument> filterDefinition, OptionObject<TDocument, TProjection> option)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        {
+            var findDefinition = this.BeforeFind<TDocument, TObjectId, TProjection, TUser>(sender, filterDefinition, option);
+
+            ArgumentNullException.ThrowIfNull(findDefinition);
+
+            return findDefinition;
+        }
+
+        internal IQueryable<TDocument> BeforeQueryableInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, IQueryable<TDocument> queryable, OptionObject<TDocument, TProjection> option)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        {
+            var findDefinition = this.BeforeQueryable<TDocument, TObjectId, TProjection, TUser>(sender, queryable, option);
+
+            ArgumentNullException.ThrowIfNull(findDefinition);
+
+            return findDefinition;
+        }
+
+
+        internal FilterDefinition<TDocument> BeforeDeleteInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, FilterDefinition<TDocument> filterDefinition, OptionObject<TDocument, TProjection> option)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        {
+            var findDefinition = this.BeforeDelete<TDocument, TObjectId, TProjection, TUser>(sender, filterDefinition, option);
+
+            ArgumentNullException.ThrowIfNull(findDefinition);
+
+            return findDefinition;
+        }
+
+        internal IEnumerable<WriteModel<TDocument>> BeforeBulkWriteInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, IEnumerable<WriteModel<TDocument>> writeModels, OptionObject<TDocument, TProjection> option)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        {
+            var writemodel = this.BeforeBulkWrite<TDocument, TObjectId, TProjection, TUser>(sender, writeModels, option);
+
+            ArgumentNullException.ThrowIfNull(writemodel);
+
+            return writemodel;
+        }
+
+        internal IEnumerable<TProjection> ResultInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, IEnumerable<TProjection> results)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        {
+            var projection = this.Result<TDocument, TObjectId, TProjection, TUser>(sender, results);
+
+            ArgumentNullException.ThrowIfNull(projection);
+
+            return projection;
+        }
+
+        internal TProjection ResultInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, TProjection result)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        {
+            var projection = this.Result<TDocument, TObjectId, TProjection, TUser>(sender, result);
+
+            ArgumentNullException.ThrowIfNull(projection);
+
+            return projection;
+        }
+
+
+
 
         /// <summary>
         /// Executes logic before inserting a document of type TDocument.
@@ -478,9 +457,9 @@ namespace UCode.Mongo
         /// This method is marked as virtual, allowing derived classes to override
         /// its functionality for customized pre-insert logic.
         /// </remarks>
-        protected virtual TDocument? BeforeInsert<TDocument, TObjectId>(TDocument original)
+        protected virtual TDocument? BeforeInsert<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, TDocument original, OptionObject<TDocument, TProjection> option)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId> => original;
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant => original;
 
         /// <summary>
         /// This method is a virtual method that can be overridden by derived classes. 
@@ -497,9 +476,9 @@ namespace UCode.Mongo
         /// that is used to perform the update operation. 
         /// Returns null if no update is to be performed.
         /// </returns>
-        protected virtual Update<TDocument>? BeforeUpdate<TDocument, TObjectId>(Update<TDocument> updateOptions)
+        protected virtual UpdateDefinition<TDocument> BeforeUpdate<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, FilterDefinition<TDocument> filterDefinition, UpdateDefinition<TDocument> updateDefinition, OptionObject<TDocument, TProjection> option)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId> => updateOptions;
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant => updateDefinition;
 
         /// <summary>
         /// Represents a method that allows for pre-processing of a document before it is replaced.
@@ -513,9 +492,9 @@ namespace UCode.Mongo
         /// <returns>
         /// Returns the original document, which can be modified before replacement if needed.
         /// </returns>
-        protected virtual TDocument? BeforeReplace<TDocument, TObjectId>(TDocument original)
+        protected virtual TDocument? BeforeReplace<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, TDocument original, FilterDefinition<TDocument> filterDefinition, OptionObject<TDocument, TProjection> option)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId> => original;
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant => original;
 
         /// <summary>
         /// This method allows performing operations or transformations on an array of BsonDocument objects
@@ -529,13 +508,37 @@ namespace UCode.Mongo
         /// Returns a potentially modified array of BsonDocument objects.
         /// The return value can be null, indicating that no documents are to be processed.
         /// </returns>
-        protected virtual BsonDocument[]? BeforeAggregate<TDocument, TObjectId, TProjection>(BsonDocument[] bsonDocuments)
+        protected virtual BsonDocument[]? BeforeAggregate<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, BsonDocument[] bsonDocuments, OptionObject<TDocument, TProjection> option)
                     where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-                    where TDocument : IObjectBase<TObjectId> => bsonDocuments;
+                    where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant => bsonDocuments;
 
+        protected virtual FilterDefinition<TDocument> BeforeDelete<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, FilterDefinition<TDocument> filterDefinition, OptionObject<TDocument, TProjection> option)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant => filterDefinition;
+
+        protected virtual FilterDefinition<TDocument> BeforeFind<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, FilterDefinition<TDocument> filterDefinition, OptionObject<TDocument, TProjection> option)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant => filterDefinition;
+
+        protected virtual IQueryable<TDocument> BeforeQueryable<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, IQueryable<TDocument> queryable, OptionObject<TDocument, TProjection> option)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant => queryable;
+
+        protected virtual IEnumerable<WriteModel<TDocument>> BeforeBulkWrite<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, IEnumerable<WriteModel<TDocument>> writeModels, OptionObject<TDocument, TProjection> option)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant => writeModels;
+
+
+        protected virtual IEnumerable<TProjection> Result<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, IEnumerable<TProjection> items)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant => items;
+
+        protected virtual TProjection Result<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, TProjection item)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant => item;
         #endregion
 
-        
+
 
         /// <summary>
         /// Gets a DbSet instance for the specified document type and object ID type.
@@ -546,6 +549,7 @@ namespace UCode.Mongo
         /// <param name="createCollectionOptionsAction">An optional action to configure the collection options when creating a new collection.</param>
         /// <param name="mongoCollectionSettingsAction">An optional action to configure the MongoDB collection settings.</param>
         /// <param name="useTransaction">An optional boolean that indicates whether to use a transaction. Defaults to the current transactional context if not provided.</param>
+        /// <param name="throwIndexExceptions"></param>
         /// <returns>A DbSet instance that can be used for querying and managing documents of the specified type.</returns>
         /// <exception cref="ArgumentNullException">Thrown when any of the required parameters are null or invalid.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -554,9 +558,9 @@ namespace UCode.Mongo
             Action<CreateCollectionOptions>? createCollectionOptionsAction = null,
             Action<MongoCollectionSettings>? mongoCollectionSettingsAction = null,
             bool? useTransaction = default,
-                    bool thowIndexExceptions = false)
+            bool throwIndexExceptions = false)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId>, IObjectBaseTenant => new(this, collectionName, createCollectionOptionsAction, mongoCollectionSettingsAction, useTransaction ?? this.TransactionalContext, thowIndexExceptions);
+            where TDocument : IObjectBase<TObjectId>, IObjectBaseTenant => new(this, collectionName, createCollectionOptionsAction, mongoCollectionSettingsAction, useTransaction ?? this.TransactionalContext, throwIndexExceptions);
 
         /// <summary>
         /// Retrieves a DbSet of the specified document type from the database.
@@ -566,6 +570,7 @@ namespace UCode.Mongo
         /// <param name="createCollectionOptionsAction">An optional action to configure the creation options for the collection.</param>
         /// <param name="mongoCollectionSettingsAction">An optional action to configure the MongoDB collection settings.</param>
         /// <param name="useTransaction">Optional value indicating whether to use a transaction.</param>
+        /// <param name="throwIndexExceptions"></param>
         /// <returns>A DbSet of the specified document type.</returns>
         /// <exception cref="InvalidOperationException">Thrown if the operation cannot be performed.</exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -574,8 +579,8 @@ namespace UCode.Mongo
                     Action<CreateCollectionOptions>? createCollectionOptionsAction = null,
                     Action<MongoCollectionSettings>? mongoCollectionSettingsAction = null,
                     bool? useTransaction = default,
-                    bool thowIndexExceptions = false)
-                    where TDocument : IObjectBase, IObjectBaseTenant => new(this, collectionName, createCollectionOptionsAction, mongoCollectionSettingsAction, useTransaction ?? this.TransactionalContext, thowIndexExceptions);
+                    bool throwIndexExceptions = false)
+                    where TDocument : IObjectBase, IObjectBaseTenant => new(this, collectionName, createCollectionOptionsAction, mongoCollectionSettingsAction, useTransaction ?? this.TransactionalContext, throwIndexExceptions);
 
 
 
@@ -591,42 +596,8 @@ namespace UCode.Mongo
         /// The method uses aggressive inlining to improve performance by reducing the overhead of method calls.
         /// </remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IEnumerable<string> CollectionNames() => _instanceCollectionNames;
+        public IEnumerable<string> CollectionNames() => this._instanceCollectionNames;
 
-        /*
-        /// <summary>
-        /// Represents an abstract asynchronous method that maps data.
-        /// This method is intended to be implemented by derived classes 
-        /// to provide specific mapping logic.
-        /// </summary>
-        /// <remarks>
-        /// The method is marked with <see cref="MethodImplOptions.AggressiveInlining"/> to suggest 
-        /// that the compiler should try to inline the method for performance improvements. 
-        /// As it is an abstract method, it does not contain any implementation and must 
-        /// be overridden in any non-abstract derived class.
-        /// </remarks>
-        /// <returns>
-        /// A task representing the asynchronous operation. This allows for the 
-        /// method to be awaited and facilitates asynchronous programming patterns.
-        /// </returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected abstract Task MapAsync(IEnumerable<BsonClassMap> bsonClassMaps);
-
-        /// <summary>
-        /// Asynchronously indexes data. This method is abstract and must be implemented by any derived class.
-        /// </summary>
-        /// <returns>
-        /// A Task representing the asynchronous operation of indexing data.
-        /// </returns>
-        /// <remarks>
-        /// The method is marked with the <see cref="MethodImplAttribute"/> to indicate that it should
-        /// be inlined aggressively, potentially improving performance when called.
-        /// </remarks>
-        /// <exception cref="NotImplementedException">
-        /// Thrown when the method is not implemented in a derived class.
-        /// </exception>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected abstract Task IndexAsync();*/
 
         /// <summary>
         /// Initiates a new client session if one is not already active.
