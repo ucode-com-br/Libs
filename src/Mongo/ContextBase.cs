@@ -424,8 +424,6 @@ namespace UCode.Mongo
         {
             var projection = this.Result<TDocument, TObjectId, TProjection, TUser>(sender, results);
 
-            ArgumentNullException.ThrowIfNull(projection);
-
             return projection;
         }
 
@@ -434,8 +432,6 @@ namespace UCode.Mongo
             where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
         {
             var projection = this.Result<TDocument, TObjectId, TProjection, TUser>(sender, result);
-
-            ArgumentNullException.ThrowIfNull(projection);
 
             return projection;
         }
