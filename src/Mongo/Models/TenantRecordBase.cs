@@ -21,7 +21,7 @@ namespace UCode.Mongo.Models
 
         [BsonElement("created_by")]
         [JsonPropertyName("created_by")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         [BsonIgnoreIfNull]
         public TUser CreatedBy
         {
@@ -31,7 +31,7 @@ namespace UCode.Mongo.Models
 
         [BsonElement("created_at")]
         [JsonPropertyName("created_at")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         [BsonIgnoreIfNull]
         public DateTime CreatedAt
         {

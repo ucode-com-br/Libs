@@ -67,7 +67,7 @@ namespace UCode.MongoTests
             var options = new FindOptionsPaging<IdStringCollectionRecord>() { PageSize = 100, CurrentPage = 0 };
             
 
-            var result1 = await context.IdStringCollection.GetPagedAsync<IdStringCollectionRecord>(filter: query, findOptions: options);
+            var result1 = await context.IdStringCollection.GetPagedAsync(filter: query, findOptionsPaging: options);
 
         }
     }

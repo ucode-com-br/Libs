@@ -325,213 +325,264 @@ namespace UCode.Mongo
 
 
         #region Before
+
+        //
+        internal void BeforeInsertInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref TDocument original, ref ReplaceOptions replaceOptions)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        {
+            ArgumentNullException.ThrowIfNull(sender);
+
+            OptionObject<TDocument, TProjection> option = replaceOptions;
+
+            this.BeforeInsert<TDocument, TObjectId, TProjection, TUser>(sender, ref original, ref option);
+
+            replaceOptions = option;
+        }
+
+        internal void BeforeInsertInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref TDocument original, ref InsertOneOptions insertOneOptions)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        {
+            ArgumentNullException.ThrowIfNull(sender);
+
+            OptionObject<TDocument, TProjection> option = insertOneOptions;
+
+            this.BeforeInsert<TDocument, TObjectId, TProjection, TUser>(sender, ref original, ref option);
+
+            insertOneOptions = option;
+        }
+
+
+        //internal void BeforeInsertInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref TDocument original, ref OptionObject<TDocument, TProjection> option)
+        //    where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+        //    where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        //{
+        //    ArgumentNullException.ThrowIfNull(sender);
+
+        //    this.BeforeInsert<TDocument, TObjectId, TProjection, TUser>(sender, ref original, ref option);
+        //}
+
+        //
+        internal void BeforeUpdateInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref FilterDefinition<TDocument> filterDefinition, ref UpdateDefinition<TDocument> updateDefinition, ref UpdateOptions updateOptions)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        {
+            ArgumentNullException.ThrowIfNull(sender);
+
+            OptionObject<TDocument, TProjection> option = updateOptions;
+
+            this.BeforeUpdate<TDocument, TObjectId, TProjection, TUser>(sender, ref filterDefinition, ref updateDefinition, ref option);
+        }
+
+        internal void BeforeUpdateInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref FilterDefinition<TDocument> filterDefinition, ref UpdateDefinition<TDocument> updateDefinition, ref FindOneAndUpdateOptions<TDocument, TProjection> findOneAndUpdateOptions)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        {
+            ArgumentNullException.ThrowIfNull(sender);
+
+            OptionObject<TDocument, TProjection> option = findOneAndUpdateOptions;
+
+            this.BeforeUpdate<TDocument, TObjectId, TProjection, TUser>(sender, ref filterDefinition, ref updateDefinition, ref option);
+        }
+
+        //internal void BeforeUpdateInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref FilterDefinition<TDocument> filterDefinition, ref UpdateDefinition<TDocument> updateDefinition, ref OptionObject<TDocument, TProjection> option)
+        //    where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+        //    where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        //{
+        //    ArgumentNullException.ThrowIfNull(sender);
+
+        //    this.BeforeUpdate<TDocument, TObjectId, TProjection, TUser>(sender, ref filterDefinition, ref updateDefinition, ref option);
+        //}
+
+        internal void BeforeReplaceInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, TDocument original, ref FilterDefinition<TDocument> filterDefinition, ref ReplaceOptions replaceOptions)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        {
+            ArgumentNullException.ThrowIfNull(sender);
+            OptionObject<TDocument, TProjection> option = replaceOptions;
+            this.BeforeReplace<TDocument, TObjectId, TProjection, TUser>(sender, ref original, ref filterDefinition, ref option);
+            replaceOptions = option;
+        }
+
+        //AggregateOptions
+        internal void BeforeAggregateInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref BsonDocument[] original, ref AggregateOptions aggregateOptions)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        {
+            ArgumentNullException.ThrowIfNull(sender);
+            OptionObject<TDocument, TProjection> option = aggregateOptions;
+            this.BeforeAggregate<TDocument, TObjectId, TProjection, TUser>(sender, ref original, ref option);
+            aggregateOptions = option;
+        }
+
+        //internal void BeforeAggregateInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref BsonDocument[] original, ref OptionObject<TDocument, TProjection> option)
+        //    where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+        //    where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        //{
+        //    ArgumentNullException.ThrowIfNull(sender);
+        //    this.BeforeAggregate<TDocument, TObjectId, TProjection, TUser>(sender, ref original, ref option);
+        //}
+
+        internal void BeforeFindInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref FilterDefinition<TDocument> filterDefinition, ref CountOptions countOptions)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        {
+            ArgumentNullException.ThrowIfNull(sender);
+            OptionObject<TDocument, TProjection> option = countOptions;
+            this.BeforeFind<TDocument, TObjectId, TProjection, TUser>(sender, ref filterDefinition, ref option);
+            countOptions = option;
+        }
+
         
-        internal TDocument BeforeInsertInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, TDocument original, OptionObject<TDocument, TProjection> option)
+        internal void BeforeFindInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref FilterDefinition<TDocument> filterDefinition, ref FindOptions<TDocument, TProjection> findOptions)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
             where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
         {
-            var destination = this.BeforeInsert<TDocument, TObjectId, TProjection, TUser>(sender, original, option);
-
-            ArgumentNullException.ThrowIfNull(destination);
-
-            return destination;
+            ArgumentNullException.ThrowIfNull(sender);
+            OptionObject<TDocument, TProjection> option = findOptions;
+            this.BeforeFind<TDocument, TObjectId, TProjection, TUser>(sender, ref filterDefinition, ref option);
+            findOptions = option;
         }
 
-        internal UpdateDefinition<TDocument> BeforeUpdateInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, FilterDefinition<TDocument> filterDefinition, UpdateDefinition<TDocument> updateDefinition, OptionObject<TDocument, TProjection> option)
+        //internal void BeforeFindInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref FilterDefinition<TDocument> filterDefinition, ref OptionObject<TDocument, TProjection> option)
+        //    where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+        //    where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        //{
+        //    ArgumentNullException.ThrowIfNull(sender);
+        //    this.BeforeFind<TDocument, TObjectId, TProjection, TUser>(sender, ref filterDefinition, ref option);
+        //}
+
+        
+        internal void BeforeQueryableInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref IQueryable<TDocument> queryable, ref AggregateOptions aggregateOptions)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
             where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
         {
-            var destination = this.BeforeUpdate<TDocument, TObjectId, TProjection, TUser>(sender, filterDefinition, updateDefinition, option);
+            ArgumentNullException.ThrowIfNull(sender);
 
-            ArgumentNullException.ThrowIfNull(destination);
-
-            return destination;
+            OptionObject<TDocument, TProjection> option = aggregateOptions;
+            this.BeforeQueryable<TDocument, TObjectId, TProjection, TUser>(sender, ref queryable, ref option);
+            aggregateOptions = option;
         }
 
-        internal TDocument BeforeReplaceInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, TDocument original, FilterDefinition<TDocument> filterDefinition, OptionObject<TDocument, TProjection> option)
+        //internal void BeforeQueryableInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref IQueryable<TDocument> queryable, ref OptionObject<TDocument, TProjection> option)
+        //    where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+        //    where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        //{
+        //    ArgumentNullException.ThrowIfNull(sender);
+        //    this.BeforeQueryable<TDocument, TObjectId, TProjection, TUser>(sender, ref queryable, ref option);
+        //}
+
+
+        internal void BeforeDeleteInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref FilterDefinition<TDocument> filterDefinition, ref DeleteOptions deleteOptions)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
             where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
         {
-            var destination = this.BeforeReplace<TDocument, TObjectId, TProjection, TUser>(sender, original, filterDefinition, option);
-
-            ArgumentNullException.ThrowIfNull(destination);
-
-            return destination;
+            ArgumentNullException.ThrowIfNull(sender);
+            OptionObject<TDocument, TProjection> option = deleteOptions;
+            this.BeforeDelete<TDocument, TObjectId, TProjection, TUser>(sender, ref filterDefinition, ref option);
+            deleteOptions = option;
         }
 
-        internal BsonDocument[] BeforeAggregateInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, BsonDocument[] original, OptionObject<TDocument, TProjection> option)
+        //BulkWriteOptions
+        internal void BeforeBulkWriteInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref IEnumerable<WriteModel<TDocument>> writeModels, ref BulkWriteOptions bulkWriteOptions)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
             where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
         {
-            var destination = this.BeforeAggregate<TDocument, TObjectId, TProjection, TUser>(sender, original, option);
+            ArgumentNullException.ThrowIfNull(sender);
+            OptionObject<TDocument, TProjection> option = bulkWriteOptions;
+            this.BeforeBulkWrite<TDocument, TObjectId, TProjection, TUser>(sender, ref writeModels, ref option);
+            bulkWriteOptions = option;
+        }
+        //internal void BeforeBulkWriteInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref IEnumerable<WriteModel<TDocument>> writeModels, ref OptionObject<TDocument, TProjection> option)
+        //    where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+        //    where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        //{
+        //    ArgumentNullException.ThrowIfNull(sender);
+        //    this.BeforeBulkWrite<TDocument, TObjectId, TProjection, TUser>(sender, ref writeModels, ref option);
+        //}
 
-            if (destination == null || destination.Length == 0)
-            {
-                throw new Exception("Cannot save null or empty aggregation.");
-            }
+        internal void ResultInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref IEnumerable<TProjection> results)
+            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        {
+            ArgumentNullException.ThrowIfNull(sender);
 
-            return destination;
+            this.Result<TDocument, TObjectId, TProjection, TUser>(sender, ref results);
         }
 
-        internal FilterDefinition<TDocument> BeforeFindInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, FilterDefinition<TDocument> filterDefinition, OptionObject<TDocument, TProjection> option)
+        internal void ResultInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref TProjection result)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
             where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
         {
-            var findDefinition = this.BeforeFind<TDocument, TObjectId, TProjection, TUser>(sender, filterDefinition, option);
+            ArgumentNullException.ThrowIfNull(sender);
 
-            ArgumentNullException.ThrowIfNull(findDefinition);
-
-            return findDefinition;
-        }
-
-        internal IQueryable<TDocument> BeforeQueryableInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, IQueryable<TDocument> queryable, OptionObject<TDocument, TProjection> option)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-            var findDefinition = this.BeforeQueryable<TDocument, TObjectId, TProjection, TUser>(sender, queryable, option);
-
-            ArgumentNullException.ThrowIfNull(findDefinition);
-
-            return findDefinition;
-        }
-
-
-        internal FilterDefinition<TDocument> BeforeDeleteInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, FilterDefinition<TDocument> filterDefinition, OptionObject<TDocument, TProjection> option)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-            var findDefinition = this.BeforeDelete<TDocument, TObjectId, TProjection, TUser>(sender, filterDefinition, option);
-
-            ArgumentNullException.ThrowIfNull(findDefinition);
-
-            return findDefinition;
-        }
-
-        internal IEnumerable<WriteModel<TDocument>> BeforeBulkWriteInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, IEnumerable<WriteModel<TDocument>> writeModels, OptionObject<TDocument, TProjection> option)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-            var writemodel = this.BeforeBulkWrite<TDocument, TObjectId, TProjection, TUser>(sender, writeModels, option);
-
-            ArgumentNullException.ThrowIfNull(writemodel);
-
-            return writemodel;
-        }
-
-        internal IEnumerable<TProjection> ResultInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, IEnumerable<TProjection> results)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-            var projection = this.Result<TDocument, TObjectId, TProjection, TUser>(sender, results);
-
-            return projection;
-        }
-
-        internal TProjection ResultInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, TProjection result)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-            var projection = this.Result<TDocument, TObjectId, TProjection, TUser>(sender, result);
-
-            return projection;
+            this.Result<TDocument, TObjectId, TProjection, TUser>(sender, ref result);
         }
 
 
 
 
-        /// <summary>
-        /// Executes logic before inserting a document of type TDocument.
-        /// </summary>
-        /// <typeparam name="TDocument">The type of document that implements IObjectId with a specific ObjectId type.</typeparam>
-        /// <typeparam name="TObjectId">The type of the identification key for the document, which must implement IComparable and IEquatable interfaces.</typeparam>
-        /// <param name="original">The original document that is about to be inserted.</param>
-        /// <returns>
-        /// Returns the original document, allowing for modifications or validations
-        /// to be applied before the insertion, if needed.
-        /// </returns>
-        /// <remarks>
-        /// This method is marked as virtual, allowing derived classes to override
-        /// its functionality for customized pre-insert logic.
-        /// </remarks>
-        protected virtual TDocument? BeforeInsert<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, TDocument original, OptionObject<TDocument, TProjection> option)
+        protected virtual void BeforeInsert<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref TDocument original, ref OptionObject<TDocument, TProjection> option)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant => original;
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        {
+        }
 
-        /// <summary>
-        /// This method is a virtual method that can be overridden by derived classes. 
-        /// It allows the opportunity to modify the provided update options 
-        /// before executing an update operation on a document.
-        /// </summary>
-        /// <typeparam name="TDocument">The type of the document being updated. 
-        /// Must implement the <see cref="IObjectBase{TObjectId}"/> interface.</typeparam>
-        /// <typeparam name="TObjectId">The type of the object ID. 
-        /// Must implement both <see cref="IComparable{T}"/> and <see cref="IEquatable{T}"/> interfaces.</typeparam>
-        /// <param name="updateOptions">The update options to be processed.</param>
-        /// <returns>
-        /// The (possibly modified) <see cref="Update{TDocument}"/> object 
-        /// that is used to perform the update operation. 
-        /// Returns null if no update is to be performed.
-        /// </returns>
-        protected virtual UpdateDefinition<TDocument> BeforeUpdate<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, FilterDefinition<TDocument> filterDefinition, UpdateDefinition<TDocument> updateDefinition, OptionObject<TDocument, TProjection> option)
+        protected virtual void BeforeUpdate<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref FilterDefinition<TDocument> filterDefinition, ref UpdateDefinition<TDocument> updateDefinition, ref OptionObject<TDocument, TProjection> option)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant => updateDefinition;
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        {
+        }
 
-        /// <summary>
-        /// Represents a method that allows for pre-processing of a document before it is replaced.
-        /// This method can be overridden in derived classes to implement custom behavior.
-        /// </summary>
-        /// <typeparam name="TDocument">The type of the document being processed. 
-        /// It must implement the <see cref="IObjectBase{TObjectId}"/> interface.</typeparam>
-        /// <typeparam name="TObjectId">The type of the identifier for the document. 
-        /// It must implement <see cref="IComparable{T}"/> and <see cref="IEquatable{T}"/> interfaces.</typeparam>
-        /// <param name="original">The original document that is about to be replaced.</param>
-        /// <returns>
-        /// Returns the original document, which can be modified before replacement if needed.
-        /// </returns>
-        protected virtual TDocument? BeforeReplace<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, TDocument original, FilterDefinition<TDocument> filterDefinition, OptionObject<TDocument, TProjection> option)
+        protected virtual void BeforeReplace<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref TDocument original, ref FilterDefinition<TDocument> filterDefinition, ref OptionObject<TDocument, TProjection> option)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant => original;
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        {
+        }
 
-        /// <summary>
-        /// This method allows performing operations or transformations on an array of BsonDocument objects
-        /// before an aggregation operation is applied.
-        /// </summary>
-        /// <typeparam name="TDocument">The type of the document that implements the IObjectId interface.</typeparam>
-        /// <typeparam name="TObjectId">The type of the object identifier that implements both IComparable and IEquatable interfaces.</typeparam>
-        /// <typeparam name="TProjection">The type used for the projection in the aggregation operation.</typeparam>
-        /// <param name="bsonDocuments">An array of BsonDocument objects that will be processed.</param>
-        /// <returns>
-        /// Returns a potentially modified array of BsonDocument objects.
-        /// The return value can be null, indicating that no documents are to be processed.
-        /// </returns>
-        protected virtual BsonDocument[]? BeforeAggregate<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, BsonDocument[] bsonDocuments, OptionObject<TDocument, TProjection> option)
+        protected virtual void BeforeAggregate<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref BsonDocument[] bsonDocuments, ref OptionObject<TDocument, TProjection> option)
                     where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-                    where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant => bsonDocuments;
+                    where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        {
+        }
 
-        protected virtual FilterDefinition<TDocument> BeforeDelete<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, FilterDefinition<TDocument> filterDefinition, OptionObject<TDocument, TProjection> option)
+        protected virtual void BeforeDelete<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref FilterDefinition<TDocument> filterDefinition, ref OptionObject<TDocument, TProjection> option)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant => filterDefinition;
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        {
+        }
 
-        protected virtual FilterDefinition<TDocument> BeforeFind<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, FilterDefinition<TDocument> filterDefinition, OptionObject<TDocument, TProjection> option)
+        protected virtual void BeforeFind<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref FilterDefinition<TDocument> filterDefinition, ref OptionObject<TDocument, TProjection> option)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant => filterDefinition;
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        {
+        }
 
-        protected virtual IQueryable<TDocument> BeforeQueryable<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, IQueryable<TDocument> queryable, OptionObject<TDocument, TProjection> option)
+        protected virtual void BeforeQueryable<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref IQueryable<TDocument> queryable, ref OptionObject<TDocument, TProjection> option)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant => queryable;
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        {
+        }
 
-        protected virtual IEnumerable<WriteModel<TDocument>> BeforeBulkWrite<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, IEnumerable<WriteModel<TDocument>> writeModels, OptionObject<TDocument, TProjection> option)
+        protected virtual void BeforeBulkWrite<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref IEnumerable<WriteModel<TDocument>> writeModels, ref OptionObject<TDocument, TProjection> option)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant => writeModels;
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        {
+        }
 
 
-        protected virtual IEnumerable<TProjection> Result<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, IEnumerable<TProjection> items)
+        protected virtual void Result<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref IEnumerable<TProjection> items)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant => items;
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        {
+        }
 
-        protected virtual TProjection Result<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, TProjection item)
+        protected virtual void Result<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref TProjection item)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant => item;
+            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
+        {
+        }
         #endregion
 
 

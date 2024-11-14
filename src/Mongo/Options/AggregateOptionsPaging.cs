@@ -2,12 +2,7 @@ using MongoDB.Driver;
 
 namespace UCode.Mongo.Options
 {
-    /// <summary>
-    /// Represents the options for paginating aggregate results.
-    /// Inherits from <see cref="AggregateOptions"/> and includes properties
-    /// to manage pagination such as current page, page size, items to skip,
-    /// and limit for the number of items to return.
-    /// </summary>
+
     public class AggregateOptionsPaging : AggregateOptions
     {
 

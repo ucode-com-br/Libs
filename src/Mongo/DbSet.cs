@@ -113,19 +113,17 @@ namespace UCode.Mongo
             return clientSessionHandle != default;
         }
 
-        private static FindOptionsPaging<TDocument, TProjection> ConvertInternal<TProjection>(FindOptionsPaging<TDocument>? findOptionsPaging)
-        {
-            var opt = new FindOptionsPaging<TDocument, TProjection>();
+        //private static FindOptionsPaging<TDocument, TProjection> ConvertInternal<TProjection>(FindOptionsPaging<TDocument>? findOptionsPaging)
+        //{
+        //    var opt = new FindOptionsPaging<TDocument, TProjection>();
 
-            if (findOptionsPaging != default)
-            {
-                var json = System.Text.Json.JsonSerializer.Serialize(findOptionsPaging);
-
-                opt = System.Text.Json.JsonSerializer.Deserialize<FindOptionsPaging<TDocument, TProjection>>(json)!;
-            }
-
-            return opt;
-        }
+        //    if (findOptionsPaging != default)
+        //    {
+        //        var json = System.Text.Json.JsonSerializer.Serialize(findOptionsPaging);
+        //        opt = System.Text.Json.JsonSerializer.Deserialize<FindOptionsPaging<TDocument, TProjection>>(json)!;
+        //    }
+        //    return opt;
+        //}
 
         private static AggregateOptionsPaging ConvertInternal(AggregateOptions? findOptionsPaging)
         {
@@ -430,7 +428,9 @@ namespace UCode.Mongo
                 queryable = this.MongoCollection.AsQueryable(option);
             }
 
-            return this._contextbase.BeforeQueryableInternal<TDocument, TObjectId, TDocument, TUser>(this, queryable, option);
+            this._contextbase.BeforeQueryableInternal<TDocument, TObjectId, IQueryable<TDocument>, TUser>(this, ref queryable, ref option);
+
+            return queryable;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -492,17 +492,24 @@ namespace UCode.Mongo
             // Set limit and skip options for counting
             countOptions ??= new CountOptions();
 
-            var filterDefinition = this._contextbase.BeforeFindInternal<TDocument, TObjectId, TDocument, TUser>(this, query, countOptions);
+            FilterDefinition<TDocument> filterDefinition = query;
 
+            this._contextbase.BeforeFindInternal<TDocument, TObjectId, TDocument, TUser>(this, ref filterDefinition, ref countOptions);
+
+            bool any = false;
             // Count documents and check if count is greater than 0
             if (this.InTransaction(forceTransaction, out var clientSessionHandle))
             {
-                return this._contextbase.ResultInternal(this, await this.MongoCollection.CountDocumentsAsync(clientSessionHandle, filterDefinition, countOptions, cancellationToken) > 0);
+                any = await this.MongoCollection.CountDocumentsAsync(clientSessionHandle, filterDefinition, countOptions, cancellationToken) > 0;
             }
             else
             {
-                return this._contextbase.ResultInternal(this, await this.MongoCollection.CountDocumentsAsync(filterDefinition, countOptions, cancellationToken) > 0);
+                return await this.MongoCollection.CountDocumentsAsync(filterDefinition, countOptions, cancellationToken) > 0;
             }
+
+            this._contextbase.ResultInternal(this, ref any);
+
+            return any;
         }
 
         #endregion
@@ -546,16 +553,32 @@ namespace UCode.Mongo
             [MaybeNull] bool? forceTransaction = default,
             [MaybeNull] CancellationToken cancellationToken = default)
         {
-            // Create a query to find the document by its ID
             var qry = Query<TDocument, TProjection>.FromExpression(o => o.Id.Equals(id));
 
-            // Call the GetOneAsync method with the query and options
             return await this.GetOneAsync(qry, findOptions, forceTransaction, cancellationToken);
         }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async ValueTask<TProjection> GetOneAsync<TProjection>([NotNull] Query<TDocument, TProjection> query,
+            [MaybeNull] FindOptions<TDocument, TProjection>? findOptions = default,
+            [MaybeNull] bool? forceTransaction = default,
+            [MaybeNull] CancellationToken cancellationToken = default)
+        {
+            return await GetFirstOrSingleAsync<TProjection>(false, query, findOptions, forceTransaction, cancellationToken);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public async ValueTask<TProjection> GetSingleAsync<TProjection>([NotNull] Query<TDocument, TProjection> query,
+            [MaybeNull] FindOptions<TDocument, TProjection>? findOptions = default,
+            [MaybeNull] bool? forceTransaction = default,
+            [MaybeNull] CancellationToken cancellationToken = default)
+        {
+            return await GetFirstOrSingleAsync<TProjection>(true, query, findOptions, forceTransaction, cancellationToken);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private async ValueTask<TProjection> GetFirstOrSingleAsync<TProjection>([NotNull] bool isSingle, [NotNull] Query<TDocument, TProjection> query,
             [MaybeNull] FindOptions<TDocument, TProjection>? findOptions = default,
             [MaybeNull] bool? forceTransaction = default,
             [MaybeNull] CancellationToken cancellationToken = default)
@@ -570,19 +593,20 @@ namespace UCode.Mongo
             findOptions.Skip ??= 0;
             findOptions.Limit ??= 1;
 
-            // Create the filter definition from the query
-            var filterSelected = this._contextbase.BeforeFindInternal<TDocument, TObjectId, TProjection, TUser>(this, (FilterDefinition<TDocument>)query, findOptions);
+            FilterDefinition<TDocument> filterDefinition = query;
+
+            this._contextbase.BeforeFindInternal<TDocument, TObjectId, TProjection, TUser>(this, ref filterDefinition, ref findOptions);
 
             // Create the cursor for the find operation
             IAsyncCursor<TProjection> cursor;
 
             if (this.InTransaction(forceTransaction, out var clientSessionHandle))
             {
-                cursor = await this.MongoCollection.FindAsync(clientSessionHandle, filterSelected, findOptions, cancellationToken);
+                cursor = await this.MongoCollection.FindAsync(clientSessionHandle, filterDefinition, findOptions, cancellationToken);
             }
             else
             {
-                cursor = await this.MongoCollection.FindAsync(filterSelected, findOptions, cancellationToken);
+                cursor = await this.MongoCollection.FindAsync(filterDefinition, findOptions, cancellationToken);
             }
 
             // Iterate over the cursor and retrieve the first occurrence
@@ -590,9 +614,17 @@ namespace UCode.Mongo
             {
                 foreach (var item in cursor.Current)
                 {
-                    // Set the result to the current item
+                    if (isSingle && result != null)
+                    {
+                        throw new InvalidOperationException("More than one result.");
+                    }
+
                     result = item;
-                    break;
+
+                    if (!isSingle)
+                    {
+                        break;
+                    }
                 }
 
             }
@@ -600,8 +632,9 @@ namespace UCode.Mongo
             // Dispose the cursor
             cursor.Dispose();
 
+            this._contextbase.ResultInternal<TDocument, TObjectId, TProjection, TUser>(this, ref result);
 
-            return this._contextbase.ResultInternal<TDocument, TObjectId, TProjection, TUser>(this, result);
+            return result;
         }
         #endregion
 
@@ -739,7 +772,7 @@ namespace UCode.Mongo
 
             FilterDefinition<TDocument> filterSelected = Query<TDocument, TProjection>.FromText(text, fullTextSearchOptions);
 
-            filterSelected = this._contextbase.BeforeFindInternal<TDocument, TObjectId, TProjection, TUser>(this, filterSelected, findOptions);
+            this._contextbase.BeforeFindInternal<TDocument, TObjectId, TProjection, TUser>(this, ref filterSelected, ref findOptions);
 
             if (filter != default)
             {
@@ -763,7 +796,11 @@ namespace UCode.Mongo
                 {
                     if (item != null)
                     {
-                        yield return this._contextbase.ResultInternal<TDocument, TObjectId, TProjection, TUser>(this, item);
+                        TProjection result = item;
+
+                        this._contextbase.ResultInternal<TDocument, TObjectId, TProjection, TUser>(this, ref result);
+
+                        yield return result;
                     }
                 }
             }
@@ -783,8 +820,9 @@ namespace UCode.Mongo
             // Set default options if not provided
             findOptions ??= new FindOptions<TDocument, TProjection>();
 
-            // Create the filter definition from the query
-            var filterSelected = this._contextbase.BeforeFindInternal<TDocument, TObjectId, TProjection, TUser>(this, (FilterDefinition<TDocument>)filter, findOptions);
+            FilterDefinition<TDocument> filterDefinition = filter;
+
+            this._contextbase.BeforeFindInternal<TDocument, TObjectId, TProjection, TUser>(this, ref filterDefinition, ref findOptions);
 
 
             // Create the cursor for the find operation
@@ -794,11 +832,11 @@ namespace UCode.Mongo
             if (this.InTransaction(forceTransaction, out var clientSessionHandle))
             {
                 // Perform the find operation with the session and filter
-                cursor = await this.MongoCollection.FindAsync(clientSessionHandle, filterSelected, findOptions, cancellationToken);
+                cursor = await this.MongoCollection.FindAsync(clientSessionHandle, filterDefinition, findOptions, cancellationToken);
             }
             else
             {
-                cursor = await this.MongoCollection.FindAsync(filterSelected, findOptions, cancellationToken);
+                cursor = await this.MongoCollection.FindAsync(filterDefinition, findOptions, cancellationToken);
             }
 
             // Iterate over the cursor and retrieve the search results
@@ -809,7 +847,11 @@ namespace UCode.Mongo
                     // Yield return each item in the search results, excluding null items
                     if (item != null)
                     {
-                        yield return this._contextbase.ResultInternal<TDocument, TObjectId, TProjection, TUser>(this, item);
+                        TProjection? itemResult = item;
+
+                        this._contextbase.ResultInternal<TDocument, TObjectId, TProjection, TUser>(this, ref itemResult);
+
+                        yield return itemResult;
                     }
                 }
             }
@@ -821,46 +863,48 @@ namespace UCode.Mongo
         [return: NotNull]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async Task<PagedResult<TProjection>> GetPagedAsync<TProjection>([NotNull] Query<TDocument> filter,
-            [MaybeNull] FindOptionsPaging<TDocument>? findOptions,
+            [MaybeNull] FindOptionsPaging<TDocument, TObjectId, TProjection, TUser>? findOptionsPaging,
             [MaybeNull] bool? forceTransaction = default,
             [MaybeNull] CancellationToken cancellationToken = default)
         {
             // Convert the filter to the correct type for the GetPagedAsync method
             Query<TDocument, TProjection> qry = filter;
 
-            // Convert the findOptions to the correct type for the GetPagedAsync method
-            var opt = ConvertInternal<TProjection>(findOptions);
+            //FindOptions<TDocument, TProjection> findOptions = findOptionsPaging;
 
             // Call the GetPagedAsync method with the converted filter and findOptions
-            return await this.GetPagedAsync(qry, opt, forceTransaction, cancellationToken);
+            return await this.GetPagedAsync(qry, findOptionsPaging, forceTransaction, cancellationToken);
         }
 
 
         [return: NotNull]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async Task<PagedResult<TProjection>> GetPagedAsync<TProjection>([NotNull] Query<TDocument, TProjection> filter,
-            [MaybeNull] FindOptionsPaging<TDocument, TProjection>? findOptions,
+            [MaybeNull] FindOptionsPaging<TDocument, TObjectId, TProjection, TUser>? findOptionsPaging,
             [MaybeNull] bool? forceTransaction = default,
             [MaybeNull] CancellationToken cancellationToken = default)
         {
             // Convert the filter and findOptions to strings for logging purposes
-            var fstr = filter.ToString();
-            var fostr = findOptions.ToString();
-            var fojson = findOptions.JsonString();
+            //var fstr = filter.ToString();
+            //var fostr = findOptionsPaging.ToString();
+            //var fojson = findOptionsPaging.JsonString();
+
+            findOptionsPaging ??= new FindOptionsPaging<TDocument, TObjectId, TProjection, TUser>();
 
 
             // Check if the page size is valid
-            if (findOptions.PageSize <= 0)
+            if (findOptionsPaging.PageSize <= 0)
             {
                 throw new ArgumentException("Page size is invalid or null.");
             }
 
             // Check if the current page is valid
-            if (findOptions.CurrentPage < 0)
+            if (findOptionsPaging.CurrentPage < 0)
             {
                 throw new ArgumentException("Current page is invalid or null.");
             }
 
+            FindOptions<TDocument, TProjection> findOptions = findOptionsPaging;
 
 
 
@@ -868,10 +912,8 @@ namespace UCode.Mongo
             // Create the filter definition from the query
             FilterDefinition<TDocument> filterSelected = filter;
 
-            // Create the options for the find operation
-            FindOptions<TDocument, TProjection> options = findOptions;
 
-            filterSelected = this._contextbase.BeforeFindInternal<TDocument, TObjectId, TProjection, TUser>(this, filterSelected, options);
+            this._contextbase.BeforeFindInternal<TDocument, TObjectId, TProjection, TUser>(this, ref filterSelected, ref findOptions);
 
 
             // Create the count options from the find options and set the limit and skip options to null
@@ -879,28 +921,27 @@ namespace UCode.Mongo
             {
                 Limit = null,
                 Skip = null,
-                Collation = options.Collation,
-                Comment = options.Comment,
-                Hint = options.Hint,
-                MaxTime = options.MaxTime
+                Collation = findOptions.Collation,
+                Comment = findOptions.Comment,
+                Hint = findOptions.Hint,
+                MaxTime = findOptions.MaxTime
             };
 
             // Asynchronously count the number of documents that match the specified filter
-            var total = System.Convert.ToInt32(await this.CountDocumentsAsync((FilterDefinition<TDocument>)filter, countOptions));
+            var total = Convert.ToInt32(await this.CountDocumentsAsync((FilterDefinition<TDocument>)filter, countOptions));
 
             IAsyncCursor<TProjection> cursor;
 
             if (this.InTransaction(forceTransaction, out var clientSessionHandle))
             {
-                cursor = await this.MongoCollection.FindAsync(clientSessionHandle, filterSelected, options, cancellationToken);
+                cursor = await this.MongoCollection.FindAsync(clientSessionHandle, filterSelected, findOptions, cancellationToken);
             }
             else
             {
-                cursor = await this.MongoCollection.FindAsync(filterSelected, options, cancellationToken);
+                cursor = await this.MongoCollection.FindAsync(filterSelected, findOptions, cancellationToken);
             }
 
-            // Create an array to hold the items
-            var itens = new TProjection[(options != null && options.Limit.HasValue && options.Limit.Value < total) ? options.Limit.Value : total];
+            var itens = new TProjection[(countOptions != null && countOptions.Limit.HasValue && countOptions.Limit.Value < total) ? countOptions.Limit.Value : total];
 
             var lastPos = 0;
             // Iterate over the cursor and retrieve the items
@@ -926,8 +967,12 @@ namespace UCode.Mongo
 
             #endregion find
 
+            IEnumerable<TProjection> results = itens;
+
+            this._contextbase.ResultInternal<TDocument, TObjectId, TProjection, TUser>(this, ref results);
+
             // Perform the find operation and return the result
-            return new PagedResult<TProjection>(this._contextbase.ResultInternal<TDocument, TObjectId, TProjection, TUser>(this, itens), Convert.ToInt32(findOptions.CurrentPage), Convert.ToInt32(findOptions.PageSize), total);
+            return new PagedResult<TProjection>(results, findOptionsPaging.CurrentPage, findOptionsPaging.PageSize, total);
         }
 
         #endregion
@@ -948,7 +993,10 @@ namespace UCode.Mongo
 
             // Get the filter and update definitions from the query
             FilterDefinition<TDocument> filterDefinition = query;
-            var updateDefinition = this._contextbase.BeforeUpdateInternal<TDocument, TObjectId, TProjection, TUser>(this, query, query.Update, options);
+
+            UpdateDefinition<TDocument> updateDefinition = query.Update;
+
+            this._contextbase.BeforeUpdateInternal<TDocument, TObjectId, TProjection, TUser>(this, ref filterDefinition, ref updateDefinition, ref options);
 
             // If the operation should not be performed in a transaction
             if (this.InTransaction(forceTransaction, out var clientSessionHandle))
@@ -982,23 +1030,30 @@ namespace UCode.Mongo
             // Initialize the result to null
             UpdateResult result;
 
+            FilterDefinition<TDocument> filterDefinition = query;
+
+            UpdateDefinition<TDocument> update = query.Update;
+
+            this._contextbase.BeforeUpdateInternal<TDocument, TObjectId, long, TUser>(this, ref filterDefinition, ref update, ref options);
+
             if (this.InTransaction(forceTransaction, out var clientSessionHandle))
             {
-                // Perform the update operation without a session
-                result = await this.MongoCollection.UpdateManyAsync(clientSessionHandle, query, this._contextbase.BeforeUpdateInternal<TDocument, TObjectId, long, TUser>(this, query, query.Update, options), options, cancellationToken);
+                result = await this.MongoCollection.UpdateManyAsync(clientSessionHandle, query, update, options, cancellationToken);
             }
             else
             {
-                result = await this.MongoCollection.UpdateManyAsync(query, this._contextbase.BeforeUpdateInternal<TDocument, TObjectId, long, TUser>(this, query, query.Update, options), options, cancellationToken);
+                result = await this.MongoCollection.UpdateManyAsync(query, update, options, cancellationToken);
             }
 
+            this._contextbase.ResultInternal<TDocument, TObjectId, UpdateResult, TUser>(this, ref result);
+
             // Return the number of modified documents, or -1 if the operation was not acknowledged
-            return this._contextbase.ResultInternal<TDocument, TObjectId, long, TUser>(this, result.IsAcknowledged ? result.ModifiedCount : -1);
+            return result.IsAcknowledged ? result.ModifiedCount : -1;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async ValueTask<long> UpdateManyAsync([NotNull] string filter,
-            [NotNull] string update,
+            [NotNull] string updateStr,
             [NotNull] UpdateOptions options,
             [MaybeNull] bool? forceTransaction = default,
             [MaybeNull] CancellationToken cancellationToken = default)
@@ -1008,19 +1063,27 @@ namespace UCode.Mongo
             // Initialize the result to null
             UpdateResult result;
 
+            FilterDefinition<TDocument> filterDefinition = filter;
+
+            UpdateDefinition<TDocument> update = updateStr;
+
+            this._contextbase.BeforeUpdateInternal<TDocument, TObjectId, long, TUser>(this, ref filterDefinition, ref update, ref options);
+
             if (this.InTransaction(forceTransaction, out var clientSessionHandle))
             {
                 // Perform the update operation with a session
-                result = await this.MongoCollection.UpdateManyAsync(clientSessionHandle, filter, this._contextbase.BeforeUpdateInternal<TDocument, TObjectId, long, TUser>(this, filter, update, options), options, cancellationToken);
+                result = await this.MongoCollection.UpdateManyAsync(clientSessionHandle, filter, update, options, cancellationToken);
             }
             else
             {
                 // Perform the update operation without a session
-                result = await this.MongoCollection.UpdateManyAsync(filter, this._contextbase.BeforeUpdateInternal<TDocument, TObjectId, long, TUser>(this, filter, update, options), options, cancellationToken);
+                result = await this.MongoCollection.UpdateManyAsync(filter, update, options, cancellationToken);
             }
 
+            this._contextbase.ResultInternal<TDocument, TObjectId, UpdateResult, TUser>(this, ref result);
+
             // Return the number of modified documents, or -1 if the operation was not acknowledged
-            return this._contextbase.ResultInternal<TDocument, TObjectId, long, TUser>(this, result.IsAcknowledged ? result.ModifiedCount : -1);
+            return result.IsAcknowledged ? result.ModifiedCount : -1;
         }
 
         #endregion UpdateManyAsync
@@ -1055,11 +1118,14 @@ namespace UCode.Mongo
             else
                 query = this.MongoCollection.AsQueryable(new AggregateOptions());
 
-            // Invoke the preApprend function on the queryable
-            var queryAppended = this._contextbase.BeforeQueryableInternal<TDocument, TObjectId, TDocument, TUser>(this, preApprend.Invoke(query), aggregateOptions);
+            var iq = preApprend.Invoke(query);
+
+            this._contextbase.BeforeQueryableInternal<TDocument, TObjectId, TDocument, TUser>(this, ref iq, ref aggregateOptions);
+
+            long count = await iq.LongCountAsync(cancellationToken);
 
             // Count the number of documents in the queryable
-            var count = this._contextbase.ResultInternal(this, await queryAppended.LongCountAsync(cancellationToken));
+            this._contextbase.ResultInternal(this, ref count);
 
 
             return count;
@@ -1074,17 +1140,22 @@ namespace UCode.Mongo
         {
             countOptions ??= new CountOptions();
 
-            filterDefinition = this._contextbase.BeforeFindInternal<TDocument, TObjectId, long, TUser>(this, filterDefinition, countOptions);
+            this._contextbase.BeforeFindInternal<TDocument, TObjectId, long, TUser>(this, ref filterDefinition, ref countOptions);
 
+            long result = 0;
             if (this.InTransaction(forceTransaction, out var clientSessionHandle))
             {
                 // Perform the count operation without a session
-                return this._contextbase.ResultInternal(this, await this.MongoCollection.CountDocumentsAsync(clientSessionHandle, filterDefinition, countOptions, cancellationToken));
+                result = await this.MongoCollection.CountDocumentsAsync(clientSessionHandle, filterDefinition, countOptions, cancellationToken);
             }
             else
             {
-                return this._contextbase.ResultInternal(this, await this.MongoCollection.CountDocumentsAsync(filterDefinition, countOptions, cancellationToken));
+                result = await this.MongoCollection.CountDocumentsAsync(filterDefinition, countOptions, cancellationToken);
             }
+
+            this._contextbase.ResultInternal(this, ref result);
+
+            return result;
         }
 
         #endregion
@@ -1118,20 +1189,24 @@ namespace UCode.Mongo
             // Initialize the result to null
             UpdateResult result;
 
+            this._contextbase.BeforeUpdateInternal<TDocument, TObjectId, long, TUser>(this, ref filterDefinition, ref updateDefinition, ref updateOptions);
+
             if (this.InTransaction(forceTransaction, out var clientSessionHandle))
             {
                 // Perform the update operation with a session
-                result = await this.MongoCollection.UpdateOneAsync(clientSessionHandle, filterDefinition, _contextbase.BeforeUpdateInternal<TDocument, TObjectId, long, TUser>(this, filterDefinition, updateDefinition, updateOptions), updateOptions, cancellationToken);
+                result = await this.MongoCollection.UpdateOneAsync(clientSessionHandle, filterDefinition, updateDefinition, updateOptions, cancellationToken);
             }
             // If no transaction is in use
             else
             {
                 // Perform the update operation without a session
-                result = await this.MongoCollection.UpdateOneAsync(filterDefinition, _contextbase.BeforeUpdateInternal<TDocument, TObjectId, long, TUser>(this, filterDefinition, updateDefinition, updateOptions), updateOptions, cancellationToken);
+                result = await this.MongoCollection.UpdateOneAsync(filterDefinition, updateDefinition, updateOptions, cancellationToken);
             }
 
-            // Return the number of modified documents, or -1 if the operation was not acknowledged
-            return this._contextbase.ResultInternal<TDocument, TObjectId, long, TUser>(this, result == default ? -1 : result.IsAcknowledged ? result.ModifiedCount : -1);
+            this._contextbase.ResultInternal<TDocument, TObjectId, UpdateResult, TUser>(this, ref result);
+
+
+            return result == default ? -1 : result.IsAcknowledged ? result.ModifiedCount : -1;
         }
 
 
@@ -1154,19 +1229,25 @@ namespace UCode.Mongo
                 new InsertOneModel<TDocument>(source)
             };
 
+
+            this._contextbase.BeforeInsertInternal<TDocument, TObjectId, long, TUser>(this, ref source, ref insertOneOptions);
+
             if (this.InTransaction(forceTransaction, out var clientSessionHandle))
             {
                 // Perform the update operation with a session
-                await this.MongoCollection.InsertOneAsync(clientSessionHandle, this._contextbase.BeforeInsertInternal<TDocument, TObjectId, long, TUser>(this, source, insertOneOptions), insertOneOptions, cancellationToken);
+                await this.MongoCollection.InsertOneAsync(clientSessionHandle, source, insertOneOptions, cancellationToken);
             }
             // If no transaction is in use
             else
             {
                 // Perform the update operation without a session
-                await this.MongoCollection.InsertOneAsync(this._contextbase.BeforeInsertInternal<TDocument, TObjectId, long, TUser>(this, source, insertOneOptions), insertOneOptions, cancellationToken);
+                await this.MongoCollection.InsertOneAsync(source, insertOneOptions, cancellationToken);
             }
 
-            return this._contextbase.ResultInternal<TDocument, TObjectId, long, TUser>(this, source.Id.Equals(default) || source.Id.Equals(null) ? 0 : 1);
+
+            this._contextbase.ResultInternal<TDocument, TObjectId, TDocument, TUser>(this, ref source);
+
+            return source.Id.Equals(default) || source.Id.Equals(null) ? 0 : 1;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1183,11 +1264,11 @@ namespace UCode.Mongo
             // Add a write model for each document to insert
             foreach (var doc in docs)
             {
-                var insertOneModel = new InsertOneModel<TDocument>(_contextbase.BeforeInsertInternal<TDocument, TObjectId, long, TUser>(this, doc, bulkWriteOptions));
+                var insertOneModel = new InsertOneModel<TDocument>(doc);
                 writeModels.Add(insertOneModel);
             }
 
-            return this._contextbase.ResultInternal<TDocument, TObjectId, long, TUser>(this, await this.BulkWriteAsync(writeModels, bulkWriteOptions, forceTransaction, cancellationToken));
+            return await this.BulkWriteAsync(writeModels, bulkWriteOptions, forceTransaction, cancellationToken);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1233,13 +1314,13 @@ namespace UCode.Mongo
             {
                 FilterDefinition<TDocument> filterDefinition = (query ?? exp).CompleteExpression(doc);
 
-                var model = new ReplaceOneModel<TDocument>(filterDefinition, this._contextbase.BeforeReplaceInternal<TDocument, TObjectId, long, TUser>(this, doc, filterDefinition, bulkWriteOptions));
+                var model = new ReplaceOneModel<TDocument>(filterDefinition, doc);
 
                 updates.Add(model);
             }
 
 
-            return this._contextbase.ResultInternal<TDocument, TObjectId, long, TUser>(this, await this.BulkWriteAsync(updates, bulkWriteOptions, forceTransaction, cancellationToken));
+            return await this.BulkWriteAsync(updates, bulkWriteOptions, forceTransaction, cancellationToken);
         }
 
 
@@ -1299,20 +1380,24 @@ namespace UCode.Mongo
             // Create a filter definition to match the document
             FilterDefinition<TDocument> filterDefinition = query ?? Query<TDocument>.FromExpression(f => f.Id.Equals(doc.Id));
 
+            this._contextbase.BeforeInsertInternal<TDocument, TObjectId, ReplaceOneResult, TUser>(this, ref doc, ref replaceOptions);
+
             if (this.InTransaction(forceTransaction, out var clientSessionHandle))
             {
                 // Perform the replace operation with a session
-                result = await this.MongoCollection.ReplaceOneAsync(clientSessionHandle, filterDefinition, this._contextbase.BeforeInsertInternal<TDocument, TObjectId, ReplaceOneResult, TUser>(this, doc, replaceOptions), replaceOptions, cancellationToken);
+                result = await this.MongoCollection.ReplaceOneAsync(clientSessionHandle, filterDefinition, doc, replaceOptions, cancellationToken);
             }
             else
             {
                 // Perform the replace operation without a session
-                result = await this.MongoCollection.ReplaceOneAsync(filterDefinition, this._contextbase.BeforeInsertInternal<TDocument, TObjectId, ReplaceOneResult, TUser>(this, doc, replaceOptions), replaceOptions, cancellationToken);
+                result = await this.MongoCollection.ReplaceOneAsync(filterDefinition, doc, replaceOptions, cancellationToken);
             }
 
 
             // Return the number of replaced documents, or -1 if the operation was not acknowledged
-            return this._contextbase.ResultInternal(this, result);
+            this._contextbase.ResultInternal(this, ref result);
+
+            return result;
         }
 
         #endregion
@@ -1330,12 +1415,13 @@ namespace UCode.Mongo
             // Set default delete options if not provided
             deleteOptions ??= new DeleteOptions();
 
+
             // Delete the document by its ID
             return await this.DeleteAsync([id], deleteOptions, forceTransaction, cancellationToken);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async ValueTask<long> DeleteAsync([NotNull] IEnumerable<TObjectId> ids,
+        private async ValueTask<long> DeleteAsync([NotNull] IEnumerable<WriteModel<TDocument>> enumeratorWriteModel,
                     [MaybeNull] BulkWriteOptions? bulkWriteOptions = default,
                     [MaybeNull] bool? forceTransaction = default,
                     [MaybeNull] CancellationToken cancellationToken = default)
@@ -1344,20 +1430,17 @@ namespace UCode.Mongo
 
             bulkWriteOptions ??= new BulkWriteOptions();
 
-            var listWriteModel = new List<WriteModel<TDocument>>();
+            //var listWriteModel = new List<WriteModel<TDocument>>();
+            //foreach (var id in ids)
+            //{
+            //    Expression<Func<TDocument, bool>> exp = (f) => f.Id.Equals(id);
+            //    FilterDefinition<TDocument> filterDefinition = exp;
+            //    var model = new DeleteOneModel<TDocument>(filterDefinition) { };
+            //    listWriteModel.Add(model);
+            //    this._contextbase.BeforeDeleteInternal<TDocument, TObjectId, TDocument, TUser>(this, ref filterDefinition, ref deleteOptions);
+            //}
 
-            foreach (var id in ids)
-            {
-                Expression<Func<TDocument, bool>> exp = (f) => f.Id.Equals(id);
-
-                FilterDefinition<TDocument> filterDefinition = exp;
-
-                var model = new DeleteOneModel<TDocument>(this._contextbase.BeforeDeleteInternal<TDocument, TObjectId, long, TUser>(this, filterDefinition, bulkWriteOptions));
-
-                listWriteModel.Add(model);
-            }
-
-            return this._contextbase.ResultInternal(this, await this.BulkWriteAsync(listWriteModel, bulkWriteOptions, forceTransaction, cancellationToken));
+            return await this.BulkWriteAsync(enumeratorWriteModel as List<WriteModel<TDocument>> ?? enumeratorWriteModel.ToList(), bulkWriteOptions, forceTransaction, cancellationToken);
         }
 
 
@@ -1380,8 +1463,23 @@ namespace UCode.Mongo
                 Let = deleteOptions.Let
             };
 
+            var listWriteModel = new List<WriteModel<TDocument>>();
+
+            foreach (var id in ids)
+            {
+                Expression<Func<TDocument, bool>> exp = (f) => f.Id.Equals(id);
+
+                FilterDefinition<TDocument> filterDefinition = exp;
+
+                var model = new DeleteOneModel<TDocument>(filterDefinition) { };
+
+                listWriteModel.Add(model);
+
+                this._contextbase.BeforeDeleteInternal<TDocument, TObjectId, TDocument, TUser>(this, ref filterDefinition, ref deleteOptions);
+            }
+
             // Perform the bulk write operation with the write models and options
-            return await this.DeleteAsync(ids, bulkWriteOptions, forceTransaction, cancellationToken);
+            return await this.DeleteAsync(listWriteModel, bulkWriteOptions, forceTransaction, cancellationToken);
         }
 
 
@@ -1393,7 +1491,14 @@ namespace UCode.Mongo
         {
             deleteOptions ??= new DeleteOptions();
 
-            var listWriteModel = new List<WriteModel<TDocument>> { new DeleteManyModel<TDocument>(query) };
+            var listWriteModel = new List<WriteModel<TDocument>>
+            {
+                new DeleteManyModel<TDocument>(query)
+                {
+                    Collation = deleteOptions.Collation,
+                    Hint = deleteOptions.Hint
+                }
+            };
 
             var bulkWriteOptions = new BulkWriteOptions()
             {
@@ -1431,33 +1536,38 @@ namespace UCode.Mongo
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async Task<PagedResult<TDocument>> AggregateFacetAsync([NotNull] Query<TDocument> query,
-                    [MaybeNull] AggregateOptionsPaging? aggregateOptions = default,
+                    [MaybeNull] AggregateOptionsPaging? aggregateOptionsPaging = default,
                     [MaybeNull] bool? forceTransaction = default,
                     [MaybeNull] CancellationToken cancellationToken = default)
         {
             // Set default aggregate options if not provided
-            aggregateOptions ??= new AggregateOptionsPaging();
+            aggregateOptionsPaging ??= new AggregateOptionsPaging();
 
             // Check if the skip and limit options are valid
-            if (!aggregateOptions.Skip.HasValue || aggregateOptions.Skip.Value < 0)
+            if (!aggregateOptionsPaging.Skip.HasValue || aggregateOptionsPaging.Skip.Value < 0)
             {
                 throw new Exception("Skip is invalid or null.");
             }
 
-            if (!aggregateOptions.Limit.HasValue || aggregateOptions.Limit.Value <= 0)
+            if (!aggregateOptionsPaging.Limit.HasValue || aggregateOptionsPaging.Limit.Value <= 0)
             {
                 throw new Exception("Limit is invalid or null.");
             }
 
+
             // Convert the query to a BsonDocument array
-            BsonDocument[] bsonDocumentFilter = this._contextbase.BeforeAggregateInternal<TDocument, TObjectId, TDocument, TUser>(this, query, aggregateOptions);
+            BsonDocument[] bsonDocumentFilter = query;
+
+            AggregateOptions aggregateOptions = aggregateOptionsPaging;
+
+            this._contextbase.BeforeAggregateInternal<TDocument, TObjectId, TDocument, TUser>(this, ref bsonDocumentFilter, ref aggregateOptions);
 
             // Create a list to hold the paging filters
             var bsonDocumentFilterPaging = ((BsonDocument[])query).ToList();
 
             // Add skip and limit filters to the paging filters
-            bsonDocumentFilterPaging.Add(new BsonDocument(new BsonElement("$skip", BsonValue.Create(aggregateOptions.Skip.Value))));
-            bsonDocumentFilterPaging.Add(new BsonDocument(new BsonElement("$limit", BsonValue.Create(aggregateOptions.Limit.Value))));
+            bsonDocumentFilterPaging.Add(new BsonDocument(new BsonElement("$skip", BsonValue.Create(aggregateOptionsPaging.Skip.Value))));
+            bsonDocumentFilterPaging.Add(new BsonDocument(new BsonElement("$limit", BsonValue.Create(aggregateOptionsPaging.Limit.Value))));
 
             // Create the aggregation pipeline structure
             var structAggregate = "[ { \"$facet\": { \"result\": [],\"total\": [{\"$count\": \"total\"}]}} ]";
@@ -1487,7 +1597,7 @@ namespace UCode.Mongo
             FacedAggregate<TDocument> item = default;
 
             // Create a cursor for the aggregation operation
-            var cursor = await this.MongoCollection.AggregateAsync<FacedAggregate<TDocument>>(bson, aggregateOptions, cancellationToken);
+            var cursor = await this.MongoCollection.AggregateAsync<FacedAggregate<TDocument>>(bson, aggregateOptionsPaging, cancellationToken);
 
             while (await cursor.MoveNextAsync(cancellationToken))
             {
@@ -1501,10 +1611,12 @@ namespace UCode.Mongo
             // Dispose the cursor
             cursor.Dispose();
 
+            this._contextbase.ResultInternal(this, ref item);
+
             // Return the result of the aggregation operation, the skip value, the limit value, and the total number of rows
             if (item != default)
             {
-                return new PagedResult<TDocument>(this._contextbase.ResultInternal(this, item.Result.ToArray()), aggregateOptions.CurrentPage, aggregateOptions.PageSize, item.TotalRows());
+                return new PagedResult<TDocument>(item.Result.ToArray(), aggregateOptionsPaging.CurrentPage, aggregateOptionsPaging.PageSize, item.TotalRows());
             }
 
             // If there is no result, return the default value
@@ -1540,8 +1652,9 @@ namespace UCode.Mongo
 
 
             // Convert the query to a BsonDocument array
-            BsonDocument[] bsonDocumentFilter = this._contextbase.BeforeAggregateInternal<TDocument, TObjectId, TProjection, TUser>(this, query, aggregateOptions);
+            BsonDocument[] bsonDocumentFilter = query;
 
+            this._contextbase.BeforeAggregateInternal<TDocument, TObjectId, TProjection, TUser>(this, ref bsonDocumentFilter, ref aggregateOptions);
 
             // If the debugger is attached, serialize the aggregation pipeline to a string for debugging purposes
             if (Debugger.IsAttached)
@@ -1571,9 +1684,13 @@ namespace UCode.Mongo
 
             while (await cursor.MoveNextAsync(cancellationToken))
             {
-                foreach (var c in cursor.Current)
+                foreach (var current in cursor.Current)
                 {
-                    yield return this._contextbase.ResultInternal(this, c);
+                    TProjection c = current;
+
+                    this._contextbase.ResultInternal(this, ref c);
+
+                    yield return c;
                 }
             }
 
@@ -1587,7 +1704,7 @@ namespace UCode.Mongo
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal async ValueTask<long> BulkWriteAsync([NotNull] List<WriteModel<TDocument>> writeModel,
+        internal async ValueTask<long> BulkWriteAsync([NotNull] List<WriteModel<TDocument>> listWriteModel,
                     [NotNull] BulkWriteOptions bulkWriteOptions,
                     [MaybeNull] bool? forceTransaction = default,
                     [MaybeNull] CancellationToken cancellationToken = default)
@@ -1595,19 +1712,21 @@ namespace UCode.Mongo
             cancellationToken.ThrowIfCancellationRequested();
 
             // Perform the bulk write operation based on the provided options
-            BulkWriteResult result;
+            BulkWriteResult<TDocument> result;
 
-            var writeModels = this._contextbase.BeforeBulkWriteInternal<TDocument, TObjectId, TDocument, TUser>(this, writeModel, bulkWriteOptions);
+            IEnumerable<WriteModel<TDocument>> writeModels = listWriteModel;
+
+            this._contextbase.BeforeBulkWriteInternal<TDocument, TObjectId, TDocument, TUser>(this, ref writeModels, ref bulkWriteOptions);
 
             if (this.InTransaction(forceTransaction, out var clientSessionHandle))
             {
                 // Perform the bulk write operation with a session
-                result = this._contextbase.ResultInternal<TDocument, TObjectId, BulkWriteResult<TDocument>, TUser>(this, await this.MongoCollection.BulkWriteAsync(clientSessionHandle, writeModels, bulkWriteOptions, cancellationToken));
+                result = await this.MongoCollection.BulkWriteAsync(clientSessionHandle, writeModels, bulkWriteOptions, cancellationToken);
             }
             else
             {
                 // Perform the bulk write operation without a session
-                result = this._contextbase.ResultInternal<TDocument, TObjectId, BulkWriteResult<TDocument>, TUser>(this, await this.MongoCollection.BulkWriteAsync(writeModels, bulkWriteOptions, cancellationToken));
+                result = await this.MongoCollection.BulkWriteAsync(writeModels, bulkWriteOptions, cancellationToken);
             }
 
             // Check if the result is default
@@ -1617,10 +1736,12 @@ namespace UCode.Mongo
                 return -1;
             }
 
+            this._contextbase.ResultInternal<TDocument, TObjectId, BulkWriteResult<TDocument>, TUser>(this, ref result);
+
             // Return the total count of documents inserted, updated, matched, or deleted if the operation was acknowledged
             if (result.IsAcknowledged)
             {
-                return result.DeletedCount + result.ModifiedCount + result.MatchedCount + result.InsertedCount;
+                return result.DeletedCount + result.ModifiedCount + result.MatchedCount + result.InsertedCount + result.RequestCount;
             }
 
             return -1;
