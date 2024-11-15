@@ -30,6 +30,9 @@ namespace UCode.Mongo.Options
         where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
         where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
     {
+        private int _currentPage = 1;
+        private int _pageSize = 1;
+
         /// <summary>
         /// Gets or sets the number of items to skip based on the current page and page size.
         /// This property calculates the skip amount by multiplying the page size with the current page number 
@@ -85,7 +88,23 @@ namespace UCode.Mongo.Options
         [JsonPropertyName("currentPage")]
         public int CurrentPage
         {
-            get; set;
+            get
+            {
+                return this._currentPage;
+            }
+            set
+            {
+                if (value <= 0)
+                {
+                    throw new InvalidOperationException($"Current page is {value}");
+                }
+
+                this._currentPage = value;
+
+                base.Limit = this._pageSize;
+
+                base.Skip = this._pageSize * (this._currentPage - 1);
+            }
         }
 
         /// <summary>
@@ -99,9 +118,31 @@ namespace UCode.Mongo.Options
         [JsonPropertyName("pageSize")]
         public int PageSize
         {
-            get; set;
+            get
+            {
+                return this._pageSize;
+            }
+            set
+            {
+                if (value <= 0)
+                {
+                    throw new InvalidOperationException($"Page size is {value}");
+                }
+
+                this._pageSize = value;
+
+                base.Limit = this._pageSize;
+
+                base.Skip = this._pageSize * (this._currentPage - 1);
+            }
         }
 
 
+        public static implicit operator FindOptions(FindOptionsPaging<TDocument, TObjectId, TProjection, TUser> source)
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize<FindOptionsBase>(source);
+
+            return System.Text.Json.JsonSerializer.Deserialize<FindOptions>(json)!;
+        }
     }
 }
