@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 
 namespace UCode.Repositories
@@ -14,9 +15,62 @@ namespace UCode.Repositories
         public event ItemEventHandler ItemEvent;
 
 
-        public async ValueTask<IPagedResult<TOut>> ConvertAsync<TOut>(Func<T, TOut>? convertFunc = null, bool parallel = true) => await ValueTask.FromResult(this.Convert(convertFunc, parallel));
+        public async ValueTask<IPagedResult<TOut>> ConvertAsync<TOut>(Func<T, TOut>? convertFunc, bool parallel) => await ValueTask.FromResult(this.Convert(convertFunc, parallel));
 
-        public IPagedResult<TOut> Convert<TOut>(Func<T, TOut>? convertFunc = null, bool parallel = true)
+        public IPagedResult<TOut> Convert<TOut>() => Convert<TOut>(false);
+
+        public IPagedResult<TOut> Convert<TOut>(bool parallel)
+        {
+            List<TOut>? tout = default;
+
+            Func<T, TOut> func = static (T obj) =>
+            {
+                if (obj == null)
+                {
+                    return default;
+                }
+
+                TOut? result = default;
+
+                try
+                {
+                    result = (TOut)(object)obj;
+                }
+                catch (Exception ex0)
+                {
+                    try
+                    {
+                        result = (TOut?) System.Convert.ChangeType(obj, typeof(TOut));
+
+                        if (result == null)
+                        {
+                            throw new NullReferenceException($"System.Convert.ChangeType result is null.");
+                        }
+                    }
+                    catch (Exception ex1)
+                    {
+                        try
+                        {
+                            var options = new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web) { ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles };
+
+                            var json = System.Text.Json.JsonSerializer.Serialize(obj, options);
+
+                            result = System.Text.Json.JsonSerializer.Deserialize<TOut>(json, options);
+                        }
+                        catch (Exception ex3)
+                        {
+                            throw new AggregateException(ex0, ex1, ex3);
+                        }
+                    }
+                }
+
+                return result;
+            };
+
+            return Convert<TOut>(func, parallel);
+        }
+
+        public IPagedResult<TOut> Convert<TOut>(Func<T, TOut>? convertFunc, bool parallel)
         {
             List<TOut>? tout = default;
 
