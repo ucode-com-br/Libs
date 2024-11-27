@@ -62,7 +62,7 @@ namespace UCode.Repositories
         public event IPagedResult<T>.ItemEventHandler ItemEvent;
 
         protected virtual void OnItem(IReadOnlyList<T> itens) => Parallel.ForEach(itens,
-                (item, _, position) => ItemEvent?.Invoke(this, new ItemEventArgs<T>(item, Convert.ToInt32(position))));
+                (item, _, position) => ItemEvent?.Invoke(this, new ItemEventArgs<T>(item, System.Convert.ToInt32(position))));
 
 
 
