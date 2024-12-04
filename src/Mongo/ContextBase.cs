@@ -176,7 +176,7 @@ namespace UCode.Mongo
         /// <value>
         /// A boolean value that is true if the transaction context is started; otherwise, false.
         /// </value>
-        private bool TransactionContextStarted
+        private bool TransactionContextStartedxxxxxxx
         {
             get; set;
         }
@@ -657,12 +657,8 @@ namespace UCode.Mongo
         {
             lock (this._transactionContextLock)
             {
-                // Check if a session hasn't already been started
-                if (!this.TransactionContextStarted || this.ContextSession == null)
-                {
-                    // Start a new session
-                    this.ContextSession = this.MongoClient.StartSession();
-                }
+                // Start a new session
+                this.ContextSession ??= this.CreateSession();
             }
 
             // Return the session
@@ -694,12 +690,10 @@ namespace UCode.Mongo
 
             lock (this._transactionContextLock)
             {
-                if (!this.TransactionContextStarted)
+                if (!result.IsInTransaction)
                 {
                     // Start the transaction
                     result.StartTransaction();
-
-                    this.TransactionContextStarted = true;
                 }
             }
 
@@ -721,18 +715,18 @@ namespace UCode.Mongo
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AbortTransaction()
         {
-            if (!this.TransactionContextStarted)
+            if (!(this.ContextSession?.IsInTransaction ?? false))
                 throw new InvalidOperationException("Transaction has not been started.");
 
             lock (this._transactionContextLock)
             {
                 this.ContextSession!.AbortTransaction();
 
-                this.TransactionalContext = false;
+                //this.TransactionalContext = false;
 
                 this.ContextSession.Dispose();
 
-                this.ContextSession = default;
+                this.ContextSession = this.CreateSession();
             }
         }
 
@@ -750,22 +744,19 @@ namespace UCode.Mongo
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void CommitTransaction()
         {
-            if (!this.TransactionContextStarted)
+            if (!(this.ContextSession?.IsInTransaction ?? false))
                 throw new InvalidOperationException("Transaction has not been started.");
 
             lock (this._transactionContextLock)
             {
                 // Commit the transaction
-                this.ContextSession!.CommitTransaction();
+                this.ContextSession?.CommitTransaction();
 
                 // Dispose of the session to release resources
-                this.ContextSession!.Dispose();
+                this.ContextSession?.Dispose();
 
                 // Set the session to null to indicate that the transaction has been committed
-                this.ContextSession = null;
-
-                // Set _onTransaction to false to indicate that the transaction has been committed
-                this.TransactionContextStarted = default;
+                this.ContextSession = this.CreateSession();
             }
         }
 
