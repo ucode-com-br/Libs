@@ -167,14 +167,7 @@ namespace UCode.Mongo
             get;
         }
 
-        /// <summary>
-        /// Gets a value indicating whether a transaction should be used.
-        /// The property is read-only outside of the class, as its setter is 
-        public bool UseTransaction
-        {
-            get;
-            private set;
-        }
+        
 
         #endregion Fields
 
@@ -195,16 +188,26 @@ namespace UCode.Mongo
         /// </returns>
         private bool InTransaction(bool? forceTransaction, out IClientSessionHandle? clientSessionHandle)
         {
-            if (!forceTransaction.HasValue && this._contextbase.TransactionalContext)
+            if (this._sessionHandle != null && !this._sessionHandle.IsInTransaction)
+            {
+                this._sessionHandle.StartTransaction();
+
+                clientSessionHandle = this._sessionHandle;
+            }
+            else if ((!forceTransaction.HasValue || (forceTransaction.HasValue && !forceTransaction.Value)) && this._contextbase.TransactionalContext)
             {
                 clientSessionHandle = this._contextbase.StartTransaction();
             }
             else if (forceTransaction.HasValue && forceTransaction.Value)
             {
-                if (!this.UseTransaction)
+                if (this._sessionHandle == null)
                 {
                     this._sessionHandle = this._contextbase.CreateSession();
-                    this.UseTransaction = true;
+                }
+
+                if (!this._sessionHandle.IsInTransaction)
+                {
+                    this._sessionHandle.StartTransaction();
                 }
 
                 clientSessionHandle = this._sessionHandle;
@@ -321,7 +324,7 @@ namespace UCode.Mongo
         {
             this._contextbase = contextBase;
 
-            if (this.UseTransaction = useTransaction)
+            if (useTransaction)
             {
                 this._sessionHandle = this._contextbase.CreateSession();
             }
@@ -2690,7 +2693,7 @@ namespace UCode.Mongo
         /// </exception>
         public void CommitTransaction(CancellationToken cancellationToken = default)
         {
-            if (this.UseTransaction)
+            if (this._sessionHandle != null)
             {
                 this._sessionHandle.CommitTransaction(cancellationToken);
 
@@ -2709,7 +2712,7 @@ namespace UCode.Mongo
         /// <exception cref="InvalidOperationException">Thrown if there is no active transaction to abort.</exception>
         public void AbortTransaction(CancellationToken cancellationToken = default)
         {
-            if (this.UseTransaction)
+            if (this._sessionHandle != null)
             {
                 this._sessionHandle.AbortTransaction(cancellationToken);
 
@@ -2843,13 +2846,8 @@ namespace UCode.Mongo
         {
             if (disposing)
             {
-                this._contextbase.ContextSession?.Dispose();
                 this._sessionHandle?.Dispose();
             }
-            //(_asyncDisposableResource as IDisposable)?.Dispose();
-
-            //_contextbase.Session = null;
-            // _asyncDisposableResource = null;
         }
 
 
@@ -2862,23 +2860,14 @@ namespace UCode.Mongo
         /// </returns>
         protected virtual async ValueTask DisposeAsyncCore()
         {
-            //if (_asyncDisposableResource is not null)
-            //{
-            //    await _asyncDisposableResource.DisposeAsync().ConfigureAwait(false);
-            //}
-            // ReSharper disable once SuspiciousTypeConversion.Global
-            if (this._contextbase.ContextSession is IAsyncDisposable disposable)
+            if (this._sessionHandle is not null and IAsyncDisposable disposable)
             {
                 await disposable.DisposeAsync().ConfigureAwait(false);
             }
             else
             {
-                this._contextbase.ContextSession?.Dispose();
+                this._sessionHandle?.Dispose();
             }
-
-            this._sessionHandle?.Dispose();
-            //_asyncDisposableResource = null;
-            //_disposableResource = null;
         }
 
         #endregion Dispose

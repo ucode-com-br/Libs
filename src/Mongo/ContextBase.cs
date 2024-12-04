@@ -170,17 +170,6 @@ namespace UCode.Mongo
             get; private set;
         }
 
-        /// <summary>
-        /// Gets or sets a value indicating whether the transaction context has been started.
-        /// </summary>
-        /// <value>
-        /// A boolean value that is true if the transaction context is started; otherwise, false.
-        /// </value>
-        private bool TransactionContextStartedxxxxxxx
-        {
-            get; set;
-        }
-
 
 
         /// <summary>
@@ -276,9 +265,8 @@ namespace UCode.Mongo
 
             this.Database = this.MongoClient.GetDatabase(this.DatabaseName);
 
-            this.TransactionalContext = transactionalContext;
 
-            if (this.TransactionalContext)
+            if (this.TransactionalContext = transactionalContext)
             {
                 this.ContextSession = this.MongoClient.StartSession();
                 this.StartTransaction();
