@@ -7,10 +7,32 @@ using System.Threading.Tasks;
 
 namespace UCode.Extensions.Tools
 {
+    /// <summary>
+    /// Represents a synapse, providing methods and properties to manage and interact with neural connections.
+    /// </summary>
+    /// <remarks>
+    /// This class serves as a static utility for handling operations related to synapses in a neural network simulation.
+    /// </remarks>
     public static class Synapse
     {
+        /// <summary>
+        /// Represents the configuration settings for connecting to a Cosmos DB instance.
+        /// </summary>
+        /// <remarks>
+        /// This struct holds the essential parameters necessary for establishing a connection 
+        /// to a Cosmos DB, including account name, database name, collection name, region, 
+        /// and the secret key for authentication.
+        /// </remarks>
         public struct CosmosDbConfigView
         {
+            /// <summary>
+            /// Initializes a new instance of the <see cref="CosmosDbConfigView"/> class.
+            /// </summary>
+            /// <param name="accountName">The name of the Cosmos DB account.</param>
+            /// <param name="database">The name of the database within the Cosmos DB account.</param>
+            /// <param name="collection">The name of the collection within the specified database.</param>
+            /// <param name="region">The region where the Cosmos DB account is hosted.</param>
+            /// <param name="secretKey">The secret key used for authentication with the Cosmos DB account.</param>
             public CosmosDbConfigView(string accountName, string database, string collection, string region, string secretKey)
             {
                 this.AccountName = accountName;
@@ -21,40 +43,57 @@ namespace UCode.Extensions.Tools
             }
 
             /// <summary>
-            /// CosmosDb name, only [name] like "[name].xxxx.cosmos.azure.com"
+            /// Gets the name of the account.
             /// </summary>
+            /// <value>
+            /// A string representing the account name.
+            /// This property is read-only outside of the class, as the setter is 
             public string AccountName
             {
                 get; private set;
             }
 
             /// <summary>
-            /// CosmosDb database name
+            /// Gets the name of the database.
             /// </summary>
+            /// <value>
+            /// A string representing the name of the database.
+            /// </value>
+            /// <remarks>
+            /// This property is read-only outside of the class it is defined in,
+            /// since it has a 
             public string Database
             {
                 get; private set;
             }
 
             /// <summary>
-            /// CosmosDb collection name
-            /// </summary>
+            /// Gets the collection as a string.
+            /// The Collection property is read-only outside the class and can only be set 
             public string Collection
             {
                 get; private set;
             }
 
             /// <summary>
-            /// CosmosDb region widout spaces and lowercaase, like "brazilsouth"<
+            /// Gets the region associated with the object.
             /// </summary>
+            /// <value>
+            /// A string that represents the region.
+            /// This property is read-only outside of the class.
+            /// </value>
             public string Region
             {
                 get; private set;
             }
 
             /// <summary>
-            /// CosmosDb secret key, like "iOezRrwAu3r1MuYxBLZruJiPdsK3Vqo82BsTh0ZjJXNA7WeDerJPzYZoUYIis0d3Q102c0CB3RLDACDbul5apw==".
+            /// Gets the secret key associated with the instance of the class.
+            /// The secret key is a string that is used for secure operations.
             /// </summary>
+            /// <value>
+            /// A string representing the secret key. This property can only be set 
+            /// 
             public string SecretKey
             {
                 get; private set;
@@ -83,13 +122,15 @@ namespace UCode.Extensions.Tools
 
 
         /// <summary>
-        /// Generate sql to create cosmosdb analytical view in synapse
+        /// Creates a SQL view in Azure Cosmos DB based on the provided instance and its properties.
+        /// This method generates a SQL query to create the view using the member information from the specified instance.
         /// </summary>
-        /// <param name="cosmosDb">CosmosDb required configurations</param>
-        /// <param name="sqlViewName">Name for create view in azure synapse sql</param>
-        /// <param name="instance">instance of object, if null create instance with parameter less constructor</param>
-        /// <param name="notFoundItem">Each property or field not found call this delegate</param>
-        /// <returns>SQL query</returns>
+        /// <typeparam name="T">The type of the instance used to derive the SQL view structure.</typeparam>
+        /// <param name="cosmosDb">The configuration settings required to connect to the Cosmos DB.</param>
+        /// <param name="sqlViewName">The name of the SQL view to create.</param>
+        /// <param name="instance">An optional instance of type <typeparamref name="T"/> from which the view properties will be derived.</param>
+        /// <param name="notFoundItem">An optional function that defines handling for member types that do not match predefined suffix types.</param>
+        /// <returns>A string that represents the SQL command to create the specified view in Cosmos DB.</returns>
         public static string CosmosDbAnalyticalViewCreateSql<T>([NotNull] this CosmosDbConfigView cosmosDb, [NotNull] string sqlViewName, T? instance = default, Func<ReflectionExtensions.MemberInfoAction<T>, (string Suffix, string SqlType)?>? notFoundItem = default)
         {
             var cosmosdbConnection = $"account={cosmosDb.AccountName};database={cosmosDb.Database};region={cosmosDb.Region};key={cosmosDb.SecretKey}";

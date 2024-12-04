@@ -5,6 +5,14 @@ using Azure.Storage.Blobs;
 
 namespace UCode.Blob
 {
+    /// <summary>
+    /// Represents a service that provides functionality or operations.
+    /// </summary>
+    /// <remarks>
+    /// This class may define methods and properties specific to the service 
+    /// it represents, and will be the foundation for additional service 
+    /// implementations or extensions.
+    /// </remarks>
     public class Service
     {
         private readonly BlobServiceClient _blobServiceClient;
@@ -12,9 +20,9 @@ namespace UCode.Blob
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Service"/> class.
+        /// This constructor accepts a connection string to initialize the BlobServiceClient.
         /// </summary>
-        /// <param name="connectionstring">The connection string for the Azure Blob Storage account.</param>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="connectionstring"/> is null or empty.</exception>
+        /// <param name="connectionstring">The connection string for the Blob Storage account.</param>
         public Service([NotNull] string connectionstring)
         {
             // Start a stopwatch to measure the time it takes to initialize the service
@@ -36,8 +44,20 @@ namespace UCode.Blob
         }
 
         /// <summary>
-        /// Lists all the containers in the Blob Storage account.
+        /// Lists all blob containers in the associated Blob Storage account and measures the time taken for the operation.
         /// </summary>
+        /// <remarks>
+        /// This method uses a stopwatch to track the duration of the listing operation and logs the total time taken once the operation is complete.
+        /// </remarks>
+        /// <returns>
+        /// This method does not return a value.
+        /// </returns>
+        /// <example>
+        /// <code>
+        /// listContainersInstance.ListContainers();
+        /// </code>
+        /// This example shows how to call the ListContainers method.
+        /// </example>
         private void ListContainers()
         {
             // Start a stopwatch to measure the time it takes to list the containers
@@ -56,9 +76,11 @@ namespace UCode.Blob
         }
 
         /// <summary>
-        /// Gets the number of containers in the Blob Storage account.
+        /// Gets the count of containers in the Blob Storage account.
         /// </summary>
-        /// <returns>The number of containers in the Blob Storage account.</returns>
+        /// <returns>
+        /// The total number of containers present in the Blob Storage account.
+        /// </returns>
         public int ContainerCount()
         {
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
@@ -76,11 +98,11 @@ namespace UCode.Blob
         }
 
         /// <summary>
-        /// Gets a container by name. If the container does not exist, it will be created.
+        /// Asynchronously retrieves a blob container by its name, creating it if it does not exist.
         /// </summary>
-        /// <param name="containerName">The name of the container.</param>
-        /// <returns>A Task that represents the asynchronous operation. The task result contains the container.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="containerName"/> is null or empty.</exception>
+        /// <param name="containerName">The name of the blob container to be retrieved.</param>
+        /// <returns>A task that represents the asynchronous operation, with a result of type <see cref="Container"/>.
+        /// If the container did not previously exist, it will be created.</returns>
         [return: NotNull]
         public async Task<Container> Container([NotNull] string containerName)
         {
@@ -115,9 +137,11 @@ namespace UCode.Blob
         }
 
         /// <summary>
-        /// Writes the specified output to the debug console if a debugger is attached.
+        /// Writes output to the debug console if a debugger is attached.
         /// </summary>
-        /// <param name="output">The output to write to the debug console.</param>
+        /// <param name="output">
+        /// The output string to be written to the debug console.
+        /// </param>
         private static void DebugWrite(string output)
         {
             // Check if a debugger is attached

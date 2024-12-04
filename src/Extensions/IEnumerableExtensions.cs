@@ -100,23 +100,6 @@ namespace UCode.Extensions
             }
         }
 
-        //public static async IAsyncEnumerable<T> RemoveAllAsync<T>([NotNull] this IAsyncEnumerable<T> source, [NotNull] Func<T, bool> remove)
-        //{
-        //    await foreach (var item in source)
-        //        if (remove(item))
-        //            yield return item;
-
-        //    await Task.Yield();
-        //}
-
-        //public static IEnumerable<T> RemoveAll<T>([NotNull] this IEnumerable<T> source, [NotNull] Func<T, bool> remove)
-        //{
-        //    //foreach (var item in source)
-        //    //    if (remove(item))
-        //    //        yield return item;
-
-        //    return RemoveAll(source, (Expression<Func<T, bool>>)Expression.Lambda<Func<T, bool>>(Expression.Call(remove.Method)));
-        //}
 
         /// <summary>
         /// Asynchronously removes all elements from the given IAsyncEnumerable<T> source that meet the criteria defined by the given predicate function.

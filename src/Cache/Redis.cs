@@ -9,6 +9,9 @@ using Microsoft.Extensions.Logging;
 
 namespace UCode.Cache
 {
+    /// <summary>
+    /// Represents a Redis wrapper for managing distributed cache operations.
+    /// </summary>
     public class Redis
     {
         private readonly IDistributedCache _distributedCache;

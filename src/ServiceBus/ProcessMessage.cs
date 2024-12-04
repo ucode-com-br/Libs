@@ -5,6 +5,11 @@ using Azure.Messaging.ServiceBus;
 
 namespace UCode.ServiceBus
 {
+    /// <summary>
+    /// Represents a message processing class that can handle messages of a specified type.
+    /// Implements both synchronous and asynchronous disposal patterns.
+    /// </summary>
+    /// <typeparam name="T">The type of the message being processed.</typeparam>
     public class ProcessMessage<T> : IDisposable, IAsyncDisposable
     {
         private bool _disposedValue;
@@ -16,6 +21,17 @@ namespace UCode.ServiceBus
         private readonly SemaphoreSlim _changeStateLock = new(1, 1);
         private readonly SemaphoreSlim _processingStartStopSemaphore = new(1, 1);
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ProcessMessage"/> class.
+        /// This constructor sets up the message processor with the specified parameters 
+        /// and attaches handlers for processing messages and errors.
+        /// </summary>
+        /// <param name="processor">The <see cref="ServiceBusProcessor"/> that will be used for processing messages.</param>
+        /// <param name="session">A boolean indicating whether the message processing should be session-enabled.</param>
+        /// <param name="partitioned">A boolean indicating whether the processor should handle partitioned messages.</param>
+        /// <returns>
+        /// This constructor does not return any value.
+        /// </returns>
         public ProcessMessage(ServiceBusProcessor processor, bool session, bool partitioned)
         {
             this._processor = processor;
@@ -30,8 +46,18 @@ namespace UCode.ServiceBus
         }
 
         /// <summary>
-        /// ServiceBusSessionProcessor
+        /// Initializes a new instance of the <see cref="ProcessMessage"/> class.
+        /// This constructor sets up message processing and error handling for the specified session processor.
         /// </summary>
+        /// <param name="processor">
+        /// The <see cref="ServiceBusSessionProcessor"/> that will be used to process messages.
+        /// </param>
+        /// <param name="session">
+        /// A boolean value indicating whether the processor is session-enabled.
+        /// </param>
+        /// <param name="partitioned">
+        /// A boolean value indicating whether the processor is partitioned.
+        /// </param>
         public ProcessMessage(ServiceBusSessionProcessor processor, bool session, bool partitioned)
         {
             this._sessionProcessor = processor;
@@ -47,14 +73,19 @@ namespace UCode.ServiceBus
 
         private Func<ProcessEventArgs<T>, Task>? _processMessageAsync;
         /// <summary>
-        /// The handler responsible for processing messages received from the Queue
-        /// or Subscription.
-        /// Implementation is mandatory.
+        /// Represents an asynchronous event that processes messages of type <typeparamref name="T"/>.
+        /// This event can only have one handler assigned to it at a time.
         /// </summary>
         /// <remarks>
-        /// It is not recommended that the state of the processor be managed directly from within this handler; requesting to start or stop the processor may result in
-        /// a deadlock scenario.
+        /// The event handler is expected to be a function that takes <see cref="ProcessEventArgs{T}"/> 
+        /// as an argument and returns a <see cref="Task"/>.
         /// </remarks>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown when attempting to add or remove a handler while one is already set.
+        /// </exception>
+        /// <returns>
+        /// The asynchronous event handler for processing messages.
+        /// </returns>
         public event Func<ProcessEventArgs<T>, Task> ProcessMessageAsync
         {
             add
@@ -78,11 +109,31 @@ namespace UCode.ServiceBus
                 this.EnsureNotRunningAndInvoke(() => this._processMessageAsync = default);
             }
         }
+        /// <summary>
+        /// Represents an asynchronous task for receiving active data.
+        /// </summary>
+        /// <value>
+        /// A <see cref="Task"/> that encapsulates the operation of receiving active data.
+        /// </value>
+        /// <remarks>
+        /// This property is utilized to manage the lifecycle of the receive operation, 
+        /// allowing for tasks to be awaited and monitored for completion.
+        /// </remarks>
         private Task ActiveReceiveTask
         {
             get; set;
         }
 
+        /// <summary>
+        /// Ensures that the processing is not currently running and then invokes the specified action.
+        /// If the processing is already running, an InvalidOperationException is thrown.
+        /// </summary>
+        /// <param name="action">The action to invoke if the processing is not running.</param>
+        /// <exception cref="InvalidOperationException">Thrown when the processing is already running and the action cannot be invoked.</exception>
+        /// <remarks>
+        /// This method uses a semaphore to ensure thread-safety while checking and invoking the action. 
+        /// It ensures that only one thread can change the state of the processing at a time.
+        /// </remarks>
         internal void EnsureNotRunningAndInvoke(Action action)
         {
             if (this.ActiveReceiveTask == null)
@@ -114,9 +165,11 @@ namespace UCode.ServiceBus
 
         private Func<ProcessExceptionEventArgs, Task> _processErrorAsync;
         /// <summary>
-        /// The handler responsible for processing messages received from the Queue
-        /// or Subscription. Implementation is mandatory.
+        /// Represents an asynchronous event that is triggered when a processing error occurs.
         /// </summary>
+        /// <returns>
+        /// A delegate that can handle processing errors ASynchronously.
+        /// </returns>
         public event Func<ProcessExceptionEventArgs, Task> ProcessErrorAsync
         {
             add
@@ -146,10 +199,13 @@ namespace UCode.ServiceBus
 
 
         /// <summary>
-        /// handle any meessage when receiving messages
+        /// Asynchronously handles messages from a messaging service.
+        /// This method processes the incoming message and invokes the appropriate
+        /// handlers. If there is no message processor defined, it abandons the message
+        /// and invokes the error handler if available.
         /// </summary>
-        /// <param name="args"></param>
-        /// <returns></returns>
+        /// <param name="args">The arguments containing message details to be processed.</param>
+        /// <returns>A Task representing the asynchronous operation.</returns>
         private async Task MessageHandler(ProcessMessageEventArgs args)
         {
             if (this._processMessageAsync != null)
@@ -172,10 +228,12 @@ namespace UCode.ServiceBus
 
 
         /// <summary>
-        /// handle any errors when receiving messages
+        /// Asynchronously handles the error by invoking a specified error processing delegate.
         /// </summary>
-        /// <param name="args"></param>
-        /// <returns></returns>
+        /// <param name="args">An instance of <see cref="ProcessErrorEventArgs"/> containing information about the error.</param>
+        /// <returns>
+        /// A task representing the asynchronous operation.
+        /// </returns>
         private async Task ErrorHandler(ProcessErrorEventArgs args)
         {
             if (this._processErrorAsync != null)
@@ -186,10 +244,12 @@ namespace UCode.ServiceBus
         }
 
         /// <summary>
-        /// handle any meessage when receiving messages
+        /// Asynchronously handles session messages received from a message session.
+        /// It processes the message if a message handler is available, otherwise it abandons the message 
+        /// and invokes an error handler if defined.
         /// </summary>
-        /// <param name="args"></param>
-        /// <returns></returns>
+        /// <param name="args">The event arguments containing the message session information.</param>
+        /// <returns>A task that represents the asynchronous operation.</returns>
         private async Task MessageSessionHandler(ProcessSessionMessageEventArgs args)
         {
             if (this._processMessageAsync != null)
@@ -210,6 +270,17 @@ namespace UCode.ServiceBus
             }
         }
 
+        /// <summary>
+        /// Creates a new instance of <see cref="ProcessExceptionEventArgs"/> by generating an 
+        /// <see cref="InvalidOperationException"/> using the provided error message.
+        /// </summary>
+        /// <param name="errorMessage">
+        /// The error message that describes the reason for the exception.
+        /// </param>
+        /// <returns>
+        /// A <see cref="ProcessExceptionEventArgs"/> object containing the details of the exception 
+        /// that occurred during processing.
+        /// </returns>
         private ProcessExceptionEventArgs GetInvalidOperationException(string errorMessage)
         {
             var exception = new InvalidOperationException(errorMessage);
@@ -228,14 +299,26 @@ namespace UCode.ServiceBus
 
 
         /// <summary>
-        /// Start ignoring if succeed or not
+        /// Initiates the asynchronous start process.
         /// </summary>
+        /// <returns>
+        /// A Task representing the asynchronous operation. The result of the Task is ignored in this case.
+        /// </returns>
+        /// <remarks>
+        /// This method 
         public async Task StartAsync() => _ = await this.TryStartAsync();
 
         /// <summary>
-        /// Start with result
+        /// Attempts to start the processing asynchronously. 
+        /// This method ensures that only one instance 
+        /// of processing can be started at a time 
+        /// using a locking mechanism.
         /// </summary>
-        /// <returns>succeed to start</returns>
+        /// <returns>
+        /// A task that represents the asynchronous operation, 
+        /// containing a boolean value that indicates whether 
+        /// the processing was successfully started.
+        ///// </returns>
         public async Task<bool> TryStartAsync()
         {
             var result = false;
@@ -277,14 +360,29 @@ namespace UCode.ServiceBus
         }
 
         /// <summary>
-        /// Stop ignoring if succeed or not
+        /// Asynchronously stops the current operation.
         /// </summary>
+        /// <returns>
+        /// A <see cref="Task"/> that represents the asynchronous stop operation.
+        /// </returns>
+        /// <remarks>
+        /// This method attempts to stop the current process and ignores any result 
+        /// returned by the <see cref="TryStopAsync"/> method itself.
+        /// </remarks>
         public async Task StopAsync() => _ = await this.TryStopAsync();
 
         /// <summary>
-        /// Stop with result
+        /// Asynchronously attempts to stop the current processing. 
+        /// This method will first acquire a lock to ensure that state changes 
+        /// do not occur simultaneously. If the processing is ongoing, it will 
+        /// stop both the main processor and the session processor if they are assigned. 
+        /// If neither processor is assigned, an exception will be thrown. 
+        /// The method returns a boolean indicating whether the stopping operation was successful.
         /// </summary>
-        /// <returns>succeed to stop</returns>
+        /// <returns>
+        /// A task that represents the asynchronous operation. The task result is 
+        /// true if the processing was stopped successfully; otherwise, false. 
+        /// </returns>
         public async Task<bool> TryStopAsync()
         {
             var result = false;
@@ -327,28 +425,45 @@ namespace UCode.ServiceBus
         }
 
 
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!this._disposedValue)
-            {
-                if (disposing)
-                {
-                    // TODO: dispose managed state (managed objects)
-                }
-
-                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
-                // TODO: set large fields to null
-                this._disposedValue = true;
-            }
-
-            try
-            {
-                this.DisposeAsync().AsTask().Wait();
-            }
-            catch (Exception)
-            {
-
-            }
+        /// <summary>
+        /// Releases the resources used by the current instance of the class.
+        /// </summary>
+        /// <param name="disposing">
+        /// A boolean value indicating whether the method has been called directly 
+        /// or indirectly by user code (true) or if it has been called by the 
+        /// runtime from inside the finalizer (false). When disposing is true, 
+        /// the method has been called directly or indirectly by a user's code, 
+        /// and managed and unmanaged resources can be disposed.
+        /// </param>
+        /// <remarks>
+        /// This method is invoked by the Dispose() method and the finalizer. 
+        /// Dispose() calls this method with disposing set to true to release 
+        /// both managed and unmanaged resources. The finalizer calls this 
+        /// method with disposing set to false, allowing only unmanaged resources 
+        /// to be released.
+        /// </remarks>
+        protected virtual void Dispose(bool disposing) 
+        { 
+            if (!this._disposedValue) 
+            { 
+                if (disposing) 
+                { 
+                    // TODO: dispose managed state (managed objects) 
+                } 
+        
+                // TODO: free unmanaged resources (unmanaged objects) and override finalizer 
+                // TODO: set large fields to null 
+                this._disposedValue = true; 
+            } 
+        
+            try 
+            { 
+                this.DisposeAsync().AsTask().Wait(); 
+            } 
+            catch (Exception) 
+            { 
+        
+            } 
         }
 
         // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
@@ -358,6 +473,15 @@ namespace UCode.ServiceBus
         //     Dispose(disposing: false);
         // }
 
+        /// <summary>
+        /// Releases the resources used by the current instance of the <see cref="ProcessMessage"/> class.
+        /// This method is called when the application no longer needs the instance.
+        /// </summary>
+        /// <remarks>
+        /// This method calls the <see cref="Dispose(bool)"/> method with the <paramref name="disposing"/> 
+        /// parameter set to <c>true</c>. It also suppresses finalization to prevent the garbage collector 
+        /// from calling the finalizer.
+        /// </remarks>
         public void Dispose()
         {
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
@@ -366,6 +490,15 @@ namespace UCode.ServiceBus
             GC.SuppressFinalize(this);
         }
 
+        /// <summary>
+        /// Asynchronously disposes of the resources used by the current instance.
+        /// This includes disposing of any managed resources held by this instance,
+        /// as well as any associated asynchronous resources, including processor and sessionProcessor,
+        /// if they are not null.
+        /// </summary>
+        /// <returns>
+        /// A ValueTask representing the asynchronous dispose operation.
+        /// </returns>
         public async ValueTask DisposeAsync()
         {
             if (!this._disposedValue)

@@ -9,17 +9,84 @@ using System.Text.Json;
 
 namespace UCode.Extensions
 {
+    /// <summary>
+    /// Provides extension methods for manipulating and working with text strings.
+    /// </summary>
+    /// <remarks>
+    /// This static class includes various utility functions that enhance the 
+    /// functionality of the <see cref="string"/> class. It allows for cleaner 
+    /// and more readable code when performing common string operations.
+    /// </remarks>
     public static class TextExtensions
     {
+        /// <summary>
+        /// Encodes a specified string to a URL-safe format.
+        ///
+        /// This method is an extension method for the string class. It utilizes the
+        /// `HttpUtility.UrlEncode` method to convert the provided string into a format
+        /// that can be safely transmitted in a URL. If the input string is null,
+        /// the method returns null.
+        ///
+        /// </summary>
+        /// <param name="source">
+        /// The string to be encoded. This parameter can be null.
+        /// </param>
+        /// <returns>
+        /// A URL-encoded string, or null if the input source is null.
+        /// </returns>
         public static string? UrlEncode(this string? source) => source == null ? null : HttpUtility.UrlEncode(source);
 
+        /// <summary>
+        /// Extends the <see cref="string"/> class to provide a method for URL decoding.
+        /// </summary>
+        /// <param name="source">The URL-encoded string to decode. If <c>null</c>, the result will also be <c>null</c>.</param>
+        /// <returns>
+        /// Returns the decoded string, or <c>null</c> if <paramref name="source"/> is <c>null</c>.
+        /// </returns>
+        /// <remarks>
+        /// This method uses the <see cref="HttpUtility.UrlDecode(string)"/> method 
+        /// to perform the decoding of the URL-encoded string.
+        /// </remarks>
         public static string? UrlDecode(this string? source) => source == null ? null : HttpUtility.UrlDecode(source);
 
+        /// <summary>
+        /// Encodes a specified string by replacing each occurrence of a predefined set of characters 
+        /// with their corresponding HTML entity representations. If the input string is null, it returns null.
+        /// </summary>
+        /// <param name="source">The string to be HTML encoded. Can be null.</param>
+        /// <returns>
+        /// A string that represents the HTML-encoded version of the input string, 
+        /// or null if the input string is null.
+        /// </returns>
         public static string? HtmlEncode(this string? source) => source == null ? null : HttpUtility.HtmlDecode(source);
 
+        /// <summary>
+        /// Decodes a string that has been encoded for HTML display.
+        /// This method returns the decoded version of the input string,
+        /// or null if the input is also null.
+        /// </summary>
+        /// <param name="source">
+        /// The string that is to be decoded. This can be null.
+        /// </param>
+        /// <returns>
+        /// The decoded string if the input is not null; otherwise, null.
+        /// </returns>
+        /// <remarks>
+        /// This method utilizes the HttpUtility.HtmlDecode method 
+        /// to decode HTML-encoded strings, converting entities such as &amp;,
+        /// &lt;, and &gt; back to their respective characters.
+        /// </remarks>
         public static string? HtmlDecode(this string? source) => source == null ? null : HttpUtility.HtmlDecode(source);
 
 
+        /// <summary>
+        /// Converts the provided object to a query string.
+        /// </summary>
+        /// <typeparam name="T">The type of the source object.</typeparam>
+        /// <param name="source">The source object to be converted to a query string. It can be null.</param>
+        /// <returns>
+        /// A query string representation of the object, or null if the source is null.
+        /// </returns>
         public static string? ToQueryString<T>(this T? source)
         {
             if (source == null)
@@ -41,6 +108,13 @@ namespace UCode.Extensions
             return ToQueryString(jsonRoot, null);
         }
 
+        /// <summary>
+        /// Converts a JSON element to a query string representation.
+        /// This method handles various JSON value types, including null, string, array, boolean, number, and object.
+        /// </summary>
+        /// <param name="obj">The JSON element to convert, which may be null.</param>
+        /// <param name="name">The name to associate with the JSON element in the query string.</param>
+        /// <returns>A query string representation of the JSON element, or null if the input is null.</returns>
         private static string? ToQueryString(JsonElement? obj, string? name)
         {
             switch (obj?.ValueKind)
@@ -75,6 +149,18 @@ namespace UCode.Extensions
         }
 
 
+        /// <summary>
+        /// Converts a string to its Soundex representation specific to Brazilian Portuguese.
+        /// Soundex is a phonetic algorithm that indexes words by their sounds when pronounced in English.
+        /// This method processes the input string to eliminate vowels and certain letter combinations,
+        /// replacing them with specific characters to produce a sound-like representation.
+        /// </summary>
+        /// <param name="source">The input string to be converted to Soundex.</param>
+        /// <returns>
+        /// A Soundex representation of the input string as a string.
+        /// The output will primarily consist of consonants with certain rules applied to eliminate 
+        /// specific characters and group similar sounding characters together.
+        /// </returns>
         public static string SoundexPtBr(this string source)
         {
             StringBuilder sb;

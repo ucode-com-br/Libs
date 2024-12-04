@@ -690,7 +690,7 @@ namespace UCode.Mongo
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IClientSessionHandle StartTransaction()
         {
-            IClientSessionHandle? result = StartSession();
+            var result = this.StartSession();
 
             lock (this._transactionContextLock)
             {

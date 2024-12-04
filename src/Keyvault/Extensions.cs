@@ -10,16 +10,23 @@ namespace UCode.Keyvault
 {
 
     /// <summary>
-    /// Keyvault automatic extensions for aspnet core
+    /// Provides extension methods for various types.
     /// </summary>
+    /// <remarks>
+    /// This static class contains extension methods that can be used to add new functionality
+    /// to existing types without creating a new derived type.
+    /// </remarks>
     public static class Extensions
     {
         /// <summary>
-        /// 
+        /// Extends the <see cref="IConfigurationBuilder"/> to add Azure Key Vault dependencies.
+        /// This method configures access to Azure Key Vault based on the provided settings
+        /// in the <see cref="IConfigurationBuilder"/> and the host environment.
         /// </summary>
-        /// <param name="builder"></param>
-        /// <param name="hostEnvironment"></param>
-        /// <param name="options"></param>
+        /// <param name="builder">The configuration builder to which the Azure Key Vault settings will be added.</param>
+        /// <param name="hostEnvironment">Provides information about the hosting environment, such as whether 
+        /// the application is in development or production.</param>
+        /// <param name="options">An optional action to configure <see cref="KeyVaultOptions"/>.</param>
         public static void AddAzureKeyVaultDependencies(this IConfigurationBuilder builder, IHostEnvironment hostEnvironment, Action<KeyVaultOptions>? options = null)
         {
             var conn = builder.Build();

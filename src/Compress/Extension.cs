@@ -4,13 +4,21 @@ using System.IO.Compression;
 
 namespace UCode.Compress
 {
+    /// <summary>
+    /// Contains extension methods for various types to enhance their functionality.
+    /// </summary>
+    /// <remarks>
+    /// This static class cannot be instantiated and is used to define extension methods
+    /// which can be called as if they were instance methods on the extended types.
+    /// </remarks>
     public static class Extension
     {
         /// <summary>
-        /// Copies the contents of one stream to another.
+        /// Copies data from the source stream to the destination stream in blocks of 4096 bytes.
         /// </summary>
-        /// <param name="src">The source stream.</param>
-        /// <param name="dest">The destination stream.</param>
+        /// <param name="src">The source stream from which to read data. Must not be null.</param>
+        /// <param name="dest">The destination stream to which data will be written. Must not be null.</param>
+        /// <exception cref="ArgumentNullException">Thrown when either src or dest is null.</exception>
         public static void CopyTo([NotNull] this Stream src, [NotNull] Stream dest)
         {
             var bytes = new byte[4096];
@@ -26,8 +34,8 @@ namespace UCode.Compress
         /// <summary>
         /// Compresses a byte array using GZip compression.
         /// </summary>
-        /// <param name="bytes">The byte array to compress.</param>
-        /// <returns>The compressed byte array.</returns>
+        /// <param name="bytes">The byte array to be compressed. This parameter is required and cannot be null.</param>
+        /// <returns>A new byte array that contains the compressed data.</returns>
         public static byte[] Zip([NotNull] this byte[] bytes)
         {
             using (var msi = new MemoryStream(bytes))
@@ -45,10 +53,12 @@ namespace UCode.Compress
         }
 
         /// <summary>
-        /// Decompresses a byte array that was compressed using GZip compression.
+        /// Decompresses a byte array that has been compressed using GZip compression.
         /// </summary>
-        /// <param name="bytes">The compressed byte array.</param>
-        /// <returns>The decompressed byte array.</returns>
+        /// <param name="bytes">The byte array to be decompressed. Must not be null.</param>
+        /// <returns>
+        /// A byte array containing the decompressed data.
+        /// </returns>
         public static byte[] Unzip([NotNull] this byte[] bytes)
         {
             using (var msi = new MemoryStream(bytes))

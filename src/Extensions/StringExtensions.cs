@@ -13,8 +13,19 @@ using System.Text.RegularExpressions;
 
 namespace UCode.Extensions
 {
+    /// <summary>
+    /// A static partial class that contains extension methods for string manipulation.
+    /// </summary>
     public static partial class StringExtensions
     {
+        /// <summary>
+        /// A generated regular expression that matches a specific pattern of expressions enclosed in curly braces,
+        /// while accounting for various escape sequences and nested structures.
+        /// This regex is designed to avoid matching nested braces within captured groups.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="Regex"/> object that can be used to find expressions matching the specified pattern.
+        /// </returns>
         [GeneratedRegex(@"(?<!{)(?<!\\\\){(?!{)(?<exp>(?:[^{}]+|{(\1)})*)(?<!})}", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.Compiled, "pt-BR")]
         private static partial Regex findExpression();
 
@@ -22,17 +33,42 @@ namespace UCode.Extensions
 
         public record NamedPameters : NamedPameters<object>
         {
+            /// <summary>
+            /// Initializes a new instance of the <see cref="NamedPameters"/> class,
+            /// using the specified object instance.
+            /// </summary>
+            /// <param name="instance">
+            /// The object instance that will be passed to the base class constructor.
+            /// This parameter cannot be null.
+            /// </param>
             public NamedPameters([NotNull] object instance) : base(instance)
             {
 
             }
 
 
+            /// <summary>
+            /// Initializes a new instance of the <see cref="NamedPameters"/> class.
+            /// </summary>
+            /// <param name="type">The type that this instance will represent.</param>
+            /// <param name="instance">The object instance associated with the specified type, or null if there is no instance.</param>
+            /// <returns>
+            /// A new instance of the <see cref="NamedPameters"/> class.
+            /// </returns>
             public NamedPameters(Type type, object? instance) : base(type, instance)
             {
 
             }
 
+            /// <summary>
+            /// Initializes a new instance of the <see cref="NamedPameters"/> class.
+            /// </summary>
+            /// <param name="name">The name of the parameter.</param>
+            /// <param name="type">The type of the parameter.</param>
+            /// <param name="instance">The instance associated with the parameter, which can be null.</param>
+            /// <returns>
+            /// A new instance of the <see cref="NamedPameters"/> class.
+            /// </returns>
             public NamedPameters(string name, Type type, object? instance) : base(name, type, instance)
             {
 
@@ -42,12 +78,32 @@ namespace UCode.Extensions
         {
             private readonly T? _value;
 
+            /// <summary>
+            /// Represents the name of an entity. The name cannot be null.
+            /// </summary>
+            /// <remarks>
+            /// The <c>Name</c> property is initialized at the time of object creation and is read-only thereafter.
+            /// </remarks>
+            /// <value>
+            /// A non-null string that represents the name of the entity.
+            /// </value>
+            /// <exception cref="ArgumentNullException">Thrown when an attempt is made to assign null to the Name property.</exception>
             [NotNull]
             public string Name
             {
                 get; init;
             }
 
+            /// <summary>
+            /// Represents a type that is marked as not nullable.
+            /// </summary>
+            /// <remarks>
+            /// This property is used to store a <see cref="Type"/> which cannot be null. 
+            /// The <c>init</c> accessor allows the property to be set only during object initialization.
+            /// </remarks>
+            /// <value>
+            /// The <see cref="Type"/> of the object.
+            /// </value>
             [NotNull]
             public Type Type
             {
@@ -55,6 +111,9 @@ namespace UCode.Extensions
             }
 
 
+            /// <summary>
+            /// Gets the value of the property, returning a default value if the 
+            /// 
             [NotNull]
             public T? Value
             {
@@ -72,6 +131,20 @@ namespace UCode.Extensions
                 init => this._value = value;
             }
 
+            /// <summary>
+            /// Gets or sets the default value of type T.
+            /// The property is marked with the <see cref="MaybeNullAttribute"/>,
+            /// indicating that it is possible for the default value to be null.
+            /// </summary>
+            /// <typeparam name="T">The type of the default value.</typeparam>
+            /// <value>
+            /// The default value. This can be null if T is a reference type or if it is 
+            /// marked with <see langword="Nullable"/>. 
+            /// </value>
+            /// <remarks>
+            /// Use this property to define a value that can be used as a fallback option 
+            /// when no other value is specified.
+            /// </remarks>
             [MaybeNull]
             public T? DefaultValue
             {
@@ -79,17 +152,53 @@ namespace UCode.Extensions
             }
 
 
+            /// <summary>
+            /// Initializes a new instance of the <see cref="NamedPameters{T}"/> class 
+            /// using the specified value and an optional default value.
+            /// </summary>
+            /// <param name="value">The primary value for the instance. This parameter cannot be null.</param>
+            /// <param name="defaultValue">An optional default value, which can be null.</param>
+            /// <returns>
+            /// A new instance of the <see cref="NamedPameters{T}"/> class.
+            /// </returns>
             public NamedPameters([NotNull] T value, [MaybeNull] T? defaultValue = default) : this(value.GetType().Name, value.GetType(), value, defaultValue)
             {
 
             }
 
 
+            /// <summary>
+            /// Initializes a new instance of the <see cref="NamedPameters"/> class.
+            /// </summary>
+            /// <param name="type">The <see cref="Type"/> that this parameter represents. Must not be null.</param>
+            /// <param name="value">The value of the parameter. This value cannot be null.</param>
+            /// <param name="defaultValue">An optional default value of the parameter, which can be null.</param>
+            /// <returns>
+            /// A new instance of <see cref="NamedPameters"/> initialized with the specified type, value, and default value.
+            /// </returns>
             public NamedPameters([NotNull] Type type, [NotNull] T? value, [MaybeNull] T? defaultValue = default) : this(type.Name, type, value, defaultValue)
             {
 
             }
 
+            /// <summary>
+            /// Initializes an instance of the <see cref="NamedParameters"/> class with the specified parameters.
+            /// </summary>
+            /// <param name="name">
+            /// The name of the parameter. This should not be null.
+            /// </param>
+            /// <param name="type">
+            /// The type of the parameter. This should not be null.
+            /// </param>
+            /// <param name="value">
+            /// The value of the parameter. This should not be null. It can be of type <typeparamref name="T"/> or a nullable type.
+            /// </param>
+            /// <param name="defaultValue">
+            /// The default value of the parameter, which can be null. If not provided, it defaults to the default value of <typeparamref name="T"/>.
+            /// </param>
+            /// <typeparam name="T">
+            /// The type of the value and defaultValue parameters. It can be any reference or nullable value type.
+            /// </typeparam>
             public NamedPameters([NotNull] string name, [NotNull] Type type, [NotNull] T? value, [MaybeNull] T? defaultValue = default)
             {
                 this.Name = name;
@@ -120,6 +229,31 @@ namespace UCode.Extensions
         }
 
 
+        /// <summary>
+        /// Extends the string class to perform interpolation using named parameters and expressions.
+        /// This method allows for dynamic expression parsing and evaluation based on the provided named parameters.
+        /// It can return a default result if no interpolated values are found.
+        /// </summary>
+        /// <param name="value">The original string that contains the expressions to be evaluated.</param>
+        /// <param name="namedPameters">An enumerable collection of named parameters used in the interpolation expressions.</param>
+        /// <param name="defaultResult">An optional default result to return if no valid expressions are found. Default is null.</param>
+        /// <param name="expressionsFoundRewriter">
+        /// An optional function to rewrite the found expressions before evaluation. 
+        /// It takes the index and expression and returns a modified expression string.
+        /// </param>
+        /// <param name="beginInvoke">
+        /// An optional function that is called before invoking the expression. 
+        /// It provides the index, the named parameters, the current expression, and the result type.
+        /// </param>
+        /// <param name="endInvoke">
+        /// An optional function that is called after invoking the expression. 
+        /// It provides the index, named parameters, current expression, result type, and the result value.
+        /// This function can modify the result before returning it.
+        /// </param>
+        /// <returns>
+        /// Returns a string that is the result of interpolating the original value using the provided named parameters. 
+        /// If no valid interpolated values are found, the default result is returned.
+        /// </returns>
         public static string? LinqInterpolation(this string value, IEnumerable<NamedPameters> namedPameters,
             string? defaultResult = default, Func<(int Index, string Expression), string>? expressionsFoundRewriter = null,
             Func<(int Index, IEnumerable<NamedPameters> NamedParameters, string Expression, Type ResultType), Type> beginInvoke = null,
@@ -297,11 +431,15 @@ namespace UCode.Extensions
         };
 
         /// <summary>
-        ///     Remove caracteres com acentos ou ilegiveis, que são os seguintes:
-        ///     `^~´¨¯°ˇˆªº·äæǽöœÄÜÖÀÁÂÃÄÅǺĀĂĄǍΑΆẢẠẦẪẨẬẰẮẴẲẶАàáâãåǻāăąǎªαάảạầấẫẩậằắẵẳặаБбÇĆĈĊČçćĉċčДдÐĎĐΔðďđδÈÉÊËĒĔĖĘĚΕΈẼẺẸỀẾỄỂỆЕЭèéêëēĕėęěέεẽẻẹềếễểệеэФфĜĞĠĢΓГҐĝğġģγгґĤĦĥħÌÍÎÏĨĪĬǏĮİΗΉΊΙΪỈỊИЫìíîïĩīĭǐįıηήίιϊỉịиыїĴĵĶΚКķκкĹĻĽĿŁΛЛĺļľŀłλлМмÑŃŅŇΝНñńņňŉνнÒÓÔÕŌŎǑŐƠØǾΟΌΩΏỎỌỒỐỖỔỘỜỚỠỞỢОòóôõōŏǒőơøǿºοόωώỏọồốỗổộờớỡởợоПпŔŖŘΡРŕŗřρрŚŜŞȘŠΣСśŝşșšſσςсȚŢŤŦτТțţťŧтÙÚÛŨŪŬŮŰŲƯǓǕǗǙǛŨỦỤỪỨỮỬỰУùúûũūŭůűųưǔǖǘǚǜυύϋủụừứữửựуÝŸŶΥΎΫỲỸỶỴЙýÿŷỳỹỷỵйВвŴŵŹŻŽΖЗźżžζзÆǼßĲĳŒƒξπβμψЁёЄєЇЖжХхЦцЧчШшЩщЪъЬьЮюЯя
+        /// Removes diacritics from the specified character by checking against a predefined 
+        /// collection of characters with diacritics (DiacriticsCharacters). If a matching 
+        /// diacritic character is found, it returns the corresponding character without diacritics.
         /// </summary>
-        /// <param name="char"></param>
-        /// <returns></returns>
+        /// <param name="char">The character from which to remove the diacritics.</param>
+        /// <returns>
+        /// Returns the character without diacritics if a match is found; otherwise, 
+        /// returns the original character unmodified.
+        /// </returns>
         public static char RemoveDiacritics(this char @char)
         {
             foreach (var entry in DiacriticsCharacters)
@@ -315,6 +453,17 @@ namespace UCode.Extensions
             return @char;
         }
 
+        /// <summary>
+        /// Replaces all occurrences of a specified string (oldValue) with a new string (newValue) in the source string,
+        /// until no more replacements can be made based on the specified string comparison rules.
+        /// </summary>
+        /// <param name="source">The input string in which replacements are to be made.</param>
+        /// <param name="oldValue">The string to be replaced.</param>
+        /// <param name="newValue">The string to replace oldValue with.</param>
+        /// <param name="comparisonType">The type of comparison to use when searching for oldValue.</param>
+        /// <param name="newSource">The output parameter that will hold the modified string after replacements.</param>
+        /// <returns>The number of replacements made during the operation.</returns>
+        /// <exception cref="ArgumentException">Thrown when an invalid comparison type is specified.</exception>
         public static int ReplaceUntil(this string source, string oldValue, string newValue, StringComparison comparisonType, out string newSource)
         {
             var result = 0;
@@ -381,6 +530,34 @@ namespace UCode.Extensions
             return result;
         }
 
+        /// <summary>
+        /// Replaces all occurrences of a specified substring within a given read-only span 
+        /// of characters with a new substring and appends the modified content to a 
+        /// StringBuilder instance. The comparison for the old value is performed based 
+        /// on specified comparison options.
+        /// </summary>
+        /// <param name="searchSpace">
+        /// The read-only span of characters to search within.
+        /// </param>
+        /// <param name="oldValue">
+        /// The read-only span of characters that represents the substring to be replaced.
+        /// </param>
+        /// <param name="newValue">
+        /// The read-only span of characters that represents the substring to replace with.
+        /// </param>
+        /// <param name="compareInfo">
+        /// An instance of CompareInfo that provides culture-specific comparisons.
+        /// </param>
+        /// <param name="options">
+        /// A CompareOptions value that specifies how to perform the comparison.
+        /// </param>
+        /// <param name="stringBuilder">
+        /// An output parameter that, on successful completion, contains the modified string 
+        /// with all replacements made.
+        /// </param>
+        /// <returns>
+        /// The total number of replacements made in the search space.
+        /// </returns>
         public static int ReplaceUntil(ReadOnlySpan<char> searchSpace, ReadOnlySpan<char> oldValue, ReadOnlySpan<char> newValue, CompareInfo compareInfo, CompareOptions options, out StringBuilder stringBuilder)
         {
             Debug.Assert(!oldValue.IsEmpty);
@@ -419,11 +596,12 @@ namespace UCode.Extensions
 
 
         /// <summary>
-        ///     Remove caracteres com acentos ou ilegiveis, que são os seguintes:
-        ///     `^~´¨¯°ˇˆªº·äæǽöœÄÜÖÀÁÂÃÄÅǺĀĂĄǍΑΆẢẠẦẪẨẬẰẮẴẲẶАàáâãåǻāăąǎªαάảạầấẫẩậằắẵẳặаБбÇĆĈĊČçćĉċčДдÐĎĐΔðďđδÈÉÊËĒĔĖĘĚΕΈẼẺẸỀẾỄỂỆЕЭèéêëēĕėęěέεẽẻẹềếễểệеэФфĜĞĠĢΓГҐĝğġģγгґĤĦĥħÌÍÎÏĨĪĬǏĮİΗΉΊΙΪỈỊИЫìíîïĩīĭǐįıηήίιϊỉịиыїĴĵĶΚКķκкĹĻĽĿŁΛЛĺļľŀłλлМмÑŃŅŇΝНñńņňŉνнÒÓÔÕŌŎǑŐƠØǾΟΌΩΏỎỌỒỐỖỔỘỜỚỠỞỢОòóôõōŏǒőơøǿºοόωώỏọồốỗổộờớỡởợоПпŔŖŘΡРŕŗřρрŚŜŞȘŠΣСśŝşșšſσςсȚŢŤŦτТțţťŧтÙÚÛŨŪŬŮŰŲƯǓǕǗǙǛŨỦỤỪỨỮỬỰУùúûũūŭůűųưǔǖǘǚǜυύϋủụừứữửựуÝŸŶΥΎΫỲỸỶỴЙýÿŷỳỹỷỵйВвŴŵŹŻŽΖЗźżžζзÆǼßĲĳŒƒξπβμψЁёЄєЇЖжХхЦцЧчШшЩщЪъЬьЮюЯя
+        /// Removes diacritics from the given string.
         /// </summary>
-        /// <param name="string"></param>
-        /// <returns></returns>
+        /// <param name="string">The input string from which diacritics will be removed.</param>
+        /// <returns>
+        /// A new string that has all diacritics removed from the original string.
+        /// </returns>
         public static string RemoveDiacritics(this string @string)
         {
             //StringBuilder sb = new StringBuilder ();
@@ -452,6 +630,14 @@ namespace UCode.Extensions
             return text;
         }
 
+        /// <summary>
+        /// Compares two <see cref="SecureString"/> instances for equality.
+        /// </summary>
+        /// <param name="ss1">The first <see cref="SecureString"/> instance to compare.</param>
+        /// <param name="ss2">The second <see cref="SecureString"/> instance to compare.</param>
+        /// <returns>
+        /// Returns <c>true</c> if the two <see cref="SecureString"/> instances are equal in content; otherwise, <c>false</c>.
+        /// </returns>
         public static bool Equal(this SecureString ss1, SecureString ss2)
         {
             var bstr1 = nint.Zero;
@@ -495,6 +681,11 @@ namespace UCode.Extensions
             }
         }
 
+        /// <summary>
+        /// Converts a SecureString to a regular string.
+        /// </summary>
+        /// <param name="value">The SecureString to convert.</param>
+        /// <returns>A string representation of the SecureString.</returns>
         public static string ConvertToString(this SecureString value)
         {
             var bstr = Marshal.SecureStringToBSTR(value);
@@ -509,6 +700,20 @@ namespace UCode.Extensions
             }
         }
 
+        /// <summary>
+        /// Converts a regular string to a <see cref="SecureString"/>.
+        /// This method creates a secure string that can be used to store sensitive information securely in memory.
+        /// </summary>
+        /// <param name="str">
+        /// The input string that will be converted to <see cref="SecureString"/>.
+        /// Must not be null or empty.
+        /// </param>
+        /// <returns>
+        /// A <see cref="SecureString"/> containing the characters from the input string.
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when the input string is null or consists only of white-space characters.
+        /// </exception>
         public static SecureString ToSecureString(this string str)
         {
             if (string.IsNullOrWhiteSpace(str))
@@ -529,15 +734,27 @@ namespace UCode.Extensions
         }
 
         
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="bytes">byte array</param>
-        /// <param name="taster">number of bytes to check of the file (to save processing). Higher
         // value is slower, but more reliable (especially UTF-8 with special characters
         // later on may appear to be ASCII initially). If taster = 0, then taster
         // becomes the length of the byte array (for maximum reliability).</param>
         /// <returns></returns>
+        /// <summary>
+        /// Detects the encoding of a byte array by checking for a Byte Order Mark (BOM) 
+        /// or by analyzing the byte patterns to identify the encoding. 
+        /// The function can take a 'taster' parameter to determine how much of the byte 
+        /// array should be analyzed for encoding detection.
+        /// </summary>
+        /// <param name="bytes">
+        /// The byte array to analyze for encoding detection. This array should not be null.
+        /// </param>
+        /// <param name="taster">
+        /// The number of bytes to sample for encoding detection. If set to 0, the whole
+        /// byte array length is used. The default value is 0.
+        /// </param>
+        /// <returns>
+        /// The detected <see cref="Encoding"/> of the input byte array. Returns the
+        /// default encoding if no other encoding can be reliably detected.
+        /// </returns>
         public static Encoding DetectEncoding([NotNull] this byte[] bytes, /*out string text,*/ int taster = 0)
         {
             //byte[] b = System.Text.Encoding.
@@ -696,11 +913,16 @@ namespace UCode.Extensions
 
 
         /// <summary>
-        /// Clone string using encoding
+        /// Creates a clone of the specified string using the specified encoding.
+        /// If the source string is null, the method returns null.
+        /// If no encoding is specified, UTF8 encoding is used by default.
         /// </summary>
-        /// <param name="source">source of string to copy</param>
-        /// <param name="encoding">Encoder for clone (default: UTF8)</param>
-        /// <returns></returns>
+        /// <param name="source">The string to clone. This can be null.</param>
+        /// <param name="encoding">The optional encoding to use for the cloning process. Defaults to UTF8 if not specified.</param>
+        /// <returns>
+        /// A new string that is a copy of the source string, 
+        /// or null if the source string is null.
+        /// </returns>
         public static string? Clone(this string? source, Encoding? encoding = null)
         {
             if(source == null)

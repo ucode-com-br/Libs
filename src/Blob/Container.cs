@@ -10,13 +10,20 @@ using Azure.Storage.Sas;
 
 namespace UCode.Blob
 {
+    /// <summary>
+    /// Represents a generic container that can hold items.
+    /// This class can be used to store and manipulate a collection of objects of a specified type.
+    /// </summary>
     public class Container
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Container"/> class.
         /// </summary>
-        /// <param name="service">The service used to interact with containers.</param>
-        /// <param name="cloudBlobContainer">The Azure Blob Container client.</param>
+        /// <param name="service">The <see cref="Service"/> instance that will be associated with this container.</param>
+        /// <param name="cloudBlobContainer">The <see cref="BlobContainerClient"/> instance used for interacting with Azure Blob Storage.</param>
+        /// <returns>
+        /// A new instance of the <see cref="Container"/> class.
+        /// </returns>
         internal Container([NotNull] Service service, [NotNull] BlobContainerClient cloudBlobContainer)
         {
             this.Service = service;
@@ -26,35 +33,44 @@ namespace UCode.Blob
 
 
         /// <summary>
-        /// Gets or sets the service used to interact with containers.
+        /// Gets or sets the <see cref="Service"/> associated with this instance.
         /// </summary>
+        /// <value>
+        /// The <see cref="Service"/> object that represents the service.
+        /// </value>
         public Service Service
         {
             get; set;
         }
 
         /// <summary>
-        /// Gets the name of the container.
+        /// Gets the name of the Cloud Blob Container associated with this instance.
         /// </summary>
+        /// <value>
+        /// A string representing the name of the Cloud Blob Container.
+        /// </value>
         public string Name => this.CloudBlobContainer.Name;
 
         /// <summary>
-        /// Gets the Azure Blob Container client.
+        /// Gets the BlobContainerClient instance used to interact with the Azure Blob Storage container.
         /// </summary>
+        /// <value>
+        /// A <see cref="BlobContainerClient"/> that represents a client to the Azure Blob Storage container.
+        /// </value>
         private BlobContainerClient CloudBlobContainer
         {
             get;
         }
 
         /// <summary>
-        /// Uploads a file to the container.
+        /// Asynchronously uploads a file to an Azure Blob Storage container.
         /// </summary>
-        /// <param name="path">The path of the file in the container.</param>
-        /// <param name="content">The content of the file to upload.</param>
-        /// <param name="metadata">Optional metadata to associate with the file.</param>
-        /// <param name="contentType">Optional content type of the file.</param>
-        /// <param name="overwrite">Optional flag to determine if the file should be overwritten if it already exists.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
+        /// <param name="path">The path within the blob container where the file will be uploaded.</param>
+        /// <param name="content">The stream containing the content to upload.</param>
+        /// <param name="metadata">Optional dictionary of metadata to associate with the blob.</param>
+        /// <param name="contentType">Optional MIME type to set for the blob.</param>
+        /// <param name="overwrite">Indicates whether to overwrite the blob if it already exists. Default is true.</param>
+        /// <returns>A task that represents the asynchronous upload operation.</returns>
         public async Task UploadAsync([NotNull] string path, Stream content,
             IDictionary<string, string> metadata = null,
             string contentType = null,
@@ -121,11 +137,13 @@ namespace UCode.Blob
         }
 
         /// <summary>
-        /// Retrieves the metadata associated with the specified blob.
+        /// Asynchronously retrieves the metadata of a blob from the specified path in the cloud blob container.
         /// </summary>
-        /// <param name="path">The path of the blob.</param>
-        /// <returns>A dictionary containing the blob's metadata.</returns>
-        /// <exception cref="FileNotFoundException">Thrown if the blob does not exist.</exception>
+        /// <param name="path">The path to the blob for which the metadata is to be retrieved.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains a dictionary of the blob's metadata, 
+        /// where the key is the metadata name and the value is the metadata value.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when the <paramref name="path"/> is null.</exception>
+        /// <exception cref="StorageException">Thrown when there is an error while accessing the blob storage.</exception>
         [return: NotNull]
         public async Task<IDictionary<string, string>> GetMetadata([NotNull] string path)
         {
@@ -141,11 +159,16 @@ namespace UCode.Blob
         //public async Task<byte[]> DownloadAsync([NotNull] string path)
 
         /// <summary>
-        /// Downloads the content of the specified blob as a stream.
+        /// Downloads the content of a blob from the specified path and returns it as a stream.
         /// </summary>
-        /// <param name="path">The path of the blob.</param>
-        /// <returns>A stream containing the blob's content.</returns>
-        /// <exception cref="FileNotFoundException">Thrown if the blob does not exist.</exception>
+        /// <param name="path">The path to the blob in the cloud storage.</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation. The task result contains a stream 
+        /// that holds the content of the blob if it exists; otherwise, an exception is thrown.
+        /// </returns>
+        /// <exception cref="FileNotFoundException">
+        /// Thrown when the blob with the specified path does not exist.
+        /// </exception>
         [return: NotNull]
         public async Task<Stream> DownloadAsync([NotNull] string path)
         {
@@ -188,11 +211,25 @@ namespace UCode.Blob
         }
 
         /// <summary>
-        /// Downloads the content of the specified blob along with its metadata and content type.
+        /// Asynchronously downloads the content of a blob from the specified path.
         /// </summary>
-        /// <param name="path">The path of the blob.</param>
-        /// <returns>A tuple containing the blob's content as a stream, its metadata as a dictionary, and its content type as a string.</returns>
-        /// <exception cref="FileNotFoundException">Thrown if the blob does not exist.</exception>
+        /// <param name="path">The path of the blob to download.</param>
+        /// <returns>
+        /// A tuple containing the following:
+        /// <list type="bullet">
+        /// <item>
+        /// <description>A <see cref="Stream"/> representing the content of the downloaded blob.</description>
+        /// </item>
+        /// <item>
+        /// <description>An <see cref="IDictionary{TKey,TValue}"/> representing the metadata associated with the blob.</description>
+        /// </item>
+        /// <item>
+        /// <description>A <see cref="string"/> representing the content type of the blob.</description>
+        /// </item>
+        /// </list>
+        /// If the blob does not exist, a <see cref="FileNotFoundException"/> is thrown.
+        /// </returns>
+        /// <exception cref="FileNotFoundException">Thrown when the specified blob does not exist.</exception>
         [return: NotNull]
         public async Task<(Stream Content, IDictionary<string, string> Metadata, string ContentType)> DownloadAllAsync([NotNull] string path)
         {
@@ -242,12 +279,19 @@ namespace UCode.Blob
         }
 
         /// <summary>
-        /// Generates a download URL for a blob with a specified time-to-live (TTL).
+        /// Generates a download URL for a blob in the cloud storage that is valid for a specified time-to-live (TTL).
         /// </summary>
-        /// <param name="path">The path of the blob.</param>
-        /// <param name="ttl">The time-to-live for the generated URL, in TimeSpan format.</param>
-        /// <returns>A Task that represents the asynchronous operation. The task result contains the generated download URL.</returns>
-        /// <exception cref="FileNotFoundException">Thrown if the blob does not exist.</exception>
+        /// <param name="path">The path of the blob for which the download URL is to be generated.</param>
+        /// <param name="ttl">The time span that indicates how long the generated URL will be valid.</param>
+        /// <returns>
+        /// A <see cref="Uri"/> that represents the generated SAS (Shared Access Signature) URI for the specified blob.
+        /// </returns>
+        /// <exception cref="FileNotFoundException">
+        /// Thrown when the specified blob does not exist in the cloud storage.
+        /// </exception>
+        /// <exception cref="Exception">
+        /// Thrown when the blob cannot generate a SAS URI.
+        /// </exception>
         [return: NotNull]
         public async Task<Uri> GenerateDownloadUrl([NotNull] string path, [NotNull] TimeSpan ttl)
         {
@@ -288,10 +332,14 @@ namespace UCode.Blob
         }
 
         /// <summary>
-        /// Deletes a blob from the container if it exists.
+        /// Asynchronously deletes a blob at the specified path if it exists.
         /// </summary>
         /// <param name="path">The path of the blob to delete.</param>
-        /// <returns>A Task that represents the asynchronous operation. The task result is a boolean indicating whether the blob was successfully deleted.</returns>
+        /// <returns>
+        /// A task that represents the asynchronous operation. The task result 
+        /// contains a boolean indicating whether the blob was deleted (`true`) 
+        /// or if it did not exist (`false`).
+        /// </returns>
         public async Task<bool> DeleteIfExistsAsync([NotNull] string path)
         {
             // Get the blob client for the specified path
@@ -302,10 +350,10 @@ namespace UCode.Blob
         }
 
         /// <summary>
-        /// Checks if a blob exists in the container.
+        /// Asynchronously checks if a blob exists at the specified path in the cloud blob container.
         /// </summary>
-        /// <param name="path">The path of the blob to check.</param>
-        /// <returns>A Task that represents the asynchronous operation. The task result is a boolean indicating whether the blob exists.</returns>
+        /// <param name="path">The string path of the blob whose existence is to be checked. This parameter cannot be null.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains a boolean value indicating whether the blob exists.</returns>
         public async Task<bool> ExistAsync([NotNull] string path)
         {
             // Get the blob client for the specified path
@@ -316,12 +364,13 @@ namespace UCode.Blob
         }
 
         /// <summary>
-        /// Moves a blob from one path to another within the container.
+        /// Asynchronously moves a blob from the specified source path to the specified destination path,
+        /// with an option to overwrite the destination blob if it exists.
         /// </summary>
-        /// <param name="source">The path of the blob to move.</param>
-        /// <param name="destination">The new path of the blob.</param>
-        /// <param name="overwrite">Optional flag to determine if the destination blob should be overwritten if it already exists.</param>
-        /// <returns>A Task that represents the asynchronous operation.</returns>
+        /// <param name="source">The source path of the blob to move.</param>
+        /// <param name="destination">The destination path where the blob should be moved.</param>
+        /// <param name="overwrite">A boolean value indicating whether to overwrite the destination blob if it already exists. Default is false.</param>
+        /// <returns>A task that represents the asynchronous move operation.</returns>
         public async Task MoveAsync([NotNull] string source, [NotNull] string destination, bool overwrite = false)
         {
             // Get the blob client for the source and destination paths
@@ -336,12 +385,12 @@ namespace UCode.Blob
         }
 
         /// <summary>
-        /// Copies a blob from one path to another within the container.
+        /// Asynchronously copies a blob from the specified source path to the specified destination path.
         /// </summary>
-        /// <param name="source">The path of the blob to copy.</param>
-        /// <param name="destination">The new path of the blob.</param>
-        /// <param name="overwrite">Optional flag to determine if the destination blob should be overwritten if it already exists.</param>
-        /// <returns>A Task that represents the asynchronous operation.</returns>
+        /// <param name="source">The path of the source blob to be copied.</param>
+        /// <param name="destination">The path where the blob should be copied to.</param>
+        /// <param name="overwrite">A boolean value indicating whether to overwrite the destination blob if it already exists. The default is false.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
         public async Task CopyAsync([NotNull] string source, [NotNull] string destination, bool overwrite = false)
         {
             // Get the blob client for the source and destination paths
@@ -353,13 +402,13 @@ namespace UCode.Blob
         }
 
         /// <summary>
-        /// Copies a blob from one path to another within the container.
+        /// Asynchronously copies a blob from a source BlobClient to a destination BlobClient.
         /// </summary>
-        /// <param name="sourceBlob">The blob client for the source blob.</param>
-        /// <param name="destBlob">The blob client for the destination blob.</param>
-        /// <param name="overwrite">Optional flag to determine if the destination blob should be overwritten if it already exists.</param>
-        /// <returns>A Task that represents the asynchronous operation.</returns>
-        /// <exception cref="FileNotFoundException">Thrown if the source blob does not exist.</exception>
+        /// <param name="sourceBlob">The BlobClient representing the source blob to copy.</param>
+        /// <param name="destBlob">The BlobClient representing the destination where the blob will be copied.</param>
+        /// <param name="overwrite">A boolean indicating whether to overwrite the destination blob if it exists.</param>
+        /// <returns>A Task representing the asynchronous operation of copying the blob.</returns>
+        /// <exception cref="FileNotFoundException">Thrown when the source blob does not exist.</exception>
         private static async Task CopyAsync([NotNull] BlobClient sourceBlob, [NotNull] BlobClient destBlob, bool overwrite)
         {
             // Check if the source blob exists

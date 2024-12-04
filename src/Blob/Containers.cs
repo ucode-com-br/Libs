@@ -4,32 +4,34 @@ using System.Linq;
 
 namespace UCode.Blob
 {
+    /// <summary>
+    /// Represents a collection of Containers.
+    /// </summary>
     public class Containers
     {
-        /// <summary>
-        /// A dictionary to store containers by name.
-        /// </summary>
         private readonly Dictionary<string, Container> _containers = new();
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Containers"/> class.
+        /// Initializes a new instance of the <see cref="Containers"/> class
+        /// with a specified <see cref="Service"/> object.
         /// </summary>
-        /// <param name="service">The service used to interact with containers.</param>
+        /// <param name="service">
+        /// The <see cref="Service"/> instance that is used to initialize the <see cref="Containers"/> class.
+        /// This parameter must not be null.
+        /// </param>
         public Containers([NotNull] Service service) => this.Service = service;
 
         /// <summary>
-        /// Gets or sets the service used to interact with containers.
+        /// Gets or sets the <see cref="Service"/> associated with this instance.
         /// </summary>
+        /// <value>
+        /// The <see cref="Service"/> object representing the service.
+        /// </value>
         public Service Service
         {
             get; set;
         }
 
-        /// <summary>
-        /// Gets the container with the specified name.
-        /// </summary>
-        /// <param name="containerName">The name of the container.</param>
-        /// <returns>The container with the specified name, or null if the name is empty or null.</returns>
         public Container this[string containerName]
         {
             get
@@ -54,9 +56,7 @@ namespace UCode.Blob
         }
 
         /// <summary>
-        /// Converts the containers to an enumerable.
-        /// </summary>
-        /// <returns>An enumerable of containers.</returns>
+        /// Converts the 
         [return: NotNull]
         public IEnumerable<Container> ToIEnumerable()
         {
@@ -67,23 +67,42 @@ namespace UCode.Blob
         }
 
         /// <summary>
-        /// Converts the containers to a list.
+        /// Converts the current instance to a list of containers.
         /// </summary>
-        /// <returns>A list of containers.</returns>
+        /// <returns>
+        /// A list of <see cref="Container"/> objects representing the items in the current instance.
+        /// This method returns a non-null list, regardless of the input state.
+        /// </returns>
+        /// <remarks>
+        /// This method utilizes the ToIEnumerable() method to get an enumerable collection,
+        /// which is then converted to a list. It ensures that the returned IList is not null,
+        /// adhering to the NotNull attribute.
+        /// </remarks>
         [return: NotNull]
         public IList<Container> ToList() => this.ToIEnumerable().ToList();
 
         /// <summary>
-        /// Converts the containers to an array.
+        /// Converts the current collection to an array of <see cref="Container"/> objects.
         /// </summary>
-        /// <returns>An array of containers.</returns>
+        /// <returns>
+        /// An array containing the elements of the collection.
+        /// </returns>
+        /// <exception cref="System.InvalidOperationException">
+        /// Thrown when the enumeration is invalid due to changes made to the collection.
+        /// </exception>
+        /// <remarks>
+        /// This method calls the <see cref="ToIEnumerable"/> method to get an <see cref="IEnumerable{Container}"/>
+        /// representation of the collection before converting it to an array.
+        /// </remarks>
         [return: NotNull]
         public Container[] ToArray() => this.ToIEnumerable().ToArray();
 
         /// <summary>
-        /// Gets the number of containers in the service.
+        /// Gets the count of containers from the service.
         /// </summary>
-        /// <returns>The number of containers in the service.</returns>
+        /// <returns>
+        /// An integer representing the number of containers.
+        /// </returns>
         public int ContainerCount() => this.Service.ContainerCount();
     }
 }
