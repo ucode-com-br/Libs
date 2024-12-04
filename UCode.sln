@@ -1,5 +1,5 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# 17
+# Visual Studio Version 17
 VisualStudioVersion = 17.6.33723.286
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.Extensions", "src\Extensions\UCode.Extensions.csproj", "{07FF8AF7-438B-4AA1-BEE7-3320D9BE9FEF}"
@@ -53,8 +53,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".husky", ".husky", "{7E58D6
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{F3EB541E-CCE5-4E1F-A412-DA68D0E319C9}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UCode.MongoTests", "tests\MongoTests\UCode.MongoTests.csproj", "{13597B21-E8E9-4495-8D46-BD6879BFC366}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -114,17 +112,12 @@ Global
 		{5A23E37A-4DD3-4209-A13C-1A9938EF387C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5A23E37A-4DD3-4209-A13C-1A9938EF387C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5A23E37A-4DD3-4209-A13C-1A9938EF387C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{13597B21-E8E9-4495-8D46-BD6879BFC366}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{13597B21-E8E9-4495-8D46-BD6879BFC366}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{13597B21-E8E9-4495-8D46-BD6879BFC366}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{13597B21-E8E9-4495-8D46-BD6879BFC366}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{981ECB21-C828-4516-AFE0-3CE973D2A691} = {871D6DB2-384D-414A-923C-560D66A797EA}
-		{13597B21-E8E9-4495-8D46-BD6879BFC366} = {F3EB541E-CCE5-4E1F-A412-DA68D0E319C9}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {71F77922-6012-44F2-906A-D0B3B20C41E1}
