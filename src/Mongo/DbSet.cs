@@ -2701,7 +2701,7 @@ namespace UCode.Mongo
             }
             else
             {
-                throw new InvalidOperationException("Abort transaction is invalid.");
+                throw new InvalidOperationException("Commit transaction is invalid.");
             }
         }
 
