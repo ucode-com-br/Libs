@@ -2677,6 +2677,51 @@ namespace UCode.Mongo
         #endregion
 
 
+        /// <summary>
+        /// Commits the current transaction if transactions are enabled.
+        /// </summary>
+        /// <param name="cancellationToken">
+        /// An optional <see cref="CancellationToken"/> that can be used to observe while waiting for the 
+        /// operation to complete and can be used to cancel the operation if needed. The default value 
+        /// is <see cref="CancellationToken.None"/>.
+        /// </param>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown when an attempt is made to commit a transaction while transactions are not enabled.
+        /// </exception>
+        public void CommitTransaction(CancellationToken cancellationToken = default)
+        {
+            if (this.UseTransaction)
+            {
+                this._sessionHandle.CommitTransaction(cancellationToken);
+
+                this._sessionHandle = this._contextbase.CreateSession();
+            }
+            else
+            {
+                throw new InvalidOperationException("Abort transaction is invalid.");
+            }
+        }
+
+        /// <summary>
+        /// Aborts the current transaction if one is in use.
+        /// </summary>
+        /// <param name="cancellationToken">A token to monitor for cancellation requests. Default is <see cref="CancellationToken.None"/>.</param>
+        /// <exception cref="InvalidOperationException">Thrown if there is no active transaction to abort.</exception>
+        public void AbortTransaction(CancellationToken cancellationToken = default)
+        {
+            if (this.UseTransaction)
+            {
+                this._sessionHandle.AbortTransaction(cancellationToken);
+
+                this._sessionHandle = this._contextbase.CreateSession();
+            }
+            else
+            {
+                throw new InvalidOperationException("Abort transaction is invalid.");
+            }
+        }
+
+
 
         /// <summary>
         /// Asynchronously performs a bulk write operation on a MongoDB collection.
@@ -2799,6 +2844,7 @@ namespace UCode.Mongo
             if (disposing)
             {
                 this._contextbase.ContextSession?.Dispose();
+                this._sessionHandle?.Dispose();
             }
             //(_asyncDisposableResource as IDisposable)?.Dispose();
 
@@ -2829,6 +2875,8 @@ namespace UCode.Mongo
             {
                 this._contextbase.ContextSession?.Dispose();
             }
+
+            this._sessionHandle?.Dispose();
             //_asyncDisposableResource = null;
             //_disposableResource = null;
         }
