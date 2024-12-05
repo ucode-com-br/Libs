@@ -3,6 +3,10 @@ using MongoDB.Driver;
 namespace UCode.Mongo.Options
 {
 
+    /// <summary>
+    /// Represents options for aggregate paging, allowing for pagination control
+    /// such as skipping items and limiting the number of items returned.
+    /// </summary>
     public class AggregateOptionsPaging : AggregateOptions
     {
 

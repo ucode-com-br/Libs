@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Formats.Asn1;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
@@ -13,13 +11,9 @@ using MongoDB.Driver;
 using MongoDB.Driver.Core.Events;
 using UCode.Extensions;
 using UCode.Mongo.Models;
-using UCode.Mongo.Options;
-using ZstdSharp.Unsafe;
 
 namespace UCode.Mongo
 {
-
-
     /// <summary>
     /// Represents the base class for context management, providing an interface for disposal.
     /// This class is intended to be inherited by other context classes that require 
@@ -31,17 +25,11 @@ namespace UCode.Mongo
     /// are no longer needed.
     /// </remarks>
     /// <seealso cref="IDisposable"/>
-    public abstract class ContextBase : IDisposable
+    public abstract class ContextBase : ContextBaseBefore, IDisposable
     {
-        internal Dictionary<string, ContextCollectionMetadata> _contextCollectionMetadata = new Dictionary<string, ContextCollectionMetadata>();
-
-        /// <summary>
-        /// A static readonly object used for locking purposes to ensure thread safety
-        /// when accessing or modifying collection names. This lock prevents race 
-        /// conditions and ensures that only one thread can access the critical 
-        /// section of the code that modifies shared collection names at any given time.
-        /// </summary>
-        private static readonly object _collectionNamesLock = new();
+        #region Static
+        private static readonly Dictionary<string, (MongoClientSettings Settings, MongoClient Client)> _settingsClients =
+                    new Dictionary<string, (MongoClientSettings Settings, MongoClient Client)>();
 
         /// <summary>
         /// A static, read-only field that holds a thread-safe collection of constructed dictionary entries. 
@@ -55,6 +43,20 @@ namespace UCode.Mongo
         /// explicit locking.
         /// </remarks>
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<MongoContextImplementation, IEnumerable<string>> _dictionaryConstructed = new();
+
+        #endregion Static
+
+
+        #region Fields
+
+        /// <summary>
+        /// A dictionary to store metadata associated with context collections, where 
+        /// the key is a string identifier and the value is an instance of 
+        /// <see cref="ContextCollectionMetadata"/>.
+        /// </summary>
+        /// <remarks>
+        /// This 
+        internal Dictionary<string, ContextCollectionMetadata> _contextCollectionMetadata = new Dictionary<string, ContextCollectionMetadata>();
 
         /// <summary>
         /// Represents a factory for creating instances of <see cref="ILogger"/>.
@@ -78,7 +80,6 @@ namespace UCode.Mongo
         /// The <c>MongoClient</c> instance that provides methods to interact with the MongoDB database.
         /// </value>
         internal readonly MongoClient MongoClient;
-
 
         /// <summary>
         /// Represents an instance of a MongoDB database that is used for data operations.
@@ -163,16 +164,6 @@ namespace UCode.Mongo
         protected ILogger<ContextBase> Logger => this._logger.Value;
 
         /// <summary>
-        /// Gets a value indicating whether the current context is transactional.
-        /// This property is read-only from outside the class, as it has a 
-        public bool TransactionalContext
-        {
-            get; private set;
-        }
-
-
-
-        /// <summary>
         /// Represents a method that will handle an event, with a specified event type 
         /// and sender information.
         /// </summary>
@@ -181,7 +172,33 @@ namespace UCode.Mongo
         /// <param name="args">An instance of <see cref="MongoEventArgs{TEvent}"/> that contains the event data.</param>
         public delegate void EventHandler<TEvent>(object sender, MongoEventArgs<TEvent> args);
 
+        /// <summary>
+        /// Represents an event that can be subscribed to by event handlers.
+        /// </summary>
+        /// <remarks>
+        /// This event uses the <see cref="EventHandler"/> delegate to define the signature of the event handler methods.
+        /// </remarks>
+        /// <example>
+        /// <code>
+        /// // Subscription to the event
+        /// this.Event += new EventHandler(MyEventHandler);
+        /// 
+        /// // Event handler method
+        /// </code>
+        /// </example>
         public event EventHandler Event;
+        #endregion Fields
+
+
+        /// <summary>
+        /// Gets a value indicating whether the current context is transactional.
+        /// This property is read-only from outside the class, as it has a 
+        public bool TransactionalContext
+        {
+            get; private set;
+        }
+
+
 
         /// <summary>
         /// Invokes the event for the specified event type with the provided event data.
@@ -194,6 +211,9 @@ namespace UCode.Mongo
         /// </param>
         public virtual void OnEvent<TEvent>(TEvent ev) => Event?.Invoke(this, new MongoEventArgs<TEvent>(ev));
 
+
+
+        #region Constructor
         /// <summary>
         /// Initializes a new instance of the <see cref="ContextBase"/> class.
         /// </summary>
@@ -206,8 +226,10 @@ namespace UCode.Mongo
         /// event subscriptions for command and connection events. If transactional support is enabled,
         /// it starts a session and begins a transaction.
         /// </remarks>
-        protected ContextBase([NotNull] ILoggerFactory loggerFactory, [NotNull] string connectionString,
-                              string? applicationName = null, bool transactionalContext = false)
+        protected ContextBase([NotNull] ILoggerFactory loggerFactory,
+            [NotNull] string connectionString,
+            [NotNull] string? applicationName = null,
+            [NotNull] bool transactionalContext = false)
         {
             //BsonSerializer.TryRegisterSerializer(new GuidSerializer(BsonType.String));
             BsonSerializer.TryRegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
@@ -217,64 +239,83 @@ namespace UCode.Mongo
 
             this._logger = new Lazy<ILogger<ContextBase>>(() => loggerFactory.CreateLogger<ContextBase>());
 
-            // Initialize Client
-            var mongoClientSettings = MongoClientSettings.FromConnectionString(connectionString);
+            this.DatabaseName = @"^mongodb(\+srv)?\:\/\/(((?<USER>.*)\:(?<PASSWORD>.*)\@(?<CLUSTER>.*))|((?<HOST>.+)\:(?<PORT>.+)))\/(?<DBNAME>.*)\?.*$".MatchNamedCaptures(connectionString)["DBNAME"];
 
-
-            // 
-            mongoClientSettings.TranslationOptions = new ExpressionTranslationOptions()
+            if (_settingsClients.TryGetValue(connectionString, out var settingsClient))
             {
-                EnableClientSideProjections = true,
-                CompatibilityLevel = ServerVersion.Server70
-            };
+                var mongoClientSettings = settingsClient.Settings;
 
-            // Set application name if provided
-            if (!string.IsNullOrWhiteSpace(applicationName))
-            {
-                mongoClientSettings.ApplicationName = applicationName;
+                this.MongoClient = settingsClient.Client;
+
+                this.Database = this.MongoClient.GetDatabase(this.DatabaseName);
+
+                if (this.TransactionalContext = transactionalContext)
+                {
+                    this.ContextSession = this.MongoClient.StartSession();
+                    this.StartTransaction();
+                }
             }
-
-            // Store the previous cluster configurator
-            var prevClusterConfigurator = mongoClientSettings.ClusterConfigurator;
-
-            // Set the new cluster configurator
-            mongoClientSettings.ClusterConfigurator = clusterConfigurator =>
+            else
             {
-                // Invoke the previous cluster configurator (if any)
-                prevClusterConfigurator?.Invoke(clusterConfigurator);
-
-                // Subscribe to command started events
-                clusterConfigurator.Subscribe<CommandStartedEvent>(this.OnEvent);
-
-                // Subscribe to command succeeded events
-                clusterConfigurator.Subscribe<CommandSucceededEvent>(this.OnEvent);
-
-                // Subscribe to command failed events
-                clusterConfigurator.Subscribe<CommandFailedEvent>(this.OnEvent);
-
-                // Subscribe to connection failed events
-                clusterConfigurator.Subscribe<ConnectionFailedEvent>(this.OnEvent);
-            };
-
-            // Initialize Client
-            this.MongoClient = new MongoClient(mongoClientSettings);
-
-            // Initialize Database
-            this.DatabaseName =
-                @"^mongodb(\+srv)?\:\/\/(((?<USER>.*)\:(?<PASSWORD>.*)\@(?<CLUSTER>.*))|((?<HOST>.+)\:(?<PORT>.+)))\/(?<DBNAME>.*)\?.*$".MatchNamedCaptures(connectionString)["DBNAME"];
-
-            this.Database = this.MongoClient.GetDatabase(this.DatabaseName);
+                // Initialize Client
+                var mongoClientSettings = MongoClientSettings.FromConnectionString(connectionString);
 
 
-            if (this.TransactionalContext = transactionalContext)
-            {
-                this.ContextSession = this.MongoClient.StartSession();
-                this.StartTransaction();
+                // 
+                mongoClientSettings.TranslationOptions = new ExpressionTranslationOptions()
+                {
+                    EnableClientSideProjections = true,
+                    CompatibilityLevel = ServerVersion.Server80
+                };
+
+                // Set application name if provided
+                if (!string.IsNullOrWhiteSpace(applicationName))
+                {
+                    mongoClientSettings.ApplicationName = applicationName;
+                }
+
+                // Store the previous cluster configurator
+                var prevClusterConfigurator = mongoClientSettings.ClusterConfigurator;
+
+                // Set the new cluster configurator
+                mongoClientSettings.ClusterConfigurator = clusterConfigurator =>
+                {
+                    // Invoke the previous cluster configurator (if any)
+                    prevClusterConfigurator?.Invoke(clusterConfigurator);
+
+                    // Subscribe to command started events
+                    clusterConfigurator.Subscribe<CommandStartedEvent>(this.OnEvent);
+
+                    // Subscribe to command succeeded events
+                    clusterConfigurator.Subscribe<CommandSucceededEvent>(this.OnEvent);
+
+                    // Subscribe to command failed events
+                    clusterConfigurator.Subscribe<CommandFailedEvent>(this.OnEvent);
+
+                    // Subscribe to connection failed events
+                    clusterConfigurator.Subscribe<ConnectionFailedEvent>(this.OnEvent);
+                };
+
+                // Initialize Client
+                this.MongoClient = new MongoClient(mongoClientSettings);
+
+                // Initialize Database
+                //this.DatabaseName =
+                //    @"^mongodb(\+srv)?\:\/\/(((?<USER>.*)\:(?<PASSWORD>.*)\@(?<CLUSTER>.*))|((?<HOST>.+)\:(?<PORT>.+)))\/(?<DBNAME>.*)\?.*$".MatchNamedCaptures(connectionString)["DBNAME"];
+
+                this.Database = this.MongoClient.GetDatabase(this.DatabaseName);
+
+
+                if (this.TransactionalContext = transactionalContext)
+                {
+                    this.ContextSession = this.MongoClient.StartSession();
+                    this.StartTransaction();
+                }
             }
 
             this.InternalConstructor(connectionString);
         }
-
+        #endregion Constructor
 
         /// <summary>
         /// Initializes an instance of the MongoContextImplementation class using the provided connection string.
@@ -288,293 +329,21 @@ namespace UCode.Mongo
             var implimentedUnderlyingSystemType = this.GetType().UnderlyingSystemType;
             var fullname = implimentedUnderlyingSystemType.FullName!;
 
-            _instanceMongoContextImplementation = new MongoContextImplementation(fullname, implimentedUnderlyingSystemType, connectionString.CalculateSha256Hash()!, this.DatabaseName);
+            this._instanceMongoContextImplementation = new MongoContextImplementation(fullname, implimentedUnderlyingSystemType, connectionString.CalculateSha256Hash()!, this.DatabaseName);
 
+            this._instanceCollectionNames = _dictionaryConstructed.AddOrUpdate(this._instanceMongoContextImplementation,
+                (key) =>
+                {
+                    var collectionName = this.Database.ListCollectionNames().ToEnumerable().ToArray();
 
-            _instanceCollectionNames = _dictionaryConstructed.AddOrUpdate(_instanceMongoContextImplementation, (key) =>
-            {
-                var collectionName = this.Database.ListCollectionNames().ToEnumerable().ToArray();
-
-                return collectionName;
-                //return collectionName.Select(collectionName => $"{fullname}-{this.DatabaseName}.{collectionName}").ToList();
-            }, (key, value) => value);
-
-
-
-            //this.MapAsync(classMaps).Wait();
-
-            //this.IndexAsync().Wait();
+                    return collectionName;
+                },
+                (key, value) => value);
         }
 
 
 
-
-
-
-
-        #region Before
-
-        //
-        internal void BeforeInsertInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref TDocument original, ref ReplaceOptions replaceOptions)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-            ArgumentNullException.ThrowIfNull(sender);
-
-            OptionObject<TDocument, TProjection> option = replaceOptions;
-
-            this.BeforeInsert<TDocument, TObjectId, TProjection, TUser>(sender, ref original, ref option);
-
-            replaceOptions = option;
-        }
-
-        internal void BeforeInsertInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref TDocument original, ref InsertOneOptions insertOneOptions)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-            ArgumentNullException.ThrowIfNull(sender);
-
-            OptionObject<TDocument, TProjection> option = insertOneOptions;
-
-            this.BeforeInsert<TDocument, TObjectId, TProjection, TUser>(sender, ref original, ref option);
-
-            insertOneOptions = option;
-        }
-
-
-        //internal void BeforeInsertInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref TDocument original, ref OptionObject<TDocument, TProjection> option)
-        //    where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-        //    where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        //{
-        //    ArgumentNullException.ThrowIfNull(sender);
-
-        //    this.BeforeInsert<TDocument, TObjectId, TProjection, TUser>(sender, ref original, ref option);
-        //}
-
-        //
-        internal void BeforeUpdateInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref FilterDefinition<TDocument> filterDefinition, ref UpdateDefinition<TDocument> updateDefinition, ref UpdateOptions updateOptions)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-            ArgumentNullException.ThrowIfNull(sender);
-
-            OptionObject<TDocument, TProjection> option = updateOptions;
-
-            this.BeforeUpdate<TDocument, TObjectId, TProjection, TUser>(sender, ref filterDefinition, ref updateDefinition, ref option);
-        }
-
-        internal void BeforeUpdateInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref FilterDefinition<TDocument> filterDefinition, ref UpdateDefinition<TDocument> updateDefinition, ref FindOneAndUpdateOptions<TDocument, TProjection> findOneAndUpdateOptions)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-            ArgumentNullException.ThrowIfNull(sender);
-
-            OptionObject<TDocument, TProjection> option = findOneAndUpdateOptions;
-
-            this.BeforeUpdate<TDocument, TObjectId, TProjection, TUser>(sender, ref filterDefinition, ref updateDefinition, ref option);
-        }
-
-        //internal void BeforeUpdateInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref FilterDefinition<TDocument> filterDefinition, ref UpdateDefinition<TDocument> updateDefinition, ref OptionObject<TDocument, TProjection> option)
-        //    where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-        //    where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        //{
-        //    ArgumentNullException.ThrowIfNull(sender);
-
-        //    this.BeforeUpdate<TDocument, TObjectId, TProjection, TUser>(sender, ref filterDefinition, ref updateDefinition, ref option);
-        //}
-
-        internal void BeforeReplaceInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, TDocument original, ref FilterDefinition<TDocument> filterDefinition, ref ReplaceOptions replaceOptions)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-            ArgumentNullException.ThrowIfNull(sender);
-            OptionObject<TDocument, TProjection> option = replaceOptions;
-            this.BeforeReplace<TDocument, TObjectId, TProjection, TUser>(sender, ref original, ref filterDefinition, ref option);
-            replaceOptions = option;
-        }
-
-        //AggregateOptions
-        internal void BeforeAggregateInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref BsonDocument[] original, ref AggregateOptions aggregateOptions)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-            ArgumentNullException.ThrowIfNull(sender);
-            OptionObject<TDocument, TProjection> option = aggregateOptions;
-            this.BeforeAggregate<TDocument, TObjectId, TProjection, TUser>(sender, ref original, ref option);
-            aggregateOptions = option;
-        }
-
-        //internal void BeforeAggregateInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref BsonDocument[] original, ref OptionObject<TDocument, TProjection> option)
-        //    where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-        //    where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        //{
-        //    ArgumentNullException.ThrowIfNull(sender);
-        //    this.BeforeAggregate<TDocument, TObjectId, TProjection, TUser>(sender, ref original, ref option);
-        //}
-
-        internal void BeforeFindInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref FilterDefinition<TDocument> filterDefinition, ref CountOptions countOptions)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-            ArgumentNullException.ThrowIfNull(sender);
-            OptionObject<TDocument, TProjection> option = countOptions;
-            this.BeforeFind<TDocument, TObjectId, TProjection, TUser>(sender, ref filterDefinition, ref option);
-            countOptions = option;
-        }
-
-        
-        internal void BeforeFindInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref FilterDefinition<TDocument> filterDefinition, ref FindOptions<TDocument, TProjection> findOptions)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-            ArgumentNullException.ThrowIfNull(sender);
-            OptionObject<TDocument, TProjection> option = findOptions;
-            this.BeforeFind<TDocument, TObjectId, TProjection, TUser>(sender, ref filterDefinition, ref option);
-            findOptions = option;
-        }
-
-        //internal void BeforeFindInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref FilterDefinition<TDocument> filterDefinition, ref OptionObject<TDocument, TProjection> option)
-        //    where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-        //    where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        //{
-        //    ArgumentNullException.ThrowIfNull(sender);
-        //    this.BeforeFind<TDocument, TObjectId, TProjection, TUser>(sender, ref filterDefinition, ref option);
-        //}
-
-        
-        internal void BeforeQueryableInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref IQueryable<TDocument> queryable, ref AggregateOptions aggregateOptions)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-            ArgumentNullException.ThrowIfNull(sender);
-
-            OptionObject<TDocument, TProjection> option = aggregateOptions;
-            this.BeforeQueryable<TDocument, TObjectId, TProjection, TUser>(sender, ref queryable, ref option);
-            aggregateOptions = option;
-        }
-
-        //internal void BeforeQueryableInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref IQueryable<TDocument> queryable, ref OptionObject<TDocument, TProjection> option)
-        //    where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-        //    where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        //{
-        //    ArgumentNullException.ThrowIfNull(sender);
-        //    this.BeforeQueryable<TDocument, TObjectId, TProjection, TUser>(sender, ref queryable, ref option);
-        //}
-
-
-        internal void BeforeDeleteInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref FilterDefinition<TDocument> filterDefinition, ref DeleteOptions deleteOptions)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-            ArgumentNullException.ThrowIfNull(sender);
-            OptionObject<TDocument, TProjection> option = deleteOptions;
-            this.BeforeDelete<TDocument, TObjectId, TProjection, TUser>(sender, ref filterDefinition, ref option);
-            deleteOptions = option;
-        }
-
-        //BulkWriteOptions
-        internal void BeforeBulkWriteInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref IEnumerable<WriteModel<TDocument>> writeModels, ref BulkWriteOptions bulkWriteOptions)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-            ArgumentNullException.ThrowIfNull(sender);
-            OptionObject<TDocument, TProjection> option = bulkWriteOptions;
-            this.BeforeBulkWrite<TDocument, TObjectId, TProjection, TUser>(sender, ref writeModels, ref option);
-            bulkWriteOptions = option;
-        }
-        //internal void BeforeBulkWriteInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref IEnumerable<WriteModel<TDocument>> writeModels, ref OptionObject<TDocument, TProjection> option)
-        //    where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-        //    where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        //{
-        //    ArgumentNullException.ThrowIfNull(sender);
-        //    this.BeforeBulkWrite<TDocument, TObjectId, TProjection, TUser>(sender, ref writeModels, ref option);
-        //}
-
-        internal void ResultInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref IEnumerable<TProjection> results)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-            ArgumentNullException.ThrowIfNull(sender);
-
-            this.Result<TDocument, TObjectId, TProjection, TUser>(sender, ref results);
-        }
-
-        internal void ResultInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref TProjection result)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-            ArgumentNullException.ThrowIfNull(sender);
-
-            this.Result<TDocument, TObjectId, TProjection, TUser>(sender, ref result);
-        }
-
-
-
-
-        protected virtual void BeforeInsert<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref TDocument original, ref OptionObject<TDocument, TProjection> option)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-        }
-
-        protected virtual void BeforeUpdate<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref FilterDefinition<TDocument> filterDefinition, ref UpdateDefinition<TDocument> updateDefinition, ref OptionObject<TDocument, TProjection> option)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-        }
-
-        protected virtual void BeforeReplace<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref TDocument original, ref FilterDefinition<TDocument> filterDefinition, ref OptionObject<TDocument, TProjection> option)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-        }
-
-        protected virtual void BeforeAggregate<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref BsonDocument[] bsonDocuments, ref OptionObject<TDocument, TProjection> option)
-                    where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-                    where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-        }
-
-        protected virtual void BeforeDelete<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref FilterDefinition<TDocument> filterDefinition, ref OptionObject<TDocument, TProjection> option)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-        }
-
-        protected virtual void BeforeFind<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref FilterDefinition<TDocument> filterDefinition, ref OptionObject<TDocument, TProjection> option)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-        }
-
-        protected virtual void BeforeQueryable<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref IQueryable<TDocument> queryable, ref OptionObject<TDocument, TProjection> option)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-        }
-
-        protected virtual void BeforeBulkWrite<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref IEnumerable<WriteModel<TDocument>> writeModels, ref OptionObject<TDocument, TProjection> option)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-        }
-
-
-        protected virtual void Result<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref IEnumerable<TProjection> items)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-        }
-
-        protected virtual void Result<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref TProjection item)
-            where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
-            where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
-        {
-        }
-        #endregion
-
-
-
+        #region GetDbSet
         /// <summary>
         /// Gets a DbSet instance for the specified document type and object ID type.
         /// </summary>
@@ -617,7 +386,7 @@ namespace UCode.Mongo
                     bool throwIndexExceptions = false)
                     where TDocument : IObjectBase, IObjectBaseTenant => new(this, collectionName, createCollectionOptionsAction, mongoCollectionSettingsAction, useTransaction ?? this.TransactionalContext, throwIndexExceptions);
 
-
+        #endregion 
 
 
 
@@ -770,7 +539,6 @@ namespace UCode.Mongo
                 if (disposing)
                 {
                     this.ContextSession?.Dispose();
-                    this.MongoClient?.Dispose();
                     // TODO: dispose managed state (managed objects) 
                 }
 
@@ -780,12 +548,6 @@ namespace UCode.Mongo
             }
         }
 
-        // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
-        // ~ContextBase()
-        // {
-        //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        //     Dispose(disposing: false);
-        // }
 
         /// <summary>
         /// Finalizer for the ContextBase class. 
@@ -808,7 +570,7 @@ namespace UCode.Mongo
         ~ContextBase()
         {
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: false);
+            this.Dispose(disposing: false);
         }
 
         /// <summary>
@@ -829,6 +591,11 @@ namespace UCode.Mongo
         /// <returns>A MongoClient instance that represents the connection to the MongoDB database.</returns>
         public MongoClient GetMongoClient() => this.MongoClient;
 
+        /// <summary>
+        /// Implicitly converts a <see cref="ContextBase"/> instance to a <see cref="MongoClient"/>.
+        /// </summary>
+        /// <param name="context">The <see cref="ContextBase"/> instance to convert.</param>
+        /// <returns>A <see cref="MongoClient"/> instance associated with the provided <paramref name="context"/>.</returns>
         public static implicit operator MongoClient(ContextBase context) => context.MongoClient;
 
     }

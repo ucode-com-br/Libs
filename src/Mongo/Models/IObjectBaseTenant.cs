@@ -2,33 +2,49 @@ using System;
 using System.Text.Json.Serialization;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
-using UCode.Mongo.Serializers;
 
 namespace UCode.Mongo.Models
 {
     /// <summary>
-    /// 
+    /// Represents a base interface for tenant objects, providing a contract for 
+    /// tenant-specific functionality in the application.
     /// </summary>
     public interface IObjectBaseTenant
     {
+        /// <summary>
+        /// Represents a reference identifier for an entity. 
+        /// This property is decorated with attributes for JSON and BSON 
+        /// serialization, indicating how it should be serialized to 
+        /// different formats.
+        /// </summary>
+        /// <value>
+        /// A <see cref="Guid"/> that uniquely identifies the reference.
+        /// </value>
+        /// <remarks>
+        /// The property is serialized as a string in BSON and JSON formats.
+        /// </remarks>
         [JsonPropertyName("ref")]
         [BsonElement("ref")]
-        //[BsonSerializer(typeof(GuidAsStringSerializer))]
-        //[BsonGuidRepresentation(GuidRepresentation.Standard)]
         [BsonRepresentation(BsonType.String)]
         Guid Ref
         {
             get; set;
         }
 
+        /// <summary>
+        /// Represents the tenant identifier for a specific entity or record.
+        /// This property is decorated with attributes for serialization 
+        /// and mapping to both JSON and BSON formats.
+        /// </summary>
+        /// <value>
+        /// A <see cref="Guid"/> that uniquely identifies the tenant.
+        /// </value>
         [JsonPropertyName("tenant")]
         [BsonElement("tenant")]
-        //[BsonSerializer(typeof(GuidAsStringSerializer))]
-        //[BsonGuidRepresentation(GuidRepresentation.Standard)]
         [BsonRepresentation(BsonType.String)]
-        Guid Tenant
-        {
-            get; set;
+        Guid Tenant 
+        { 
+            get; set; 
         }
 
     }

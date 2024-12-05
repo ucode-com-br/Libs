@@ -4,6 +4,13 @@ using MongoDB.Bson.Serialization.Attributes;
 namespace UCode.Mongo
 {
 
+    /// <summary>
+    /// Represents a sealed record for an aggregate of faces of a specific type.
+    /// This class encapsulates data associated with a collection of face-related elements,
+    /// ensuring immutability and providing a clear data structure for use in the system.
+    /// </summary>
+    /// <typeparam name="T">The type of elements contained within the aggregate, 
+    /// which must conform to specific constraints required for face-related data.</typeparam>
     internal sealed record FacedAggregate<T>
     {
         /// <summary>
