@@ -1,9 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UCode.Extensions;
 
 namespace UCode.Mongo
 {
@@ -97,7 +92,7 @@ namespace UCode.Mongo
         /// <returns>
         /// true if the specified object is equal to the current object; otherwise, false.
         /// </returns>
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (obj is MongoContextImplementation other)
             {

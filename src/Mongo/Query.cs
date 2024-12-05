@@ -1,12 +1,19 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
+using System.Text.Json.Nodes;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace UCode.Mongo
 {
+    /// <summary>
+    /// Represents a query for a specific document type in a generic manner.
+    /// This is a record type that inherits from QueryBase, allowing for 
+    /// immutable instances that provide equality and value-based behavior.
+    /// </summary>
+    /// <typeparam name="TDocument">The type of document that this query is targeting.</typeparam>
     public record Query<TDocument> : QueryBase<TDocument>
     {
         #region Constructors
@@ -76,6 +83,46 @@ namespace UCode.Mongo
         #region Static Methods
 
         /// <summary>
+        /// Creates a new <see cref="Query{TDocument}"/> object from the specified BSON query and update document.
+        /// </summary>
+        /// <param name="query">The BSON document representing the query filters.</param>
+        /// <param name="update">The BSON document representing the update operations to apply.</param>
+        /// <returns>A <see cref="Query{TDocument}"/> object containing the specified query and update information.</returns>
+        public static Query<TDocument> FromQuery([NotNull] BsonDocument query, BsonDocument update) => new(query)
+        {
+            Update = new Update<TDocument>(update)
+        };
+
+        /// <summary>
+        /// Creates a new instance of <see cref="Query{TDocument}"/> using the specified BsonDocument query and update.
+        /// </summary>
+        /// <param name="query">The BsonDocument that represents the query to be executed.</param>
+        /// <param name="update">An <see cref="Update{TDocument}"/> instance that contains the update operations to be applied.</param>
+        /// <returns>
+        /// A <see cref="Query{TDocument}"/> object that encapsulates the specified query and update.
+        /// </returns>
+        public static Query<TDocument> FromQuery([NotNull] BsonDocument query, Update<TDocument> update) => new(query)
+        {
+            Update = update
+        };
+
+        /// <summary>
+        /// Creates a <see cref="Query{TDocument}"/> instance from a specified BSON document query.
+        /// </summary>
+        /// <param name="query">
+        /// A <see cref="BsonDocument"/> that represents the query. 
+        /// This parameter must not be null.
+        /// </param>
+        /// <returns>
+        /// A <see cref="Query{TDocument}"/> that corresponds to the provided BSON document query.
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown if <paramref name="query"/> is null.
+        /// </exception>
+        public static Query<TDocument> FromQuery([NotNull] BsonDocument query) => new(query);
+
+
+        /// <summary>
         /// Creates a new instance of the <see cref="Query{TDocument}"/> class from a specified query string and an optional update.
         /// </summary>
         /// <param name="query">A string representing the query to be executed.</param>
@@ -83,7 +130,6 @@ namespace UCode.Mongo
         /// <returns>A new <see cref="Query{TDocument}"/> instance configured with the specified query and optional update.</returns>
         public static Query<TDocument> FromQuery([NotNull] string query, Update<TDocument> update = default) => new(query)
         {
-            // Initialize the Update property with the provided update
             Update = update
         };
 
@@ -167,14 +213,66 @@ namespace UCode.Mongo
             //return new Query<TDocument>(base.IncompletedExpressionQuery.ReplaceToConstant<Func<TDocument, TDocument, bool>, TDocument, Func<TDocument, bool>>(col => col.Where(p => { if (p.Index == 1) { p.Constant(constrainValue); return true; } return false; })));
         }
 
-        #region Operator & | !
 
+        #region Operator & | ! +
+
+        /// <summary>
+        /// Defines the addition operator for combining two <see cref="Query{TDocument}"/> instances.
+        /// </summary>
+        /// <param name="lhs">The left-hand side <see cref="Query{TDocument}"/> operand.</param>
+        /// <param name="rhs">The right-hand side <see cref="Query{TDocument}"/> operand.</param>
+        /// <returns>
+        /// A new <see cref="Query{TDocument}"/> instance that represents the combined filter 
+        /// of the given left-hand side and right-hand side queries.
+        /// </returns>
+        public static Query<TDocument> operator +(Query<TDocument> lhs, Query<TDocument> rhs) => (FilterDefinition<TDocument>)lhs & (FilterDefinition<TDocument>)lhs;
+
+        /// <summary>
+        /// Defines the bitwise AND operator for combining two queries.
+        /// </summary>
+        /// <typeparam name="TDocument">The type of the documents in the query.</typeparam>
+        /// <param name="lhs">The left-hand side query to combine.</param>
+        /// <param name="rhs">The right-hand side query to combine.</param>
+        /// <returns>A new <see cref="Query{TDocument}"/> that combines the two specified queries using a bitwise AND operation.</returns>
+        /// <remarks>
+        /// This operator allows for combining two queries so that the results match both conditions specified in the left and right queries.
+        /// </remarks>
         public static Query<TDocument> operator &(Query<TDocument> lhs, Query<TDocument> rhs) => (FilterDefinition<TDocument>)lhs & (FilterDefinition<TDocument>)lhs;
 
+        /// <summary>
+        /// Defines the bitwise OR operator for two <see cref="Query{TDocument}"/> instances.
+        /// This operator combines the filter definitions of both queries.
+        /// </summary>
+        /// <param name="lhs">The left-hand side <see cref="Query{TDocument}"/>.</param>
+        /// <param name="rhs">The right-hand side <see cref="Query{TDocument}"/>.</param>
+        /// <returns>
+        /// A new <see cref="Query{TDocument}"/> that represents the combined filter 
+        /// of the two given queries. The operator applies the bitwise OR operation to their 
+        /// corresponding <see cref="FilterDefinition{TDocument}"/> instances.
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when either <paramref name="lhs"/> or <paramref name="rhs"/> is <c>null</c>.
+        /// </exception>
         public static Query<TDocument> operator |(Query<TDocument> lhs, Query<TDocument> rhs) => (FilterDefinition<TDocument>)lhs | (FilterDefinition<TDocument>)lhs;
 
+        /// <summary>
+        /// Defines a logical negation operator for the <see cref="Query{TDocument}"/> class.
+        /// This operator allows for the inversion of a query by applying the logical NOT operation.
+        /// </summary>
+        /// <param name="op">The <see cref="Query{TDocument}"/> instance to negate.</param>
+        /// <returns>
+        /// Returns a new <see cref="Query{TDocument}"/> instance that represents the negation
+        /// of the specified query.
+        /// </returns>
+        /// <remarks>
+        /// This operator is particularly useful when constructing complex queries where negation 
+        /// is needed to filter out documents matching certain criteria.
+        /// </remarks>
         public static Query<TDocument> operator !(Query<TDocument> op) => !(FilterDefinition<TDocument>)op;
-        #endregion Operator & | !
+        #endregion Operator & | ! +
+
+
+
 
         /// <summary>
         /// Returns a string that represents the current object.
@@ -186,9 +284,28 @@ namespace UCode.Mongo
         /// </returns>
         public override string ToString() => base.ToString();
 
+        /// <summary>
+        /// Implicitly converts a function that takes a <typeparamref name="TDocument"/> 
+        /// and returns a boolean into a <see cref="Query{TDocument}"/>.
+        /// </summary>
+        /// <param name="expression">A function that evaluates a <typeparamref name="TDocument"/>.</param>
+        /// <returns>A <see cref="Query{TDocument}"/> that represents the provided function.</returns>
+        /// <typeparam name="TDocument">The type of document used in the query.</typeparam>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="expression"/> is null.</exception>
+        /// <remarks>
+        /// This operator allows a simple syntax for creating a Query from a predicate that 
+        /// can be used for filtering <typeparamref name="TDocument"/> items.
+        /// </remarks>
         [return: NotNull]
         public static implicit operator Query<TDocument>([NotNull] Func<TDocument, bool> expression) => new(expression);
 
+        /// <summary>
+        /// Converts a <see cref="Query{TDocument}"/> to a <see cref="FilterDefinition{TDocument}"/>.
+        /// This implicit operator allows for seamless conversion between query types to a MongoDB filter definition.
+        /// </summary>
+        /// <param name="query">The query to convert. It should be a valid instance of <see cref="Query{TDocument}"/>.</param>
+        /// <returns>A <see cref="FilterDefinition{TDocument}"/> that corresponds to the provided query.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when the expression query is incomplete and requires a constant.</exception>
         [return: NotNull]
         public static implicit operator FilterDefinition<TDocument>([NotNull] Query<TDocument> query)
         {
@@ -228,6 +345,15 @@ namespace UCode.Mongo
             }
         }
 
+        /// <summary>
+        /// Implicitly converts a <see cref="Query{TDocument}"/> to an <see cref="UpdateDefinition{TDocument}"/>.
+        /// </summary>
+        /// <param name="query">The query to be converted. Must not be null.</param>
+        /// <returns>
+        /// An <see cref="UpdateDefinition{TDocument}"/> representing the update information 
+        /// from the given <see cref="Query{TDocument}"/>, or the default value if 
+        /// the query is null or has no update property.
+        /// </returns>
         [return: NotNull]
         public static implicit operator UpdateDefinition<TDocument>([NotNull] Query<TDocument> query)
         {
@@ -249,6 +375,15 @@ namespace UCode.Mongo
             }
         }
 
+        /// <summary>
+        /// Converts a <see cref="Query{TDocument}"/> to a <see cref="ProjectionDefinition{TDocument}"/> 
+        /// for use in MongoDB queries.
+        /// </summary>
+        /// <param name="query">The query object to be converted.</param>
+        /// <returns>
+        /// A <see cref="ProjectionDefinition{TDocument}"/> that represents the converted query.
+        /// Returns the default value if the input query is null or uninitialized.
+        /// </returns>
         [return: NotNull]
         public static implicit operator MongoDB.Driver.ProjectionDefinition<TDocument>([NotNull] Query<TDocument> query)
         {
@@ -268,6 +403,14 @@ namespace UCode.Mongo
             //return query.ExpressionQuery.ToBsonDocument();
         }
 
+        /// <summary>
+        /// Implicitly converts a <see cref="Query{TDocument}"/> instance to a <see cref="SortDefinition{TDocument}"/>.
+        /// </summary>
+        /// <param name="query">The <see cref="Query{TDocument}"/> instance to convert.</param>
+        /// <returns>
+        /// A <see cref="SortDefinition{TDocument}"/> that represents the converted <paramref name="query"/>.
+        /// If the <paramref name="query"/> is null or has a default value, it returns the default <see cref="SortDefinition{TDocument}"/>.
+        /// </returns>
         [return: NotNull]
         public static implicit operator SortDefinition<TDocument>([NotNull] Query<TDocument> query)
         {
@@ -286,6 +429,15 @@ namespace UCode.Mongo
             //return query.ExpressionQuery.ToBsonDocument();
         }
 
+        /// <summary>
+        /// Implicitly converts a <see cref="Query{TDocument}"/> to a <see cref="BsonDocument"/>.
+        /// </summary>
+        /// <param name="query">The query to be converted to a BsonDocument. This parameter is not null.</param>
+        /// <returns>
+        /// A <see cref="BsonDocument"/> representation of the query. 
+        /// Returns the default value if the query is null or default.
+        /// </returns>
+        /// <exception cref="ArgumentNullException">Thrown when the <paramref name="query"/> is null.</exception>
         [return: NotNull]
         public static implicit operator BsonDocument([NotNull] Query<TDocument> query)
         {
@@ -310,10 +462,37 @@ namespace UCode.Mongo
 
         #region implicity to constructors
 
+        /// <summary>
+        /// Implicitly converts a <see cref="FilterDefinition{TDocument}"/> to a <see cref="Query{TDocument}"/>.
+        /// </summary>
+        /// <param name="source">
+        /// The <see cref="FilterDefinition{TDocument}"/> instance to be converted.
+        /// </param>
+        /// <returns>
+        /// An instance of <see cref="Query{TDocument}"/> that represents the given <see cref="FilterDefinition{TDocument}"/>.
+        /// </returns>
         public static implicit operator Query<TDocument>([NotNull] FilterDefinition<TDocument> source) => new(source);
 
+
+        /// <summary>
+        /// Defines an implicit conversion from a string to a <see cref="Query{TDocument}"/>.
+        /// </summary>
+        /// <param name="query">
+        /// A string representing the query that will be converted into a <see cref="Query{TDocument}"/> instance.
+        /// </param>
+        /// <returns>
+        /// A new instance of <see cref="Query{TDocument}"/> initialized with the provided query string.
+        /// </returns>
         public static implicit operator Query<TDocument>(string query) => new(query);
 
+
+        /// <summary>
+        /// Implicitly converts an expression of type <see cref="Expression{Func{TDocument, bool}}"/> 
+        /// to a <see cref="Query{TDocument}"/>.
+        /// </summary>
+        /// <param name="expression">The expression to convert, representing a predicate 
+        /// for filtering documents of type <typeparamref name="TDocument"/>.</param>
+        /// <returns>A new instance of <see cref="Query{TDocument}"/> initialized with the given expression.</returns>
         public static implicit operator Query<TDocument>(Expression<Func<TDocument, bool>> expression)
         {
             // Create a new instance of Query<TDocument> with the provided expression
@@ -323,6 +502,14 @@ namespace UCode.Mongo
             return query;
         }
 
+
+        /// <summary>
+        /// Implicitly converts a lambda expression that represents a predicate for filtering the documents 
+        /// into a <see cref="Query{TDocument}"/> instance.
+        /// </summary>
+        /// <param name="expression">A lambda expression of type <see cref="Expression{Func{TDocument, TDocument, bool}}"/> 
+        /// that defines the filtering criteria for the documents.</param>
+        /// <returns>A new instance of <see cref="Query{TDocument}"/> initialized with the specified expression.</returns>
         public static implicit operator Query<TDocument>(Expression<Func<TDocument, TDocument, bool>> expression)
         {
             // Create a new instance of Query<TDocument> with the provided expression
@@ -334,6 +521,12 @@ namespace UCode.Mongo
         #endregion implicity to constructors
     }
 
+    /// <summary>
+    /// Represents a query that encapsulates both the document type and the projection type.
+    /// This record inherits from <see cref="QueryBase{TDocument}"/>.
+    /// </summary>
+    /// <typeparam name="TDocument">The type of the document being queried.</typeparam>
+    /// <typeparam name="TProjection">The type of the projection that will be returned from the query.</typeparam>
     public record Query<TDocument, TProjection> : QueryBase<TDocument>
     {
         #region Constructors
@@ -392,18 +585,67 @@ namespace UCode.Mongo
         }
         #endregion Constructors
 
+
         /// <summary>
-        /// Completes the expression for the specified document, allowing for additional constraints
-        /// to be applied. This method overrides the base class method to provide custom behavior.
+        /// Completes the expression for a query with a specified constraint value.
         /// </summary>
-        /// <param name="constrainValue">The document constraint value to complete the expression with.</param>
-        /// <returns>A new instance of <see cref="Query{TDocument, TProjection}"/> that contains the completed expression.</returns>
-        public new Query<TDocument, TProjection> CompleteExpression(TDocument constrainValue) =>
-            // Call the base class method to complete the expression
-            new Query<TDocument, TProjection>(base.CompleteExpression(constrainValue));
+        /// <param name="constrainValue">The document that serves as a constraint for the query expression.</param>
+        /// <returns>A new instance of <see cref="Query{TDocument, TProjection}"/> that is completed based on the provided constraint.</returns>
+        /// <remarks>
+        /// This method overrides the base class’s implementation and initializes
+        /// the new Query instance using the result from the base’s CompleteExpression method.
+        /// </remarks>
+        public new Query<TDocument, TProjection> CompleteExpression(TDocument constrainValue) => new Query<TDocument, TProjection>(base.CompleteExpression(constrainValue));
 
 
         #region Static Methods
+
+        /// <summary>
+        /// Creates a new instance of the <see cref="Query{TDocument, TProjection}"/> class 
+        /// from the specified BsonDocument query and update documents.
+        /// </summary>
+        /// <param name="query">The BsonDocument representing the query parameters.</param>
+        /// <param name="update">The BsonDocument representing the update operations to be applied.</param>
+        /// <returns>
+        /// Returns a new instance of the <see cref="Query{TDocument, TProjection}"/> 
+        /// containing the specified query and update.
+        /// </returns>
+        public static Query<TDocument, TProjection> FromQuery([NotNull] BsonDocument query, [NotNull] BsonDocument update) => new(query)
+        {
+            Update = new Update<TDocument>(update)
+        };
+
+        /// <summary>
+        /// Creates a new instance of the <see cref="Query{TDocument, TProjection}"/> class 
+        /// from a specified BsonDocument query and an update.
+        /// </summary>
+        /// <param name="query">
+        /// The BsonDocument representing the query to be used for the new Query instance.
+        /// This document should be constructed according to the MongoDB query format.
+        /// </param>
+        /// <param name="update">
+        /// An instance of <see cref="Update{TDocument}"/> which defines the updates 
+        /// to be applied to the documents that match the query.
+        /// </param>
+        /// <returns>
+        /// A new <see cref="Query{TDocument, TProjection}"/> instance that uses the specified 
+        /// query and update parameters.
+        /// </returns>
+        public static Query<TDocument, TProjection> FromQuery([NotNull] BsonDocument query, [NotNull] Update<TDocument> update) => new(query)
+        {
+            Update = update
+        };
+
+        /// <summary>
+        /// Creates a new instance of the <see cref="Query{TDocument, TProjection}"/> class from the specified BSON document.
+        /// </summary>
+        /// <typeparam name="TDocument">The type of the document to be queried.</typeparam>
+        /// <typeparam name="TProjection">The type of the projected result.</typeparam>
+        /// <param name="query">A <see cref="BsonDocument"/> representing the query to be executed.</param>
+        /// <returns>A <see cref="Query{TDocument, TProjection}"/> instance initialized with the specified query.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when the <paramref name="query"/> parameter is null.</exception>
+        public static Query<TDocument, TProjection> FromQuery([NotNull] BsonDocument query) => new(query);
+
         /// <summary>
         /// Creates a new instance of the <see cref="Query{TDocument, TProjection}"/> class
         /// initialized with the specified query string and optional update operation.
@@ -481,8 +723,7 @@ namespace UCode.Mongo
         #endregion Static Methods
 
 
-
-        #region Operator & | !
+        #region Operator & | ! +
 
         /// <summary>
         /// Defines the addition operator for combining two <see cref="Query{TDocument, TProjection}"/> instances.
@@ -538,60 +779,9 @@ namespace UCode.Mongo
         /// is needed to filter out documents matching certain criteria.
         /// </remarks>
         public static Query<TDocument, TProjection> operator !(Query<TDocument, TProjection> op) => !(FilterDefinition<TDocument>)op;
-        #endregion Operator & | !
+        #endregion Operator & | ! +
 
 
-        #region Operator & | !
-
-        /// <summary>
-        /// Defines a binary operator for combining two <see cref="Query{TDocument, TProjection}"/> instances 
-        /// using a logical AND operation.
-        /// </summary>
-        /// <param name="lhs">The left-hand side <see cref="Query{TDocument, TProjection}"/> to combine.</param>
-        /// <param name="rhs">The right-hand side <see cref="Query{TDocument}"/> to combine.</param>
-        /// <returns>A <see cref="Query{TDocument, TProjection}"/> that represents the combined criteria.</returns>
-        /// <exception cref="InvalidOperationException">
-        /// Thrown when the filters cannot be combined.
-        /// </exception>
-        public static Query<TDocument, TProjection> operator &(Query<TDocument, TProjection> lhs, Query<TDocument> rhs) => (FilterDefinition<TDocument>)lhs & (FilterDefinition<TDocument>)lhs;
-
-        /// <summary>
-        /// Defines the bitwise AND operator for combining two <see cref="Query{TDocument}"/> objects.
-        /// </summary>
-        /// <param name="lhs">The left-hand side <see cref="Query{TDocument}"/> instance to combine.</param>
-        /// <param name="rhs">The right-hand side <see cref="Query{TDocument, TProjection}"/> instance to combine.</param>
-        /// <returns>
-        /// A combined <see cref="Query{TDocument, TProjection}"/> resulting from the bitwise AND operation on the two queries.
-        /// </returns>
-        /// <remarks>
-        /// This operator casts both queries to <see cref="FilterDefinition{TDocument}"/> 
-        /// before performing the bitwise AND operation. 
-        /// It is assumed that both queries are compatible for combining.
-        /// </remarks>
-        public static Query<TDocument, TProjection> operator &(Query<TDocument> lhs, Query<TDocument, TProjection> rhs) => (FilterDefinition<TDocument>)lhs & (FilterDefinition<TDocument>)lhs;
-
-        /// <summary>
-        /// Defines the bitwise OR operator for combining two <see cref="Query{TDocument, TProjection}"/> instances.
-        /// </summary>
-        /// <param name="lhs">The left-hand side <see cref="Query{TDocument, TProjection}"/> instance.</param>
-        /// <param name="rhs">The right-hand side <see cref="Query{TDocument}"/> instance.</param>
-        /// <returns>A <see cref="Query{TDocument, TProjection}"/> that represents the result of the bitwise OR operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when either <paramref name="lhs"/> or <paramref name="rhs"/> is null.</exception>
-        public static Query<TDocument, TProjection> operator |(Query<TDocument, TProjection> lhs, Query<TDocument> rhs) => (FilterDefinition<TDocument>)lhs | (FilterDefinition<TDocument>)lhs;
-
-        /// <summary>
-        /// Defines a bitwise OR operator for combining two queries.
-        /// </summary>
-        /// <param name="lhs">The left-hand side query of type <see cref="Query{TDocument}"/>.</param>
-        /// <param name="rhs">The right-hand side query of type <see cref="Query{TDocument, TProjection}"/>.</param>
-        /// <returns>A new <see cref="Query{TDocument, TProjection}"/> resulting from the bitwise OR operation of the two queries.</returns>
-        /// <remarks>
-        /// The implementation casts both query operands to <see cref="FilterDefinition{TDocument}"/> 
-        /// before performing the bitwise OR operation.
-        /// </remarks>
-        public static Query<TDocument, TProjection> operator |(Query<TDocument> lhs, Query<TDocument, TProjection> rhs) => (FilterDefinition<TDocument>)lhs | (FilterDefinition<TDocument>)lhs;
-
-        #endregion Operator & | !
 
 
         /// <inheritdoc/>
@@ -741,8 +931,6 @@ namespace UCode.Mongo
             // Throw an exception if the query cannot be converted
             throw new InvalidOperationException("Fail to convert object.");
         }
-
-
 
         /// <summary>
         /// Defines an implicit conversion operator from a function that takes a 
@@ -966,7 +1154,8 @@ namespace UCode.Mongo
 
 
 
-        #region implicity to constructors
+        #region Implicity to constructors
+
         /// <summary>
         /// Implicitly converts a string representation of a query into a 
         /// <see cref="Query{TDocument, TProjection}"/> object.
@@ -1050,7 +1239,6 @@ namespace UCode.Mongo
         /// created from the provided <paramref name="source"/> filter definition.
         /// </returns>
         public static implicit operator Query<TDocument, TProjection>([NotNull] FilterDefinition<TDocument> source) => new(source);
-
 
         #endregion implicity to constructors
 

@@ -24,6 +24,8 @@ namespace UCode.Mongo
         /// The expression may be null, indicating that no query is provided.
         /// </remarks>
         internal Expression<Func<TDocument, TDocument, bool>>? IncompletedExpressionQuery;
+
+
         /// <summary>
         /// Represents an expression query that can be used to filter documents of type <typeparamref name="TDocument"/>.
         /// This query is defined as a lambda expression that takes a <typeparamref name="TDocument"/> object 
@@ -36,6 +38,8 @@ namespace UCode.Mongo
         /// where queries are conditionally applied based on specific runtime criteria. 
         /// </remarks>
         internal Expression<Func<TDocument, bool>>? ExpressionQuery;
+
+
         /// <summary>
         /// Represents a query in JSON format that may be null.
         /// </summary>
@@ -43,6 +47,8 @@ namespace UCode.Mongo
         /// This field can be used to store a JSON query string that is optional and can be absent (null).
         /// </remarks>
         internal string? jsonQuery;
+
+
         /// <summary>
         /// Represents an optional full-text search configuration.
         /// </summary>
@@ -57,6 +63,8 @@ namespace UCode.Mongo
         /// the <c>TextSearchOptions</c>. If not set, it will be null.
         /// </value>
         internal (string, TextSearchOptions)? FullTextSearchOptions;
+
+
         /// <summary>
         /// Represents a filter definition to be applied on documents of type <typeparamref name="TDocument"/>.
         /// This field may hold a filter definition or be null if no filter has been specified.
@@ -66,6 +74,8 @@ namespace UCode.Mongo
         /// A <see cref="FilterDefinition{T}"/> object which defines the filter criteria, or null if no filter is defined.
         /// </value>
         internal FilterDefinition<TDocument>? FilterDefinition;
+
+
         /// <summary>
         /// Holds an optional Update object for the specified document type.
         /// </summary>
@@ -148,7 +158,7 @@ namespace UCode.Mongo
             }
 
             // Replace the incomplete expression with the constant value
-            return this.IncompletedExpressionQuery.ReplaceToConstant<Func<TDocument, TDocument, bool>, TDocument, Func<TDocument, bool>>(col => col.Where((ref ParameterExpressionItem x) => this.ReplaceParam(ref x, constrainValue)));
+            return this.IncompletedExpressionQuery.ReplaceToConstant<Func<TDocument, TDocument, bool>, TDocument, Func<TDocument, bool>>(col => col.Where((ref ParameterExpressionItem x) => QueryBase<TDocument>.ReplaceParam(ref x, constrainValue)));
         }
 
         /// <summary>
@@ -160,7 +170,7 @@ namespace UCode.Mongo
         /// <returns>
         /// Returns true if the parameter was successfully replaced; otherwise, false.
         /// </returns>
-        private bool ReplaceParam(ref ParameterExpressionItem arg, TDocument defaultValue)
+        private static bool ReplaceParam(ref ParameterExpressionItem arg, TDocument defaultValue)
         {
             // Check if the parameter has an index of 1
             if (arg.Index == 1)

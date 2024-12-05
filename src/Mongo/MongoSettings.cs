@@ -74,6 +74,17 @@ namespace UCode.Mongo
         /// </remarks>
         public MongoClientSettings CreateClientSettings() => MongoClientSettings.FromConnectionString(this.ConnectionString);
 
+
+        /// <summary>
+        /// Performs an explicit conversion from <see cref="MongoSettings"/> to <see cref="MongoClientSettings"/>.
+        /// </summary>
+        /// <param name="mongoSettings">The <see cref="MongoSettings"/> instance to convert.</param>
+        /// <returns>
+        /// A <see cref="MongoClientSettings"/> that corresponds to the provided <see cref="MongoSettings"/>.
+        /// </returns>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown when <paramref name="mongoSettings"/> is null or invalid for conversion.
+        /// </exception>
         public static explicit operator MongoClientSettings(MongoSettings mongoSettings) => mongoSettings.CreateClientSettings();
     }
 
