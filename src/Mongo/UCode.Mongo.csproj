@@ -8,7 +8,7 @@
     <Copyright>UCode (c) Desenvolvimento de Software 2024</Copyright>
     <IncludeSymbols>True</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <Version>3.10.34</Version>
+    <Version>3.10.35</Version>
     <Title>UCode Mongo</Title>
     <RepositoryType>git</RepositoryType>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
@@ -41,6 +41,9 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+
+    <!--<PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.2.5" />-->
     <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
     <PackageReference Include="MongoDB.Bson" Version="3.0.0" />
     <PackageReference Include="MongoDB.Driver" Version="3.0.0" />
@@ -51,5 +54,9 @@
 
     <ProjectReference Include="..\Extensions\UCode.Extensions.csproj" />
     <ProjectReference Include="..\Repositories\UCode.Repositories.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    
   </ItemGroup>
 </Project>
