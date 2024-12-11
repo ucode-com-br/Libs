@@ -57,6 +57,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    
+    <Folder Include="OpenTelemetry\" />
   </ItemGroup>
 </Project>
