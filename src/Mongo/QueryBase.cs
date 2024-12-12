@@ -15,6 +15,20 @@ namespace UCode.Mongo
     public abstract record QueryBase<TDocument>
     {
         /// <summary>
+        /// Represents a pipeline of BsonDocuments used for constructing a query.
+        /// </summary>
+        /// <remarks>
+        /// This field holds an array of BsonDocument objects that can be used
+        /// in various operations, such as aggregation, to define the stages 
+        /// of processing the data.
+        /// </remarks>
+        /// <value>
+        /// An array of <see cref="BsonDocument"/> objects, or null if there are no documents in the pipeline.
+        /// </value>
+        internal BsonDocument[]? Pipeline;
+
+
+        /// <summary>
         /// Represents an optional expression that can be used to query documents.
         /// This expression takes two documents of type TDocument and returns a boolean value.
         /// It is defined using the Expression<Func<TDocument, TDocument, bool>> delegate,
@@ -46,7 +60,7 @@ namespace UCode.Mongo
         /// <remarks>
         /// This field can be used to store a JSON query string that is optional and can be absent (null).
         /// </remarks>
-        internal string? jsonQuery;
+        internal string? JsonQuery;
 
 
         /// <summary>
@@ -103,7 +117,7 @@ namespace UCode.Mongo
         /// </summary>
         /// <param name="str">A string containing the JSON query. This parameter cannot be null.</param>
         /// <exception cref="ArgumentNullException">Thrown when the <paramref name="str"/> parameter is null.</exception>
-        internal QueryBase([NotNull] string str) => this.jsonQuery = str;
+        internal QueryBase([NotNull] string str) => this.JsonQuery = str;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="QueryBase"/> class.
@@ -136,6 +150,14 @@ namespace UCode.Mongo
         /// the query can be constructed without encountering null reference issues.
         /// </remarks>
         internal QueryBase([NotNull] Expression<Func<TDocument, TDocument, bool>> expressionQuery) => this.IncompletedExpressionQuery = expressionQuery;
+
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="QueryBase"/> class with the specified BSON documents.
+        /// </summary>
+        /// <param name="bsonDocuments">An array of <see cref="BsonDocument"/> objects that represent the BSON documents to be used in the query pipeline.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="bsonDocuments"/> is null.</exception>
+        internal QueryBase([NotNull] BsonDocument[] bsonDocuments) => this.Pipeline = bsonDocuments;
         #endregion Constructors
 
 
@@ -194,7 +216,7 @@ namespace UCode.Mongo
         /// <returns>
         /// A BsonDocument that represents the rendered filter.
         /// </returns>
-        public BsonDocument RenderToBsonDocument<T>(FilterDefinition<T> filter)
+        public static BsonDocument RenderToBsonDocument<T>(FilterDefinition<T> filter)
         {
             // Get the serializer registry from BsonSerializer
             var serializerRegistry = BsonSerializer.SerializerRegistry;
@@ -394,12 +416,12 @@ namespace UCode.Mongo
         /// An array of <see cref="BsonDocument"/> resulting from deserialization of the query object.
         /// If the query is null or none of the properties contain valid data, an empty array is returned.
         /// </returns>
-        public static implicit operator BsonDocument[]([MaybeNull] QueryBase<TDocument>? query)
+        public static implicit operator BsonDocument[]?([MaybeNull] QueryBase<TDocument>? query)
         {
             // If the query is null, return null
             if (query == default)
             {
-                return Array.Empty<BsonDocument>();
+                return default;
             }
 
             //if (!string.IsNullOrWhiteSpace(query.JsonQuery))
@@ -408,9 +430,9 @@ namespace UCode.Mongo
             //return BsonSerializer.Deserialize<BsonDocument[]>(query.ExpressionQuery.ToBson());
 
             // If the JsonQuery property is not null or whitespace, deserialize it into a BsonDocument array and return it
-            if (!string.IsNullOrWhiteSpace(query.jsonQuery))
+            if (!string.IsNullOrWhiteSpace(query.JsonQuery))
             {
-                return BsonSerializer.Deserialize<BsonDocument[]>(query.jsonQuery);
+                return BsonSerializer.Deserialize<BsonDocument[]>(query.JsonQuery);
             }
 
             // If the ExpressionQuery property is not null, deserialize it into a BsonDocument array and return it
@@ -430,11 +452,10 @@ namespace UCode.Mongo
             {
                 throw new InvalidOperationException("Fail to convert an expression that requires an constant.");
             }
-
             // If none of the above conditions are met, return an empty BsonDocument array
             else
             {
-                return Array.Empty<BsonDocument>();
+                return default;
             }
         }
 
@@ -456,9 +477,9 @@ namespace UCode.Mongo
             }
 
             // If the JsonQuery property is not null or whitespace, create a new JsonFilterDefinition object and return it
-            if (!string.IsNullOrWhiteSpace(query.jsonQuery))
+            if (!string.IsNullOrWhiteSpace(query.JsonQuery))
             {
-                return new JsonFilterDefinition<TDocument>(query.jsonQuery);
+                return new JsonFilterDefinition<TDocument>(query.JsonQuery);
             }
             // If the ExpressionQuery property is not null, create a new ExpressionFilterDefinition object and return it
             else if (query.ExpressionQuery != null)

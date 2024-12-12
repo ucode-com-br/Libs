@@ -379,23 +379,21 @@ namespace UCode.Mongo
                 indexKeys.Ascending(x => x.Ref).Ascending(x => x.Disabled, (option) =>
                 {
                     option.Background = true;
-                    option.Unique = true;
+                    option.Unique = false;
                     option.Name = "IDX_REF_DISABLED";
                 });
 
                 indexKeys.Ascending(x => x.Tenant, (option) =>
                 {
-                    // Create the index in the background to avoid blocking other operations
                     option.Background = true;
                     option.Unique = false;
-                    // Name the index for easy reference
                     option.Name = "IDX_TENANT";
                 });
 
                 indexKeys.Ascending(x => x.Tenant).Ascending(x => x.Ref).Ascending(x => x.Disabled, (option) =>
                 {
                     option.Background = true;
-                    option.Unique = true;
+                    option.Unique = false;
                     option.Name = "IDX_TENANT_REF_DISABLED";
                 });
 
@@ -2618,10 +2616,11 @@ namespace UCode.Mongo
         /// for debugging purposes.
         /// </remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async IAsyncEnumerable<TProjection?> AggregateEnumerableAsync<TProjection>([NotNull] Query<TDocument, TProjection> query,
-                    [MaybeNull] AggregateOptions? aggregateOptions = default,
-                    [MaybeNull] bool? forceTransaction = default,
-                    [MaybeNull][EnumeratorCancellation] CancellationToken cancellationToken = default)
+        public async IAsyncEnumerable<TProjection?> AggregateEnumerableAsync<TProjection>(
+            [NotNull] Query<TDocument, TProjection> query,
+            [MaybeNull] AggregateOptions? aggregateOptions = default,
+            [MaybeNull] bool? forceTransaction = default,
+            [MaybeNull] [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 

@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
-using System.Text.Json.Nodes;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
@@ -78,9 +77,39 @@ namespace UCode.Mongo
         internal Query(string text, TextSearchOptions fullTextSearchOptions) : base(text, fullTextSearchOptions)
         {
         }
+
+
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Query"/> class with the specified BSON elements.
+        /// This constructor passes the provided BSON documents to the base class constructor.
+        /// </summary>
+        /// <param name="bsonElements">An array of <see cref="BsonDocument"/> used to initialize the query.</param>
+        /// <returns>
+        /// This constructor does not return a value, but initializes the instance of the <see cref="Query"/> class.
+        /// </returns>
+        internal Query(BsonDocument[] bsonElements) : base(bsonElements)
+        {
+        }
         #endregion Constructors
 
         #region Static Methods
+
+        /// <summary>
+        /// Creates a new <see cref="Query{TDocument}"/> instance from the provided aggregation pipeline.
+        /// </summary>
+        /// <param name="pipeline">
+        /// An array of <see cref="BsonDocument"/> representing the stages of the aggregation pipeline.
+        /// </param>
+        /// <returns>
+        /// A new instance of <see cref="Query{TDocument}"/> initialized with the specified pipeline and a default update.
+        /// </returns>
+        public static Query<TDocument> FromPipeline([NotNull] BsonDocument[] pipeline) => new(pipeline)
+        {
+            Update = default
+        };
+
+
 
         /// <summary>
         /// Creates a new <see cref="Query{TDocument}"/> object from the specified BSON query and update document.
@@ -200,18 +229,9 @@ namespace UCode.Mongo
         /// </summary>
         /// <param name="constrainValue">The document value that will be used to complete the expression.</param>
         /// <returns>Returns a new instance of the Query<TDocument> with the completed expression.</returns>
-        public Query<TDocument> CompleteExpression(TDocument constrainValue)
-        {
+        public Query<TDocument> CompleteExpression(TDocument constrainValue) =>
             // Create a new Query object with the completed expression
-            return new Query<TDocument>(base.CompleteExpression(constrainValue));
-
-            //if (base.IncompletedExpressionQuery == null)
-            //{
-            //    throw new InvalidOperationException("This query does not have incomplete expression.");
-            //}
-
-            //return new Query<TDocument>(base.IncompletedExpressionQuery.ReplaceToConstant<Func<TDocument, TDocument, bool>, TDocument, Func<TDocument, bool>>(col => col.Where(p => { if (p.Index == 1) { p.Constant(constrainValue); return true; } return false; })));
-        }
+            new Query<TDocument>(base.CompleteExpression(constrainValue));
 
 
         #region Operator & | ! +
@@ -314,10 +334,10 @@ namespace UCode.Mongo
                 return default;
             }
 
-            if (!string.IsNullOrWhiteSpace(query.jsonQuery))
+            if (!string.IsNullOrWhiteSpace(query.JsonQuery))
             {
                 // If the query is a JSON query, create a new JsonFilterDefinition
-                return new JsonFilterDefinition<TDocument>(query.jsonQuery);
+                return new JsonFilterDefinition<TDocument>(query.JsonQuery);
             }
             else if (query.ExpressionQuery != null)
             {
@@ -385,7 +405,7 @@ namespace UCode.Mongo
         /// Returns the default value if the input query is null or uninitialized.
         /// </returns>
         [return: NotNull]
-        public static implicit operator MongoDB.Driver.ProjectionDefinition<TDocument>([NotNull] Query<TDocument> query)
+        public static implicit operator ProjectionDefinition<TDocument>?([NotNull] Query<TDocument>? query)
         {
             // If the query is null, return the default value
             if (query == default)
@@ -412,7 +432,7 @@ namespace UCode.Mongo
         /// If the <paramref name="query"/> is null or has a default value, it returns the default <see cref="SortDefinition{TDocument}"/>.
         /// </returns>
         [return: NotNull]
-        public static implicit operator SortDefinition<TDocument>([NotNull] Query<TDocument> query)
+        public static implicit operator SortDefinition<TDocument>?([NotNull] Query<TDocument>? query)
         {
             // If the query is null, return the default value
             if (query == default)
@@ -439,7 +459,7 @@ namespace UCode.Mongo
         /// </returns>
         /// <exception cref="ArgumentNullException">Thrown when the <paramref name="query"/> is null.</exception>
         [return: NotNull]
-        public static implicit operator BsonDocument([NotNull] Query<TDocument> query)
+        public static implicit operator BsonDocument?([NotNull] Query<TDocument>? query)
         {
             // If the query is null, return the default value
             if (query == default)
@@ -459,6 +479,28 @@ namespace UCode.Mongo
 
             //return query.ExpressionQuery.ToBsonDocument();
         }
+
+
+        /// <summary>
+        /// Converts an instance of <see cref="Query{TDocument}"/> to an array of <see cref="BsonDocument"/>.
+        /// </summary>
+        /// <param name="query">The query to convert, which can be null.</param>
+        /// <returns>
+        /// An array of <see cref="BsonDocument"/> representing the query's pipeline, or null if the query is null. 
+        /// Throws <see cref="ArgumentNullException"/> if the pipeline is null.
+        /// </returns>
+        public static implicit operator BsonDocument[]?([NotNull] Query<TDocument>? query)
+        {
+            // If the query is null, return the default value
+            if (query == default)
+            {
+                return default;
+            }
+
+            return query.Pipeline ?? throw new ArgumentNullException("Pipeline is null.");
+
+        }
+
 
         #region implicity to constructors
 
@@ -583,6 +625,18 @@ namespace UCode.Mongo
         internal Query(string text, TextSearchOptions fullTextSearchOptions) : base(text, fullTextSearchOptions)
         {
         }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Query"/> class with the specified BSON elements.
+        /// This constructor passes the provided BSON documents to the base class constructor.
+        /// </summary>
+        /// <param name="bsonElements">An array of <see cref="BsonDocument"/> used to initialize the query.</param>
+        /// <returns>
+        /// This constructor does not return a value, but initializes the instance of the <see cref="Query"/> class.
+        /// </returns>
+        internal Query(BsonDocument[] bsonElements) : base(bsonElements)
+        {
+        }
         #endregion Constructors
 
 
@@ -599,6 +653,20 @@ namespace UCode.Mongo
 
 
         #region Static Methods
+
+        /// <summary>
+        /// Creates a new <see cref="Query{TDocument}"/> instance from the provided aggregation pipeline.
+        /// </summary>
+        /// <param name="pipeline">
+        /// An array of <see cref="BsonDocument"/> representing the stages of the aggregation pipeline.
+        /// </param>
+        /// <returns>
+        /// A new instance of <see cref="Query{TDocument}"/> initialized with the specified pipeline and a default update.
+        /// </returns>
+        public static Query<TDocument, TProjection> FromPipeline([NotNull] BsonDocument[] pipeline) => new(pipeline)
+        {
+            Update = default
+        };
 
         /// <summary>
         /// Creates a new instance of the <see cref="Query{TDocument, TProjection}"/> class 
@@ -806,10 +874,10 @@ namespace UCode.Mongo
         public static implicit operator Query<TDocument, TProjection>([NotNull] Query<TDocument> query)
         {
             // Check if the query has a JSON query
-            if (!string.IsNullOrWhiteSpace(query.jsonQuery))
+            if (!string.IsNullOrWhiteSpace(query.JsonQuery))
             {
                 // Create a new Query object with the JSON query and update
-                return new(query.jsonQuery)
+                return new(query.JsonQuery)
                 {
                     Update = query.Update
                 };
@@ -880,10 +948,10 @@ namespace UCode.Mongo
         public static implicit operator Query<TDocument>([NotNull] Query<TDocument, TProjection> query)
         {
             // Check if the query has a JSON query
-            if (!string.IsNullOrWhiteSpace(query.jsonQuery))
+            if (!string.IsNullOrWhiteSpace(query.JsonQuery))
             {
                 // Create a new Query object with the JSON query and update
-                return new(query.jsonQuery)
+                return new(query.JsonQuery)
                 {
                     Update = query.Update
                 };
@@ -992,10 +1060,10 @@ namespace UCode.Mongo
 
 
             // Check if the query has a JSON query
-            if (!string.IsNullOrWhiteSpace(query.jsonQuery))
+            if (!string.IsNullOrWhiteSpace(query.JsonQuery))
             {
                 // Create a new JsonFilterDefinition object with the JSON query
-                return new JsonFilterDefinition<TDocument>(query.jsonQuery);
+                return new JsonFilterDefinition<TDocument>(query.JsonQuery);
             }
             // Check if the query has an expression query
             else if (query.ExpressionQuery != null)
@@ -1077,7 +1145,7 @@ namespace UCode.Mongo
         /// query to a <see cref="BsonDocument"/>.
         /// </returns>
         [return: NotNull]
-        public static implicit operator MongoDB.Driver.ProjectionDefinition<TDocument, TProjection>([NotNull] Query<TDocument, TProjection> query)
+        public static implicit operator ProjectionDefinition<TDocument, TProjection>([NotNull] Query<TDocument, TProjection> query)
         {
             // If the query is null or default, return the default ProjectionDefinition
             if (query == default)
@@ -1086,9 +1154,9 @@ namespace UCode.Mongo
             }
 
             // If the query has a JSON query, return it
-            if (!string.IsNullOrWhiteSpace(query.jsonQuery))
+            if (!string.IsNullOrWhiteSpace(query.JsonQuery))
             {
-                return query.jsonQuery;
+                return query.JsonQuery;
             }
 
             // Otherwise, convert the expression query to a BsonDocument and return it
@@ -1110,9 +1178,9 @@ namespace UCode.Mongo
             }
 
             // If the query has a JSON query, return it
-            if (!string.IsNullOrWhiteSpace(query.jsonQuery))
+            if (!string.IsNullOrWhiteSpace(query.JsonQuery))
             {
-                return query.jsonQuery;
+                return query.JsonQuery;
             }
 
             // Otherwise, convert the expression query to a BsonDocument and return it
@@ -1143,9 +1211,9 @@ namespace UCode.Mongo
             }
 
             // If the query has a JSON query, deserialize it into a BsonDocument and return it
-            if (!string.IsNullOrWhiteSpace(query.jsonQuery))
+            if (!string.IsNullOrWhiteSpace(query.JsonQuery))
             {
-                return BsonSerializer.Deserialize<BsonDocument>(query.jsonQuery);
+                return BsonSerializer.Deserialize<BsonDocument>(query.JsonQuery);
             }
 
             // Otherwise, convert the expression query to a BsonDocument and return it
@@ -1239,6 +1307,27 @@ namespace UCode.Mongo
         /// created from the provided <paramref name="source"/> filter definition.
         /// </returns>
         public static implicit operator Query<TDocument, TProjection>([NotNull] FilterDefinition<TDocument> source) => new(source);
+
+        /// <summary>
+        /// Implicitly converts a <see cref="Query{TDocument, TProjection}"/> to an array of <see cref="BsonDocument"/>.
+        /// </summary>
+        /// <param name="query">The <see cref="Query{TDocument, TProjection}"/> to convert.</param>
+        /// <returns>
+        /// An array of <see cref="BsonDocument"/> if the query is not null; otherwise, returns null.
+        /// </returns>
+        /// <exception cref="ArgumentNullException">Thrown when the <paramref name="query"/> has a null <c>Pipeline</c>.</exception>
+        public static implicit operator BsonDocument[]?([NotNull] Query<TDocument, TProjection>? query)
+        {
+
+            // If the query is null, return the default value
+            if (query == default)
+            {
+                return default;
+            }
+
+            return query.Pipeline ?? throw new ArgumentNullException("Pipeline is null.");
+
+        }
 
         #endregion implicity to constructors
 
