@@ -14,9 +14,8 @@ namespace UCode.RedisDatabase.Serializer
         /// <typeparam name="T"></typeparam>
         /// <param name="source"></param>
         /// <returns></returns>
-        [return: NotNull]
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        byte[] Serialize<T>(T source);
+        byte[]? Serialize<T>(T? source);
 
         /// <summary>
         /// Deserialize byte array to object
@@ -24,7 +23,6 @@ namespace UCode.RedisDatabase.Serializer
         /// <typeparam name="T"></typeparam>
         /// <param name="source"></param>
         /// <returns></returns>
-        [return: MaybeNull]
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         T? Deserialize<T>(byte[]? source);
     }

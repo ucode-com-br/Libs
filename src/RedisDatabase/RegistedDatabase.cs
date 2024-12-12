@@ -7,6 +7,15 @@ using StackExchange.Redis;
 
 namespace UCode.RedisDatabase
 {
+    /// <summary>
+    /// Represents an abstract base class for registered databases.
+    /// This class may contain common functionality and properties 
+    /// that can be inherited by derived database classes.
+    /// </summary>
+    /// <remarks>
+    /// Derived classes must implement the required functionality 
+    /// specific to their database type.
+    /// </remarks>
     public abstract class RegistedDatabase
     {
         [NotNull]
@@ -18,19 +27,51 @@ namespace UCode.RedisDatabase
         [NotNull]
         private readonly Lazy<ILogger<RegistedDatabase>> logger;
 
+        /// <summary>
+        /// Gets the logger instance for the <see cref="RegistedDatabase"/> class.
+        /// </summary>
+        /// <value>
+        /// The <see cref="ILogger{RegistedDatabase}"/> instance used for logging.
+        /// </value>
+        /// <remarks>
+        /// The logger is accessed lazily to improve performance and resource management.
+        /// </remarks>
         [NotNull]
         protected ILogger<RegistedDatabase> Logger => this.logger.Value;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RegistedDatabase"/> class.
+        /// </summary>
+        /// <param name="loggerFactory">
+        /// The <see cref="ILoggerFactory"/> used to create loggers.
+        /// Must not be null.
+        /// </param>
+        /// <param name="redisOptions">
+        /// The options for configuring Redis.
+        /// Must not be null.
+        /// </param>
         protected RegistedDatabase([NotNull] ILoggerFactory loggerFactory, [NotNull] RedisOptions redisOptions)
         {
             this.LoggerFactory = loggerFactory;
             this.RedisOptions = redisOptions;
-
+        
             this.logger = new Lazy<ILogger<RegistedDatabase>>(this.LoggerFactory.CreateLogger<RegistedDatabase>());
         }
 
         private string _connectionPoolId;
 
+        /// <summary>
+        /// Gets the unique identifier for the connection pool.
+        /// The identifier is generated based on the connection string and database name 
+        /// if it has not been set previously.
+        /// </summary>
+        /// <value>
+        /// A base64 string representing the unique connection pool identifier.
+        /// </value>
+        /// <remarks>
+        /// The identifier is computed using the SHA256 hash of the concatenation 
+        /// of the ConnectionString and DatabaseName properties.
+        /// </remarks>
         [NotNull]
         public string ConnectionPoolId
         {
@@ -48,18 +89,56 @@ namespace UCode.RedisDatabase
             }
         }
 
+        /// <summary>
+        /// Gets the name of the database associated with the implementing class.
+        /// </summary>
+        /// <remarks>
+        /// This property must not return null and is implemented in derived classes.
+        /// </remarks>
+        /// <returns>
+        /// A string representing the database name.
+        /// </returns>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown if the database name cannot be determined.
+        /// </exception>
         [NotNull]
         public abstract string DatabaseName
         {
             get;
         }
 
+        /// <summary>
+        /// Represents the connection string to the database.
+        /// This property must be implemented by derived classes,
+        /// and it cannot be null.
+        /// </summary>
+        /// <value>
+        /// A <see cref="string"/> that contains the connection string.
+        /// </value>
+        /// <remarks>
+        /// The derived class must provide an implementation for this property,
+        /// ensuring that it returns a valid and non-null connection string.
+        /// </remarks>
         [NotNull]
         public abstract string ConnectionString
         {
             get;
         }
 
+        /// <summary>
+        /// Retrieves the creation date and index of a specified Redis database.
+        /// </summary>
+        /// <param name="connectionMultiplexer">
+        /// The connection multiplexer used to interact with the Redis server.
+        /// </param>
+        /// <param name="databaseName">
+        /// The name of the Redis database whose index and creation date are to be retrieved.
+        /// </param>
+        /// <returns>
+        /// A tuple containing the creation date and the index of the specified Redis database.
+        /// The 'Created' field indicates when the database was created, 
+        /// and the 'Index' field is a unique long value associated with the database.
+        /// </returns>
         [return: NotNull]
         internal static (DateTime Created, long Index) GetDbIndex([NotNull] ConnectionMultiplexer connectionMultiplexer, [NotNull] string databaseName)
         {
@@ -94,6 +173,16 @@ namespace UCode.RedisDatabase
             return result;
         }
 
+        /// <summary>
+        /// Retrieves a <see cref="ConnectionMultiplexer"/> instance configured with the specified client ID, 
+        /// connection string, and default database number.
+        /// </summary>
+        /// <param name="clientId">A unique identifier for the client, used in connection configuration.</param>
+        /// <param name="connectionString">The connection string used to configure the connection multiplexer.</param>
+        /// <param name="defaultDatabase">The default database number to use when connecting.</param>
+        /// <returns>
+        /// A <see cref="ConnectionMultiplexer"/> instance that represents the connection to the Redis server.
+        /// </returns>
         [return: NotNull]
         internal static ConnectionMultiplexer GetConnectionMultiplexer(string clientId, string connectionString, int defaultDatabase)
         {
@@ -113,6 +202,15 @@ namespace UCode.RedisDatabase
         private readonly Dictionary<string, ConnectionMultiplexer> _connectionCache = new();
         private readonly Dictionary<string, RedisDatabase> _redisDatabaseCache = new();
 
+        /// <summary>
+        /// Retrieves a RedisDatabase instance associated with the specified client ID.
+        /// If no client ID is provided, it uses the default connection pool ID. 
+        /// It employs locking to ensure thread safety when accessing the connection and database caches.
+        /// </summary>
+        /// <param name="clientId">Optional. The ID of the client requesting the database. If null or whitespace, 
+        /// the default connection pool ID is used.</param>
+        /// <returns>A RedisDatabase instance that is not null and is associated with the specified or default client ID.</returns>
+        /// <exception cref="InvalidOperationException">Thrown if the underlying Redis connection cannot be established.</exception>
         [return: NotNull]
         public RedisDatabase GetDatabase(string? clientId = null)
         {

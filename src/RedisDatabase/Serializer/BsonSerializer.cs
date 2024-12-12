@@ -36,9 +36,14 @@ namespace UCode.RedisDatabase.Serializer
         /// <param name="source"></param>
         /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public byte[] Serialize<T>(T source)
+        public byte[]? Serialize<T>(T? source)
         {
-            if (source == null || source.Equals(default(T)))
+            if (source == null)
+            {
+                return null;
+            }
+
+            if (source.Equals(default(T)))
             {
                 return Array.Empty<byte>();
             }
@@ -58,6 +63,7 @@ namespace UCode.RedisDatabase.Serializer
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public T? Deserialize<T>(byte[]? source)
         {
+
             if (source == null || source.Length == 0)
             {
                 return default;

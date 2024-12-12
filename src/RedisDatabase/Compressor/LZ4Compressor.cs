@@ -2,16 +2,32 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace UCode.RedisDatabase.Compressor
 {
+    /// <summary>
+    /// Represents a compressor that utilizes the LZ4 algorithm for data compression.
+    /// </summary>
+    /// <remarks>
+    /// This class implements the ICompressor interface, providing methods for
+    /// compressing and decompressing data using the LZ4 compression scheme.
+    /// </remarks>
     public class LZ4Compressor : ICompressor
     {
         /// <summary>
-        /// Compress using LZ4 algorithm with level 0 (fastest)
+        /// Compresses the given byte array using LZ4 compression.
         /// </summary>
-        /// <param name="data"></param>
-        /// <returns></returns>
-        [return: NotNull]
-        public byte[] Compress([NotNull] byte[] data)
+        /// <param name="data">
+        /// The byte array to compress. This parameter can be null, in which case the method will return null.
+        /// </param>
+        /// <returns>
+        /// A compressed byte array, or null if the input data is null. If the input data is empty,
+        /// an empty byte array will be returned.
+        /// </returns>
+        public byte[]? Compress(byte[]? data)
         {
+            if (data == null)
+            {
+                return null;
+            }
+
             if (data.Length == 0)
             {
                 return System.Array.Empty<byte>();
@@ -29,13 +45,20 @@ namespace UCode.RedisDatabase.Compressor
         }
 
         /// <summary>
-        /// Compress using LZ4 algorithm with level 0 (fastest)
+        /// Decompresses the given byte array using the LZ4 algorithm.
         /// </summary>
-        /// <param name="data"></param>
-        /// <returns></returns>
-        [return: NotNull]
-        public byte[] Decompress([NotNull] byte[] data)
+        /// <param name="data">The compressed byte array to be decompressed. If it is null or empty, a null or empty array will be returned, respectively.</param>
+        /// <returns>
+        /// A byte array containing the decompressed data. Returns null if the input data is null; 
+        /// returns an empty byte array if the input data is empty.
+        /// </returns>
+        public byte[]? Decompress(byte[]? data)
         {
+            if (data == null)
+            {
+                return null;
+            }
+
             if (data.Length == 0)
             {
                 return System.Array.Empty<byte>();
