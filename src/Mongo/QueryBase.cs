@@ -242,7 +242,7 @@ namespace UCode.Mongo
             var filterDefinition = (FilterDefinition<TDocument>)this;
 
             // Render the filter definition to a BsonDocument
-            var render = this.RenderToBsonDocument(filterDefinition);
+            var render = RenderToBsonDocument(filterDefinition);
 
             //var json = filterDefinition.ToBson().ToJson();
 
