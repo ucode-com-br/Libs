@@ -11,6 +11,7 @@ using MongoDB.Driver;
 using MongoDB.Driver.Core.Events;
 using UCode.Extensions;
 using UCode.Mongo.Models;
+using UCode.Mongo.OpenTelemetry;
 
 namespace UCode.Mongo
 {
@@ -200,19 +201,6 @@ namespace UCode.Mongo
 
 
 
-        /// <summary>
-        /// Invokes the event for the specified event type with the provided event data.
-        /// </summary>
-        /// <typeparam name="TEvent">
-        /// The type of the event data being passed.
-        /// </typeparam>
-        /// <param name="ev">
-        /// The event data to be passed to the event handlers.
-        /// </param>
-        public virtual void OnEvent<TEvent>(TEvent ev) => Event?.Invoke(this, new MongoEventArgs<TEvent>(ev));
-
-
-
         #region Constructor
         /// <summary>
         /// Initializes a new instance of the <see cref="ContextBase"/> class.
@@ -234,7 +222,6 @@ namespace UCode.Mongo
             //BsonSerializer.TryRegisterSerializer(new GuidSerializer(BsonType.String));
             BsonSerializer.TryRegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
 
-            // Initialize LoggerFactory
             this.LoggerFactory = loggerFactory;
 
             this._logger = new Lazy<ILogger<ContextBase>>(() => loggerFactory.CreateLogger<ContextBase>());
@@ -260,7 +247,6 @@ namespace UCode.Mongo
                 // Initialize Client
                 var mongoClientSettings = MongoClientSettings.FromConnectionString(connectionString);
 
-
                 // 
                 mongoClientSettings.TranslationOptions = new ExpressionTranslationOptions()
                 {
@@ -280,29 +266,15 @@ namespace UCode.Mongo
                 // Set the new cluster configurator
                 mongoClientSettings.ClusterConfigurator = clusterConfigurator =>
                 {
-                    // Invoke the previous cluster configurator (if any)
+                    clusterConfigurator.Subscribe(new EventSubscriber(new InstrumentationOptions { CaptureCommandText = true, ApplicationName = mongoClientSettings.ApplicationName }));
+
                     prevClusterConfigurator?.Invoke(clusterConfigurator);
-
-                    // Subscribe to command started events
-                    clusterConfigurator.Subscribe<CommandStartedEvent>(this.OnEvent);
-
-                    // Subscribe to command succeeded events
-                    clusterConfigurator.Subscribe<CommandSucceededEvent>(this.OnEvent);
-
-                    // Subscribe to command failed events
-                    clusterConfigurator.Subscribe<CommandFailedEvent>(this.OnEvent);
-
-                    // Subscribe to connection failed events
-                    clusterConfigurator.Subscribe<ConnectionFailedEvent>(this.OnEvent);
                 };
 
                 // Initialize Client
                 this.MongoClient = new MongoClient(mongoClientSettings);
 
                 // Initialize Database
-                //this.DatabaseName =
-                //    @"^mongodb(\+srv)?\:\/\/(((?<USER>.*)\:(?<PASSWORD>.*)\@(?<CLUSTER>.*))|((?<HOST>.+)\:(?<PORT>.+)))\/(?<DBNAME>.*)\?.*$".MatchNamedCaptures(connectionString)["DBNAME"];
-
                 this.Database = this.MongoClient.GetDatabase(this.DatabaseName);
 
 

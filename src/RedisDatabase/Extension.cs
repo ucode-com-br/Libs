@@ -5,6 +5,8 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using OpenTelemetry.Instrumentation.StackExchangeRedis;
+using OpenTelemetry.Trace;
 using StackExchange.Redis;
 
 namespace UCode.RedisDatabase
@@ -49,6 +51,16 @@ namespace UCode.RedisDatabase
             return services;
         }
 
+        public static TracerProviderBuilder AddAppRedisInstrumentation(this TracerProviderBuilder builder, Action<StackExchangeRedisInstrumentationOptions>? action = null)
+        {
+            builder.AddRedisInstrumentation(o =>
+            {
+                o.SetVerboseDatabaseStatements = true;
+                o.Enrich = (activity, command) => { activity.DisplayName = $"Redis ({command.Command})"; };
+                action?.Invoke(o);
+            });
+            return builder;
+        }
 
         /// <summary>
         /// For one database, injecttion of "RedisDefaultDatabase"

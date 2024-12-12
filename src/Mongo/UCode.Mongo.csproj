@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
@@ -8,7 +8,7 @@
     <Copyright>UCode (c) Desenvolvimento de Software 2024</Copyright>
     <IncludeSymbols>True</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <Version>3.10.36</Version>
+    <Version>3.11.0</Version>
     <Title>UCode Mongo</Title>
     <RepositoryType>git</RepositoryType>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
@@ -47,6 +47,8 @@
     <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
     <PackageReference Include="MongoDB.Bson" Version="3.0.0" />
     <PackageReference Include="MongoDB.Driver" Version="3.0.0" />
+    <PackageReference Include="OpenTelemetry" Version="1.10.0" />
+    <PackageReference Include="OpenTelemetry.Api" Version="1.10.0" />
     
     <!--<PackageReference Include="UCode.Extensions" Version="$(Version)" />
     <PackageReference Include="UCode.Repositories" Version="$(Version)" />-->
@@ -54,9 +56,5 @@
 
     <ProjectReference Include="..\Extensions\UCode.Extensions.csproj" />
     <ProjectReference Include="..\Repositories\UCode.Repositories.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    
   </ItemGroup>
 </Project>
