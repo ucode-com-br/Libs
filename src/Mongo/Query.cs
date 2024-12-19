@@ -245,7 +245,7 @@ namespace UCode.Mongo
         /// A new <see cref="Query{TDocument}"/> instance that represents the combined filter 
         /// of the given left-hand side and right-hand side queries.
         /// </returns>
-        public static Query<TDocument> operator +(Query<TDocument> lhs, Query<TDocument> rhs) => (FilterDefinition<TDocument>)lhs & (FilterDefinition<TDocument>)lhs;
+        public static Query<TDocument> operator +(Query<TDocument> lhs, Query<TDocument> rhs) => (FilterDefinition<TDocument>)lhs & (FilterDefinition<TDocument>)rhs;
 
         /// <summary>
         /// Defines the bitwise AND operator for combining two queries.
@@ -257,7 +257,7 @@ namespace UCode.Mongo
         /// <remarks>
         /// This operator allows for combining two queries so that the results match both conditions specified in the left and right queries.
         /// </remarks>
-        public static Query<TDocument> operator &(Query<TDocument> lhs, Query<TDocument> rhs) => (FilterDefinition<TDocument>)lhs & (FilterDefinition<TDocument>)lhs;
+        public static Query<TDocument> operator &(Query<TDocument> lhs, Query<TDocument> rhs) => (FilterDefinition<TDocument>)lhs & (FilterDefinition<TDocument>)rhs;
 
         /// <summary>
         /// Defines the bitwise OR operator for two <see cref="Query{TDocument}"/> instances.
@@ -273,7 +273,7 @@ namespace UCode.Mongo
         /// <exception cref="ArgumentNullException">
         /// Thrown when either <paramref name="lhs"/> or <paramref name="rhs"/> is <c>null</c>.
         /// </exception>
-        public static Query<TDocument> operator |(Query<TDocument> lhs, Query<TDocument> rhs) => (FilterDefinition<TDocument>)lhs | (FilterDefinition<TDocument>)lhs;
+        public static Query<TDocument> operator |(Query<TDocument> lhs, Query<TDocument> rhs) => (FilterDefinition<TDocument>)lhs | (FilterDefinition<TDocument>)rhs;
 
         /// <summary>
         /// Defines a logical negation operator for the <see cref="Query{TDocument}"/> class.
