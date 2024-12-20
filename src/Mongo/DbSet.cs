@@ -356,7 +356,11 @@ namespace UCode.Mongo
             this.Logger = contextBase.LoggerFactory.CreateLogger<DbSet<TDocument, TObjectId, TUser>>();
 
 
-            if (!this._contextbase._contextCollectionMetadata.ContainsKey(this.CollectionName))
+            if (!this._contextbase._contextCollectionMetadata.TryGetValue(this.CollectionName, out var contextCollectionMetadata))
+            {
+                this._contextCollectionMetadata = contextCollectionMetadata;
+            }
+            else
             {
                 var indexKeys = new IndexKeys<TDocument>();
 
@@ -398,16 +402,16 @@ namespace UCode.Mongo
                 });
 
 
-                var contextCollectionMetadata = new ContextCollectionMetadata(this.CollectionName)
+                this._contextCollectionMetadata = new ContextCollectionMetadata(this.CollectionName)
                 {
                     IndexKeys = indexKeys,
                     BsonClassMaps = this.ReflectionRegisterClassMap()
                 };
 
 
-                this._contextbase._contextCollectionMetadata.Add(this.CollectionName, contextCollectionMetadata);
+                this._contextbase._contextCollectionMetadata.Add(this.CollectionName, this._contextCollectionMetadata);
             }
-            this._contextCollectionMetadata = this._contextbase._contextCollectionMetadata[this.CollectionName];
+            //this._contextCollectionMetadata = this._contextbase._contextCollectionMetadata[this.CollectionName];
 
             _ = this.InternalIndex(false, thowIndexExceptions);
         }
@@ -568,7 +572,7 @@ namespace UCode.Mongo
             }
             catch (Exception ex)
             {
-                Logger.LogError(exception: ex, "Fail create indexes.", this._contextCollectionMetadata.IndexKeys);
+                this.Logger.LogError(exception: ex, "Fail create indexes.", this._contextCollectionMetadata.IndexKeys);
 
                 if (thowIndexExceptions)
                     throw;
