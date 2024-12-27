@@ -245,7 +245,14 @@ namespace UCode.Mongo
         /// A new <see cref="Query{TDocument}"/> instance that represents the combined filter 
         /// of the given left-hand side and right-hand side queries.
         /// </returns>
-        public static Query<TDocument> operator +(Query<TDocument> lhs, Query<TDocument> rhs) => (FilterDefinition<TDocument>)lhs & (FilterDefinition<TDocument>)rhs;
+        public static Query<TDocument>? operator +(Query<TDocument>? lhs, Query<TDocument>? rhs) =>
+            (lhs == default && rhs == default) ?
+                default :
+            (lhs == default && rhs != default) ?
+                rhs :
+            (lhs != default && rhs == default) ?
+                lhs :
+            (FilterDefinition<TDocument>)lhs! & (FilterDefinition<TDocument>)rhs!;
 
         /// <summary>
         /// Defines the bitwise AND operator for combining two queries.
@@ -257,7 +264,14 @@ namespace UCode.Mongo
         /// <remarks>
         /// This operator allows for combining two queries so that the results match both conditions specified in the left and right queries.
         /// </remarks>
-        public static Query<TDocument> operator &(Query<TDocument> lhs, Query<TDocument> rhs) => (FilterDefinition<TDocument>)lhs & (FilterDefinition<TDocument>)rhs;
+        public static Query<TDocument>? operator &(Query<TDocument>? lhs, Query<TDocument>? rhs) =>
+            (lhs == default && rhs == default) ?
+                default :
+            (lhs == default && rhs != default) ?
+                rhs :
+            (lhs != default && rhs == default) ?
+                lhs :
+            (FilterDefinition<TDocument>)lhs! & (FilterDefinition<TDocument>)rhs!;
 
         /// <summary>
         /// Defines the bitwise OR operator for two <see cref="Query{TDocument}"/> instances.
@@ -273,7 +287,14 @@ namespace UCode.Mongo
         /// <exception cref="ArgumentNullException">
         /// Thrown when either <paramref name="lhs"/> or <paramref name="rhs"/> is <c>null</c>.
         /// </exception>
-        public static Query<TDocument> operator |(Query<TDocument> lhs, Query<TDocument> rhs) => (FilterDefinition<TDocument>)lhs | (FilterDefinition<TDocument>)rhs;
+        public static Query<TDocument>? operator |(Query<TDocument>? lhs, Query<TDocument>? rhs) =>
+            (lhs == default && rhs == default) ?
+                default :
+            (lhs == default && rhs != default) ?
+                rhs :
+            (lhs != default && rhs == default) ?
+                lhs :
+            (FilterDefinition<TDocument>)lhs! | (FilterDefinition<TDocument>)rhs!;
 
         /// <summary>
         /// Defines a logical negation operator for the <see cref="Query{TDocument}"/> class.
@@ -288,7 +309,10 @@ namespace UCode.Mongo
         /// This operator is particularly useful when constructing complex queries where negation 
         /// is needed to filter out documents matching certain criteria.
         /// </remarks>
-        public static Query<TDocument> operator !(Query<TDocument> op) => !(FilterDefinition<TDocument>)op;
+        public static Query<TDocument>? operator !(Query<TDocument>? op) =>
+            op == default ?
+            default :
+            !(FilterDefinition<TDocument>)op!;
         #endregion Operator & | ! +
 
 
@@ -304,6 +328,7 @@ namespace UCode.Mongo
         /// </returns>
         public override string ToString() => base.ToString();
 
+
         /// <summary>
         /// Implicitly converts a function that takes a <typeparamref name="TDocument"/> 
         /// and returns a boolean into a <see cref="Query{TDocument}"/>.
@@ -316,8 +341,9 @@ namespace UCode.Mongo
         /// This operator allows a simple syntax for creating a Query from a predicate that 
         /// can be used for filtering <typeparamref name="TDocument"/> items.
         /// </remarks>
-        [return: NotNull]
-        public static implicit operator Query<TDocument>([NotNull] Func<TDocument, bool> expression) => new(expression);
+        [return: MaybeNull]
+        public static implicit operator Query<TDocument>([MaybeNull] Func<TDocument, bool> expression) => new(expression);
+
 
         /// <summary>
         /// Converts a <see cref="Query{TDocument}"/> to a <see cref="FilterDefinition{TDocument}"/>.
@@ -326,8 +352,8 @@ namespace UCode.Mongo
         /// <param name="query">The query to convert. It should be a valid instance of <see cref="Query{TDocument}"/>.</param>
         /// <returns>A <see cref="FilterDefinition{TDocument}"/> that corresponds to the provided query.</returns>
         /// <exception cref="InvalidOperationException">Thrown when the expression query is incomplete and requires a constant.</exception>
-        [return: NotNull]
-        public static implicit operator FilterDefinition<TDocument>([NotNull] Query<TDocument> query)
+        [return: MaybeNull]
+        public static implicit operator FilterDefinition<TDocument>([MaybeNull] Query<TDocument> query)
         {
             if (query == default)
             {
@@ -374,8 +400,8 @@ namespace UCode.Mongo
         /// from the given <see cref="Query{TDocument}"/>, or the default value if 
         /// the query is null or has no update property.
         /// </returns>
-        [return: NotNull]
-        public static implicit operator UpdateDefinition<TDocument>([NotNull] Query<TDocument> query)
+        [return: MaybeNull]
+        public static implicit operator UpdateDefinition<TDocument>([MaybeNull] Query<TDocument> query)
         {
             // If the query is null, return the default value
             if (query == default)
@@ -404,8 +430,8 @@ namespace UCode.Mongo
         /// A <see cref="ProjectionDefinition{TDocument}"/> that represents the converted query.
         /// Returns the default value if the input query is null or uninitialized.
         /// </returns>
-        [return: NotNull]
-        public static implicit operator ProjectionDefinition<TDocument>?([NotNull] Query<TDocument>? query)
+        [return: MaybeNull]
+        public static implicit operator ProjectionDefinition<TDocument>?([MaybeNull] Query<TDocument>? query)
         {
             // If the query is null, return the default value
             if (query == default)
@@ -431,8 +457,8 @@ namespace UCode.Mongo
         /// A <see cref="SortDefinition{TDocument}"/> that represents the converted <paramref name="query"/>.
         /// If the <paramref name="query"/> is null or has a default value, it returns the default <see cref="SortDefinition{TDocument}"/>.
         /// </returns>
-        [return: NotNull]
-        public static implicit operator SortDefinition<TDocument>?([NotNull] Query<TDocument>? query)
+        [return: MaybeNull]
+        public static implicit operator SortDefinition<TDocument>?([MaybeNull] Query<TDocument>? query)
         {
             // If the query is null, return the default value
             if (query == default)
@@ -458,8 +484,8 @@ namespace UCode.Mongo
         /// Returns the default value if the query is null or default.
         /// </returns>
         /// <exception cref="ArgumentNullException">Thrown when the <paramref name="query"/> is null.</exception>
-        [return: NotNull]
-        public static implicit operator BsonDocument?([NotNull] Query<TDocument>? query)
+        [return: MaybeNull]
+        public static implicit operator BsonDocument?([MaybeNull] Query<TDocument>? query)
         {
             // If the query is null, return the default value
             if (query == default)
@@ -489,7 +515,8 @@ namespace UCode.Mongo
         /// An array of <see cref="BsonDocument"/> representing the query's pipeline, or null if the query is null. 
         /// Throws <see cref="ArgumentNullException"/> if the pipeline is null.
         /// </returns>
-        public static implicit operator BsonDocument[]?([NotNull] Query<TDocument>? query)
+        [return: MaybeNull]
+        public static implicit operator BsonDocument[]?([MaybeNull] Query<TDocument>? query)
         {
             // If the query is null, return the default value
             if (query == default)
@@ -513,7 +540,8 @@ namespace UCode.Mongo
         /// <returns>
         /// An instance of <see cref="Query{TDocument}"/> that represents the given <see cref="FilterDefinition{TDocument}"/>.
         /// </returns>
-        public static implicit operator Query<TDocument>([NotNull] FilterDefinition<TDocument> source) => new(source);
+        [return: MaybeNull]
+        public static implicit operator Query<TDocument>?([MaybeNull] FilterDefinition<TDocument>? source) => source == default ? default : new (source);
 
 
         /// <summary>
@@ -525,7 +553,8 @@ namespace UCode.Mongo
         /// <returns>
         /// A new instance of <see cref="Query{TDocument}"/> initialized with the provided query string.
         /// </returns>
-        public static implicit operator Query<TDocument>(string query) => new(query);
+        [return: MaybeNull]
+        public static implicit operator Query<TDocument>?([MaybeNull] string? query) => query == default ? default : new (query);
 
 
         /// <summary>
@@ -535,8 +564,14 @@ namespace UCode.Mongo
         /// <param name="expression">The expression to convert, representing a predicate 
         /// for filtering documents of type <typeparamref name="TDocument"/>.</param>
         /// <returns>A new instance of <see cref="Query{TDocument}"/> initialized with the given expression.</returns>
-        public static implicit operator Query<TDocument>(Expression<Func<TDocument, bool>> expression)
+        [return: MaybeNull]
+        public static implicit operator Query<TDocument>?([MaybeNull] Expression<Func<TDocument, bool>>? expression)
         {
+            if (expression == default)
+            {
+                return default;
+            }
+
             // Create a new instance of Query<TDocument> with the provided expression
             Query<TDocument> query = new(expression);
 
@@ -552,8 +587,14 @@ namespace UCode.Mongo
         /// <param name="expression">A lambda expression of type <see cref="Expression{Func{TDocument, TDocument, bool}}"/> 
         /// that defines the filtering criteria for the documents.</param>
         /// <returns>A new instance of <see cref="Query{TDocument}"/> initialized with the specified expression.</returns>
-        public static implicit operator Query<TDocument>(Expression<Func<TDocument, TDocument, bool>> expression)
+        [return: MaybeNull]
+        public static implicit operator Query<TDocument>?([MaybeNull] Expression<Func<TDocument, TDocument, bool>>? expression)
         {
+            if (expression == default)
+            {
+                return default;
+            }
+
             // Create a new instance of Query<TDocument> with the provided expression
             Query<TDocument> query = new(expression);
 
@@ -802,7 +843,14 @@ namespace UCode.Mongo
         /// A new <see cref="Query{TDocument, TProjection}"/> instance that represents the combined filter 
         /// of the given left-hand side and right-hand side queries.
         /// </returns>
-        public static Query<TDocument, TProjection> operator +(Query<TDocument, TProjection> lhs, Query<TDocument, TProjection> rhs) => (FilterDefinition<TDocument>)lhs & (FilterDefinition<TDocument>)lhs;
+        public static Query<TDocument, TProjection>? operator +(Query<TDocument, TProjection>? lhs, Query<TDocument, TProjection>? rhs) =>
+            lhs == default && rhs == default ?
+            default :
+            lhs != default && rhs == default ?
+            lhs :
+            lhs == default && rhs != default ?
+            rhs :
+            (FilterDefinition<TDocument>)lhs! & (FilterDefinition<TDocument>)lhs!;
 
         /// <summary>
         /// Defines the bitwise AND operator for combining two queries.
@@ -815,7 +863,14 @@ namespace UCode.Mongo
         /// <remarks>
         /// This operator allows for combining two queries so that the results match both conditions specified in the left and right queries.
         /// </remarks>
-        public static Query<TDocument, TProjection> operator &(Query<TDocument, TProjection> lhs, Query<TDocument, TProjection> rhs) => (FilterDefinition<TDocument>)lhs & (FilterDefinition<TDocument>)lhs;
+        public static Query<TDocument, TProjection>? operator &(Query<TDocument, TProjection>? lhs, Query<TDocument, TProjection>? rhs) =>
+            lhs == default && rhs == default ?
+            default :
+            lhs != default && rhs == default ?
+            lhs :
+            lhs == default && rhs != default ?
+            rhs :
+            (FilterDefinition<TDocument>)lhs! & (FilterDefinition<TDocument>)lhs!;
 
         /// <summary>
         /// Defines the bitwise OR operator for two <see cref="Query{TDocument, TProjection}"/> instances.
@@ -831,7 +886,14 @@ namespace UCode.Mongo
         /// <exception cref="ArgumentNullException">
         /// Thrown when either <paramref name="lhs"/> or <paramref name="rhs"/> is <c>null</c>.
         /// </exception>
-        public static Query<TDocument, TProjection> operator |(Query<TDocument, TProjection> lhs, Query<TDocument, TProjection> rhs) => (FilterDefinition<TDocument>)lhs | (FilterDefinition<TDocument>)lhs;
+        public static Query<TDocument, TProjection>? operator |(Query<TDocument, TProjection>? lhs, Query<TDocument, TProjection>? rhs) =>
+            lhs == default && rhs == default ?
+            default :
+            lhs != default && rhs == default ?
+            lhs :
+            lhs == default && rhs != default ?
+            rhs :
+            (FilterDefinition<TDocument>)lhs! | (FilterDefinition<TDocument>)lhs!;
 
         /// <summary>
         /// Defines a logical negation operator for the <see cref="Query{TDocument, TProjection}"/> class.
@@ -846,7 +908,10 @@ namespace UCode.Mongo
         /// This operator is particularly useful when constructing complex queries where negation 
         /// is needed to filter out documents matching certain criteria.
         /// </remarks>
-        public static Query<TDocument, TProjection> operator !(Query<TDocument, TProjection> op) => !(FilterDefinition<TDocument>)op;
+        public static Query<TDocument, TProjection>? operator !(Query<TDocument, TProjection>? op) =>
+            op == default ?
+            default :
+            !(FilterDefinition<TDocument>)op!;
         #endregion Operator & | ! +
 
 
@@ -863,6 +928,9 @@ namespace UCode.Mongo
         /// <inheritdoc/>
         public override string ToString() => base.ToString();
 
+
+
+
         /// <summary>
         /// Implicitly converts a <see cref="Query{TDocument}"/> to a <see cref="Query{TDocument, TProjection}"/>.
         /// It checks various properties of the input query to determine the appropriate conversion.
@@ -870,9 +938,12 @@ namespace UCode.Mongo
         /// <param name="query">The query to convert, which is of type <see cref="Query{TDocument}"/>.</param>
         /// <returns>A new instance of <see cref="Query{TDocument, TProjection}"/> converted from the input query.</returns>
         /// <exception cref="InvalidOperationException">Thrown when the conversion fails due to lacking valid properties in the input query.</exception>
-        [return: NotNull]
-        public static implicit operator Query<TDocument, TProjection>([NotNull] Query<TDocument> query)
+        [return: MaybeNull]
+        public static implicit operator Query<TDocument, TProjection>?([MaybeNull] Query<TDocument>? query)
         {
+            if (query == default)
+                return default;
+
             // Check if the query has a JSON query
             if (!string.IsNullOrWhiteSpace(query.JsonQuery))
             {
@@ -944,9 +1015,12 @@ namespace UCode.Mongo
         /// Thrown when the provided <paramref name="query"/> cannot be converted into <see cref="Query{TDocument}"/> 
         /// because it lacks the necessary query definitions.
         /// </exception>
-        [return: NotNull]
-        public static implicit operator Query<TDocument>([NotNull] Query<TDocument, TProjection> query)
+        [return: MaybeNull]
+        public static implicit operator Query<TDocument>?([MaybeNull] Query<TDocument, TProjection>? query)
         {
+            if (query == default)
+                return default;
+
             // Check if the query has a JSON query
             if (!string.IsNullOrWhiteSpace(query.JsonQuery))
             {
@@ -1017,8 +1091,8 @@ namespace UCode.Mongo
         /// <typeparam name="TProjection">
         /// The type of projection that will be applied to the documents in the query.
         /// </typeparam>
-        [return: NotNull]
-        public static implicit operator Query<TDocument, TProjection>([NotNull] Func<TDocument, bool> expression) => new(expression);
+        [return: MaybeNull]
+        public static implicit operator Query<TDocument, TProjection>?([MaybeNull] Func<TDocument, bool> expression) => expression == default ? default : new(expression);
 
         /// <summary>
         /// Implicitly converts a function that takes two <see cref="TDocument"/> parameters and returns a boolean value
@@ -1036,8 +1110,8 @@ namespace UCode.Mongo
         /// This operator allows for a more intuitive way to create queries by enabling 
         /// a functional syntax instead of requiring explicit constructor calls.
         /// </remarks>
-        [return: NotNull]
-        public static implicit operator Query<TDocument, TProjection>([NotNull] Func<TDocument, TDocument, bool> expression) => new(expression);
+        [return: MaybeNull]
+        public static implicit operator Query<TDocument, TProjection>?([MaybeNull] Func<TDocument, TDocument, bool>? expression) => expression == default ? default : new(expression);
 
         /// <summary>
         /// Implicitly converts a <see cref="Query{TDocument,TProjection}"/> to a <see cref="FilterDefinition{TDocument}"/>.
@@ -1049,8 +1123,8 @@ namespace UCode.Mongo
         /// <exception cref="InvalidOperationException">
         /// Thrown when the query has an incomplete expression that requires a constant value.
         /// </exception>
-        [return: NotNull]
-        public static implicit operator FilterDefinition<TDocument>([NotNull] Query<TDocument, TProjection> query)
+        [return: MaybeNull]
+        public static implicit operator FilterDefinition<TDocument>?([MaybeNull] Query<TDocument, TProjection>? query)
         {
             // Check if the query is null or default
             if (query == default)
@@ -1106,8 +1180,8 @@ namespace UCode.Mongo
         /// <see cref="UpdateDefinition{TDocument}"/> is returned.
         /// </returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="query"/> is null.</exception>
-        [return: NotNull]
-        public static implicit operator UpdateDefinition<TDocument>([NotNull] Query<TDocument, TProjection> query)
+        [return: MaybeNull]
+        public static implicit operator UpdateDefinition<TDocument>?([NotNull] Query<TDocument, TProjection>? query)
         {
             // If the query is null or default, return the default UpdateDefinition
             if (query == default)
@@ -1144,8 +1218,8 @@ namespace UCode.Mongo
         /// JSON query, it returns the JSON query; otherwise, it converts the expression 
         /// query to a <see cref="BsonDocument"/>.
         /// </returns>
-        [return: NotNull]
-        public static implicit operator ProjectionDefinition<TDocument, TProjection>([NotNull] Query<TDocument, TProjection> query)
+        [return: MaybeNull]
+        public static implicit operator ProjectionDefinition<TDocument, TProjection>?([MaybeNull] Query<TDocument, TProjection>? query)
         {
             // If the query is null or default, return the default ProjectionDefinition
             if (query == default)
@@ -1168,8 +1242,8 @@ namespace UCode.Mongo
         /// </summary>
         /// <param name="query">The query to convert. Must not be null.</param>
         /// <returns>A <see cref="SortDefinition{TDocument}"/> representing the query.</returns>
-        [return: NotNull]
-        public static implicit operator SortDefinition<TDocument>([NotNull] Query<TDocument, TProjection> query)
+        [return: MaybeNull]
+        public static implicit operator SortDefinition<TDocument>?([MaybeNull] Query<TDocument, TProjection>? query)
         {
             // If the query is null or default, return the default SortDefinition
             if (query == default)
@@ -1201,8 +1275,8 @@ namespace UCode.Mongo
         /// Returns the default <see cref="BsonDocument"/> if the query is null or the default value.
         /// </returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="query"/> is null.</exception>
-        [return: NotNull]
-        public static implicit operator BsonDocument([NotNull] Query<TDocument, TProjection> query)
+        [return: MaybeNull]
+        public static implicit operator BsonDocument?([MaybeNull] Query<TDocument, TProjection>? query)
         {
             // If the query is null or default, return the default BsonDocument
             if (query == default)
@@ -1238,7 +1312,8 @@ namespace UCode.Mongo
         /// is null or empty, the default value for the <see cref="Query{TDocument, TProjection}"/>
         /// type is returned.
         /// </returns>
-        public static implicit operator Query<TDocument, TProjection>(string query)
+        [return: MaybeNull]
+        public static implicit operator Query<TDocument, TProjection>?(string? query)
         {
             if (query == default)
             {
@@ -1258,7 +1333,8 @@ namespace UCode.Mongo
         /// A <see cref="Query{TDocument, TProjection}"/> instance corresponding to the specified query expression.
         /// If the <paramref name="query"/> is default, the method returns the default value of <see cref="Query{TDocument, TProjection}"/>.
         /// </returns>
-        public static implicit operator Query<TDocument, TProjection>([NotNull] Expression<Func<TDocument, bool>> query)
+        [return: MaybeNull]
+        public static implicit operator Query<TDocument, TProjection>?([MaybeNull] Expression<Func<TDocument, bool>>? query)
         {
             if (query == default)
             {
@@ -1283,7 +1359,8 @@ namespace UCode.Mongo
         /// that represents the converted query. Returns the default if 
         /// the input query is null or not provided.
         /// </returns>
-        public static implicit operator Query<TDocument, TProjection>([NotNull] Expression<Func<TDocument, TDocument, bool>> query)
+        [return: MaybeNull]
+        public static implicit operator Query<TDocument, TProjection>?([MaybeNull] Expression<Func<TDocument, TDocument, bool>>? query)
         {
             if (query == default)
             {
@@ -1306,7 +1383,8 @@ namespace UCode.Mongo
         /// A new instance of <see cref="Query{TDocument, TProjection}"/> 
         /// created from the provided <paramref name="source"/> filter definition.
         /// </returns>
-        public static implicit operator Query<TDocument, TProjection>([NotNull] FilterDefinition<TDocument> source) => new(source);
+        [return: MaybeNull]
+        public static implicit operator Query<TDocument, TProjection>?([MaybeNull] FilterDefinition<TDocument>? source) => source == default ? default : new(source);
 
         /// <summary>
         /// Implicitly converts a <see cref="Query{TDocument, TProjection}"/> to an array of <see cref="BsonDocument"/>.
@@ -1316,7 +1394,8 @@ namespace UCode.Mongo
         /// An array of <see cref="BsonDocument"/> if the query is not null; otherwise, returns null.
         /// </returns>
         /// <exception cref="ArgumentNullException">Thrown when the <paramref name="query"/> has a null <c>Pipeline</c>.</exception>
-        public static implicit operator BsonDocument[]?([NotNull] Query<TDocument, TProjection>? query)
+        [return: MaybeNull]
+        public static implicit operator BsonDocument[]?([MaybeNull] Query<TDocument, TProjection>? query)
         {
 
             // If the query is null, return the default value

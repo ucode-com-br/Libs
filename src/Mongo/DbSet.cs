@@ -172,7 +172,7 @@ namespace UCode.Mongo
         #endregion Fields
 
 
-        #region private methods
+        #region private/internal methods
         /// <summary>
         /// Determines whether a transaction should be started and provides a handle to the client session.
         /// </summary>
@@ -219,7 +219,6 @@ namespace UCode.Mongo
 
             return clientSessionHandle != default;
         }
-
 
         /// <summary>
         /// Converts the given <see cref="AggregateOptions"/> to <see cref="AggregateOptionsPaging"/>.
@@ -287,8 +286,120 @@ namespace UCode.Mongo
         /// A <see cref="FindOptions{TDocument}"/> instance, either the provided 
         /// <paramref name="findOptions"/> or a new instance if <paramref name="findOptions"/> is null.
         /// </returns>
-        private static FindOptions<TDocument, TDocument> ConvertInternal(FindOptions<TDocument>? findOptions) => findOptions ?? new FindOptions<TDocument>();
-        #endregion private methods
+        private static FindOptions<TDocument, TDocument> ConvertInternal(FindOptions<TDocument>? findOptions) => findOptions ?? new FindOptions<TDocument, TDocument>();
+
+        private static FindOptions<TDocument, TProjection> ConvertInternal<TProjection>(FindOptions<TDocument, TProjection>? findOptions) => findOptions ?? new FindOptions<TDocument, TProjection>();
+
+        /// <summary>
+        /// Registers class maps for BSON serialization if they are not already registered.
+        /// It retrieves all existing BSON class maps and ensures each one is registered before yielding it.
+        /// </summary>
+        /// <returns>
+        /// An enumerable collection of registered <see cref="BsonClassMap"/> objects.
+        /// </returns>
+        private IEnumerable<BsonClassMap> ReflectionRegisterClassMap()
+        {
+            var result = this.GetBsonClassMaps().ToArray();
+
+            foreach (var bsonClassMap in result)
+            {
+                if (!BsonClassMap.IsClassMapRegistered(bsonClassMap.ClassType))
+                {
+                    BsonClassMap.RegisterClassMap(bsonClassMap);
+                }
+
+                yield return bsonClassMap;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a collection of BsonClassMap instances by inspecting the properties and methods 
+        /// of the current context type related to the mapping of generic types.
+        /// </summary>
+        /// <returns>
+        /// An enumerable collection of <see cref="BsonClassMap"/> instances, each representing a mapping
+        /// for a particular type found within the context.
+        /// </returns>
+        private IEnumerable<BsonClassMap> GetBsonClassMaps()
+        {
+            var thisType = this._contextbase.GetType();
+
+            var props = thisType.GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.GetProperty)
+                .Where(w => w.PropertyType.IsGenericType && (w.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>) || w.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<,,>)));
+
+            var methods = thisType.GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
+                .Where(w => w.Name.Equals("Map", StringComparison.Ordinal) && w.GetParameters().Length > 0 && w.GetParameters().All(a => a.ParameterType.IsGenericType && a.ParameterType.GetGenericTypeDefinition() == typeof(BsonClassMap<>)))
+                .Select(s => new { BsonClassMap = s.GetParameters()[0].ParameterType, BsonClassMapGeneric = s.GetParameters()[0].ParameterType.GenericTypeArguments[0], Method = s }).ToArray();
+
+            foreach (var prop in props)
+            {
+                var objectIdImplementationType = prop.PropertyType.GenericTypeArguments[0];
+
+                var bsonClassMapType = typeof(BsonClassMap<>).MakeGenericType(objectIdImplementationType);
+
+                var basonClassMap = (BsonClassMap)Activator.CreateInstance(typeof(BsonClassMap<>).MakeGenericType(objectIdImplementationType))!;
+
+                basonClassMap.MapExtraElementsProperty("ExtraElements");
+
+                yield return basonClassMap;
+            }
+        }
+
+        /// <summary>
+        /// Asynchronously performs a bulk write operation on a MongoDB collection.
+        /// </summary>
+        /// <param name="listWriteModel">A list of write models specifying the operations to be performed.</param>
+        /// <param name="bulkWriteOptions">Options to control the bulk write operation.</param>
+        /// <param name="forceTransaction">Indicates whether to force the operation to run in a transaction.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
+        /// <returns>A <see cref="Task{long}"/> that represents the asynchronous operation,
+        /// containing the total count of documents inserted, updated, matched, or deleted.
+        /// Returns -1 if the operation was not acknowledged.</returns>
+        /// <exception cref="OperationCanceledException">Thrown when the operation is canceled.</exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal async Task<long> BulkWriteAsync([NotNull] List<WriteModel<TDocument>> listWriteModel,
+                    [NotNull] BulkWriteOptions bulkWriteOptions,
+                    [MaybeNull] bool? forceTransaction = default,
+                    [MaybeNull] CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // Perform the bulk write operation based on the provided options
+            BulkWriteResult<TDocument> result;
+
+            IEnumerable<WriteModel<TDocument>> writeModels = listWriteModel;
+
+            this._contextbase.BeforeBulkWriteInternal<TDocument, TObjectId, TDocument, TUser>(this, ref writeModels, ref bulkWriteOptions);
+
+            if (this.InTransaction(forceTransaction, out var clientSessionHandle))
+            {
+                // Perform the bulk write operation with a session
+                result = await this.MongoCollection.BulkWriteAsync(clientSessionHandle, writeModels, bulkWriteOptions, cancellationToken);
+            }
+            else
+            {
+                // Perform the bulk write operation without a session
+                result = await this.MongoCollection.BulkWriteAsync(writeModels, bulkWriteOptions, cancellationToken);
+            }
+
+            // Check if the result is default
+            if (result == default)
+            {
+                // Return -1 if the operation was not acknowledged
+                return -1;
+            }
+
+            this._contextbase.ResultInternal<TDocument, TObjectId, BulkWriteResult<TDocument>, TUser>(this, ref result);
+
+            // Return the total count of documents inserted, updated, matched, or deleted if the operation was acknowledged
+            if (result.IsAcknowledged)
+            {
+                return result.DeletedCount + result.ModifiedCount + result.MatchedCount + result.InsertedCount + result.RequestCount;
+            }
+
+            return -1;
+        }
+        #endregion private/internal methods
 
         #region constructor
         /// <summary>
@@ -417,60 +528,7 @@ namespace UCode.Mongo
         }
         #endregion constructor
 
-        /// <summary>
-        /// Registers class maps for BSON serialization if they are not already registered.
-        /// It retrieves all existing BSON class maps and ensures each one is registered before yielding it.
-        /// </summary>
-        /// <returns>
-        /// An enumerable collection of registered <see cref="BsonClassMap"/> objects.
-        /// </returns>
-        private IEnumerable<BsonClassMap> ReflectionRegisterClassMap()
-        {
-            var result = this.GetBsonClassMaps().ToArray();
 
-            foreach (var bsonClassMap in result)
-            {
-                if (!BsonClassMap.IsClassMapRegistered(bsonClassMap.ClassType))
-                {
-                    BsonClassMap.RegisterClassMap(bsonClassMap);
-                }
-
-                yield return bsonClassMap;
-            }
-        }
-
-        /// <summary>
-        /// Retrieves a collection of BsonClassMap instances by inspecting the properties and methods 
-        /// of the current context type related to the mapping of generic types.
-        /// </summary>
-        /// <returns>
-        /// An enumerable collection of <see cref="BsonClassMap"/> instances, each representing a mapping
-        /// for a particular type found within the context.
-        /// </returns>
-        private IEnumerable<BsonClassMap> GetBsonClassMaps()
-        {
-            var thisType = this._contextbase.GetType();
-
-            var props = thisType.GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.GetProperty)
-                .Where(w => w.PropertyType.IsGenericType && (w.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>) || w.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<,,>)));
-
-            var methods = thisType.GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
-                .Where(w => w.Name.Equals("Map", StringComparison.Ordinal) && w.GetParameters().Length > 0 && w.GetParameters().All(a => a.ParameterType.IsGenericType && a.ParameterType.GetGenericTypeDefinition() == typeof(BsonClassMap<>)))
-                .Select(s => new { BsonClassMap = s.GetParameters()[0].ParameterType, BsonClassMapGeneric = s.GetParameters()[0].ParameterType.GenericTypeArguments[0], Method = s }).ToArray();
-
-            foreach (var prop in props)
-            {
-                var objectIdImplementationType = prop.PropertyType.GenericTypeArguments[0];
-
-                var bsonClassMapType = typeof(BsonClassMap<>).MakeGenericType(objectIdImplementationType);
-
-                var basonClassMap = (BsonClassMap)Activator.CreateInstance(typeof(BsonClassMap<>).MakeGenericType(objectIdImplementationType))!;
-
-                basonClassMap.MapExtraElementsProperty("ExtraElements");
-
-                yield return basonClassMap;
-            }
-        }
 
 
 
@@ -718,7 +776,6 @@ namespace UCode.Mongo
         }
         #endregion queryable
 
-
         #region FirstOrDefault
 
 
@@ -785,7 +842,6 @@ namespace UCode.Mongo
 
         #endregion
 
-
         #region Any
 
 
@@ -848,8 +904,8 @@ namespace UCode.Mongo
         /// <returns>A <see cref="Task{TDocument}"/> that represents the asynchronous 
         /// operation. The task result contains the retrieved document, or null if not found.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async Task<TDocument> GetAsync([NotNull] TObjectId id,
-            [NotNull] FindOptions? findOptions = default,
+        public async Task<TDocument?> GetAsync([NotNull] TObjectId id,
+            [MaybeNull] FindOptions? findOptions = default,
             [MaybeNull] bool? forceTransaction = default,
             [MaybeNull] CancellationToken cancellationToken = default)
         {
@@ -871,7 +927,7 @@ namespace UCode.Mongo
         /// <param name="cancellationToken">Optional cancellation token to observe while waiting for the asynchronous operation to complete.</param>
         /// <returns>A <see cref="Task{TDocument}"/> representing the asynchronous operation, which returns the retrieved document.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async Task<TDocument> GetAsync([NotNull] TObjectId id,
+        public async Task<TDocument?> GetAsync([NotNull] TObjectId id,
             [MaybeNull] FindOptions<TDocument>? findOptions = default,
             [MaybeNull] bool? forceTransaction = default,
             [MaybeNull] CancellationToken cancellationToken = default)
@@ -894,7 +950,7 @@ namespace UCode.Mongo
         /// <param name="cancellationToken">Optional token to cancel the asynchronous operation. Can be null.</param>
         /// <returns>A <see cref="Task{TProjection}"/> representing the asynchronous operation, containing the retrieved projection of type <typeparamref name="TProjection"/>.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async Task<TProjection> GetAsync<TProjection>([NotNull] TObjectId id,
+        public async Task<TProjection?> GetAsync<TProjection>([NotNull] TObjectId id,
             [MaybeNull] FindOptions<TDocument, TProjection>? findOptions = default,
             [MaybeNull] bool? forceTransaction = default,
             [MaybeNull] CancellationToken cancellationToken = default)
@@ -918,7 +974,7 @@ namespace UCode.Mongo
         /// contains the single document that matches the query, or the default value if no documents are found.
         /// </returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async Task<TProjection> GetOneAsync<TProjection>([NotNull] Query<TDocument, TProjection> query,
+        public async Task<TProjection?> GetOneAsync<TProjection>([NotNull] Query<TDocument, TProjection> query,
             [MaybeNull] FindOptions<TDocument, TProjection>? findOptions = default,
             [MaybeNull] bool? forceTransaction = default,
             [MaybeNull] CancellationToken cancellationToken = default)
@@ -941,12 +997,12 @@ namespace UCode.Mongo
         /// or the default value if no documents match the query.
         /// </returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async Task<TProjection> GetSingleAsync<TProjection>([NotNull] Query<TDocument, TProjection> query,
+        public async Task<TProjection?> GetSingleAsync<TProjection>([NotNull] Query<TDocument, TProjection> query,
             [MaybeNull] FindOptions<TDocument, TProjection>? findOptions = default,
             [MaybeNull] bool? forceTransaction = default,
             [MaybeNull] CancellationToken cancellationToken = default)
         {
-            return await GetFirstOrSingleAsync<TProjection>(true, query, findOptions, forceTransaction, cancellationToken);
+            return await this.GetFirstOrSingleAsync<TProjection>(true, query, findOptions, forceTransaction, cancellationToken);
         }
 
         /// <summary>
@@ -979,7 +1035,8 @@ namespace UCode.Mongo
         /// Thrown when <paramref name="isSingle"/> is true and more than one document is found.
         /// </exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<TProjection> GetFirstOrSingleAsync<TProjection>([NotNull] bool isSingle, [NotNull] Query<TDocument, TProjection> query,
+        private async Task<TProjection?> GetFirstOrSingleAsync<TProjection>([NotNull] bool isSingle,
+            [NotNull] Query<TDocument, TProjection> query,
             [MaybeNull] FindOptions<TDocument, TProjection>? findOptions = default,
             [MaybeNull] bool? forceTransaction = default,
             [MaybeNull] CancellationToken cancellationToken = default)
@@ -994,7 +1051,7 @@ namespace UCode.Mongo
             findOptions.Skip ??= 0;
             findOptions.Limit ??= 1;
 
-            FilterDefinition<TDocument> filterDefinition = query;
+            FilterDefinition<TDocument> filterDefinition = (query ?? FilterDefinition<TDocument>.Empty)!;
 
             this._contextbase.BeforeFindInternal<TDocument, TObjectId, TProjection, TUser>(this, ref filterDefinition, ref findOptions);
 
@@ -1039,7 +1096,7 @@ namespace UCode.Mongo
         }
         #endregion
 
-
+        #region Get Async Enumerable
         /// <summary>
         /// Asynchronously retrieves documents of type <typeparamref name="TDocument"/> from a data source 
         /// based on the specified array of IDs. This method returns an asynchronous stream of documents,
@@ -1130,7 +1187,7 @@ namespace UCode.Mongo
             var qry = Query<TDocument, TProjection>.FromExpression(f => ids.Contains(f.Id));
 
             // Iterate over the results of the GetAsync method and yield each document
-            await foreach (var item in this.GetAsync<TProjection>(qry, findOptions, false, cancellationToken))
+            await foreach (var item in this.GetAsync<TProjection>(qry, findOptions, forceTransaction, cancellationToken))
             {
                 yield return item;
             }
@@ -1205,124 +1262,6 @@ namespace UCode.Mongo
             {
                 yield return item;
             }
-        }
-
-
-        /// <summary>
-        /// Performs a full-text search asynchronously and yields the results as an asynchronous stream of documents.
-        /// </summary>
-        /// <param name="text">
-        /// The search text to be used in the full-text search.
-        /// </param>
-        /// <param name="fullTextSearchOptions">
-        /// Options for configuring the full-text search behavior.
-        /// </param>
-        /// <param name="filter">
-        /// Optional filter criteria to apply to the search results. Can be null if no filtering is required.
-        /// </param>
-        /// <param name="findOptions">
-        /// Optional options that specify how to find documents. Can be null if default options are sufficient.
-        /// </param>
-        /// <param name="forceTransaction">
-        /// An optional boolean indicating whether to force the execution of the operation within a transaction. Defaults to null.
-        /// </param>
-        /// <param name="cancellationToken">
-        /// An optional cancellation token to observe while waiting for the task to complete. Defaults to null.
-        /// </param>
-        /// <returns>
-        /// An asynchronous enumerable of documents that match the full-text search criteria.
-        /// </returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async IAsyncEnumerable<TDocument> FulltextSearchAsync([NotNull] string text,
-            [NotNull] TextSearchOptions? fullTextSearchOptions,
-            [MaybeNull] Query<TDocument>? filter = default,
-            [MaybeNull] FindOptions<TDocument>? findOptions = default,
-            [MaybeNull] bool? forceTransaction = default,
-            [MaybeNull][EnumeratorCancellation] CancellationToken cancellationToken = default)
-        {
-            // Perform the full-text search and iterate over the results
-            await foreach (var item in this.FulltextSearchAsync<TDocument>(text, fullTextSearchOptions, filter, findOptions, forceTransaction, cancellationToken))
-            {
-                // Yield return each item in the search results
-                yield return item;
-            }
-        }
-
-
-        /// <summary>
-        /// Performs a full-text search asynchronously and returns an asynchronous enumerable of projected results.
-        /// </summary>
-        /// <typeparam name="TProjection">
-        /// The type of the projected results.
-        /// </typeparam>
-        /// <param name="text">
-        /// The text to search for.
-        /// </param>
-        /// <param name="fullTextSearchOptions">
-        /// Options to customize the full-text search.
-        /// </param>
-        /// <param name="filter">
-        /// An optional filter to further refine the results, can be null.
-        /// </param>
-        /// <param name="findOptions">
-        /// Optional find options to modify the query execution, can be null.
-        /// </param>
-        /// <param name="forceTransaction">
-        /// Optional indicator to force transaction execution, can be null.
-        /// </param>
-        /// <param name="cancellationToken">
-        /// A cancellation token to propagate notifications that the operation should be canceled.
-        /// </param>
-        /// <returns>
-        /// An async enumerable of projected results obtained from the full-text search.
-        /// </returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async IAsyncEnumerable<TProjection> FulltextSearchAsync<TProjection>([NotNull] string text,
-            [NotNull] TextSearchOptions fullTextSearchOptions,
-            [MaybeNull] Query<TDocument, TProjection>? filter = default,
-            [MaybeNull] FindOptions<TDocument, TProjection>? findOptions = default,
-            [MaybeNull] bool? forceTransaction = default,
-            [MaybeNull][EnumeratorCancellation] CancellationToken cancellationToken = default)
-        {
-            findOptions ??= new FindOptions<TDocument, TProjection>();
-
-            FilterDefinition<TDocument> filterSelected = Query<TDocument, TProjection>.FromText(text, fullTextSearchOptions);
-
-            this._contextbase.BeforeFindInternal<TDocument, TObjectId, TProjection, TUser>(this, ref filterSelected, ref findOptions);
-
-            if (filter != default)
-            {
-                filterSelected += filter;
-            }
-
-            IAsyncCursor<TProjection> cursor;
-
-            if (this.InTransaction(forceTransaction, out var clientSessionHandle))
-            {
-                cursor = await this.MongoCollection.FindAsync(clientSessionHandle, filterSelected, findOptions, cancellationToken);
-            }
-            else
-            {
-                cursor = await this.MongoCollection.FindAsync(filterSelected, findOptions, cancellationToken);
-            }
-
-            while (await cursor.MoveNextAsync(cancellationToken))
-            {
-                foreach (var item in cursor.Current)
-                {
-                    if (item != null)
-                    {
-                        TProjection result = item;
-
-                        this._contextbase.ResultInternal<TDocument, TObjectId, TProjection, TUser>(this, ref result);
-
-                        yield return result;
-                    }
-                }
-            }
-
-            // Dispose of the cursor
-            cursor.Dispose();
         }
 
 
@@ -1402,7 +1341,128 @@ namespace UCode.Mongo
             cursor.Dispose();
         }
 
+        #endregion Get Async Enumerable
 
+        #region Fulltext Search
+        /// <summary>
+        /// Performs a full-text search asynchronously and yields the results as an asynchronous stream of documents.
+        /// </summary>
+        /// <param name="text">
+        /// The search text to be used in the full-text search.
+        /// </param>
+        /// <param name="fullTextSearchOptions">
+        /// Options for configuring the full-text search behavior.
+        /// </param>
+        /// <param name="filter">
+        /// Optional filter criteria to apply to the search results. Can be null if no filtering is required.
+        /// </param>
+        /// <param name="findOptions">
+        /// Optional options that specify how to find documents. Can be null if default options are sufficient.
+        /// </param>
+        /// <param name="forceTransaction">
+        /// An optional boolean indicating whether to force the execution of the operation within a transaction. Defaults to null.
+        /// </param>
+        /// <param name="cancellationToken">
+        /// An optional cancellation token to observe while waiting for the task to complete. Defaults to null.
+        /// </param>
+        /// <returns>
+        /// An asynchronous enumerable of documents that match the full-text search criteria.
+        /// </returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public async IAsyncEnumerable<TDocument> FulltextSearchAsync([NotNull] string text,
+            [MaybeNull] TextSearchOptions? fullTextSearchOptions,
+            [MaybeNull] Query<TDocument>? filter = default,
+            [MaybeNull] FindOptions<TDocument>? findOptions = default,
+            [MaybeNull] bool? forceTransaction = default,
+            [MaybeNull][EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            // Perform the full-text search and iterate over the results
+            await foreach (var item in this.FulltextSearchAsync<TDocument>(text, fullTextSearchOptions, filter, findOptions, forceTransaction, cancellationToken))
+            {
+                // Yield return each item in the search results
+                yield return item;
+            }
+        }
+
+
+        /// <summary>
+        /// Performs a full-text search asynchronously and returns an asynchronous enumerable of projected results.
+        /// </summary>
+        /// <typeparam name="TProjection">
+        /// The type of the projected results.
+        /// </typeparam>
+        /// <param name="text">
+        /// The text to search for.
+        /// </param>
+        /// <param name="fullTextSearchOptions">
+        /// Options to customize the full-text search.
+        /// </param>
+        /// <param name="filter">
+        /// An optional filter to further refine the results, can be null.
+        /// </param>
+        /// <param name="findOptions">
+        /// Optional find options to modify the query execution, can be null.
+        /// </param>
+        /// <param name="forceTransaction">
+        /// Optional indicator to force transaction execution, can be null.
+        /// </param>
+        /// <param name="cancellationToken">
+        /// A cancellation token to propagate notifications that the operation should be canceled.
+        /// </param>
+        /// <returns>
+        /// An async enumerable of projected results obtained from the full-text search.
+        /// </returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public async IAsyncEnumerable<TProjection> FulltextSearchAsync<TProjection>([NotNull] string text,
+            [MaybeNull] TextSearchOptions? fullTextSearchOptions,
+            [MaybeNull] Query<TDocument, TProjection>? filter = default,
+            [MaybeNull] FindOptions<TDocument, TProjection>? findOptions = default,
+            [MaybeNull] bool? forceTransaction = default,
+            [MaybeNull][EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            findOptions ??= new FindOptions<TDocument, TProjection>();
+            
+            FilterDefinition<TDocument> filterSelected = Query<TDocument, TProjection>.FromText(text, fullTextSearchOptions);
+
+            this._contextbase.BeforeFindInternal<TDocument, TObjectId, TProjection, TUser>(this, ref filterSelected, ref findOptions);
+
+            if (filter != default)
+            {
+                filterSelected += filter;
+            }
+
+            IAsyncCursor<TProjection> cursor;
+
+            if (this.InTransaction(forceTransaction, out var clientSessionHandle))
+            {
+                cursor = await this.MongoCollection.FindAsync(clientSessionHandle, filterSelected, findOptions, cancellationToken);
+            }
+            else
+            {
+                cursor = await this.MongoCollection.FindAsync(filterSelected, findOptions, cancellationToken);
+            }
+
+            while (await cursor.MoveNextAsync(cancellationToken))
+            {
+                foreach (var item in cursor.Current)
+                {
+                    if (item != null)
+                    {
+                        TProjection result = item;
+
+                        this._contextbase.ResultInternal<TDocument, TObjectId, TProjection, TUser>(this, ref result);
+
+                        yield return result;
+                    }
+                }
+            }
+
+            // Dispose of the cursor
+            cursor.Dispose();
+        }
+        #endregion Fulltext Search
+
+        #region Get Paged
         /// <summary>
         /// Asynchronously retrieves a paginated result based on the provided filter and pagination options.
         /// </summary>
@@ -1423,7 +1483,7 @@ namespace UCode.Mongo
             [MaybeNull] CancellationToken cancellationToken = default)
         {
             // Convert the filter to the correct type for the GetPagedAsync method
-            Query<TDocument, TProjection> qry = filter;
+            Query<TDocument, TProjection> qry = filter!;
 
             //FindOptions<TDocument, TProjection> findOptions = findOptionsPaging;
 
@@ -1455,7 +1515,6 @@ namespace UCode.Mongo
             //var fojson = findOptionsPaging.JsonString();
 
             findOptionsPaging ??= new FindOptionsPaging<TDocument, TObjectId, TProjection, TUser>();
-
 
             // Check if the page size is valid
             if (findOptionsPaging.PageSize <= 0)
@@ -1539,6 +1598,7 @@ namespace UCode.Mongo
             // Perform the find operation and return the result
             return new PagedResult<TProjection>(results, findOptionsPaging.CurrentPage, findOptionsPaging.PageSize, total);
         }
+        #endregion Get Paged
 
         #endregion
 
@@ -2633,7 +2693,7 @@ namespace UCode.Mongo
 
 
             // Convert the query to a BsonDocument array
-            BsonDocument[] bsonDocumentFilter = query;
+            BsonDocument[] bsonDocumentFilter = query!;
 
             this._contextbase.BeforeAggregateInternal<TDocument, TObjectId, TProjection, TUser>(this, ref bsonDocumentFilter, ref aggregateOptions);
 
@@ -2667,7 +2727,7 @@ namespace UCode.Mongo
             {
                 foreach (var current in cursor.Current)
                 {
-                    TProjection c = current;
+                    TProjection? c = current;
 
                     this._contextbase.ResultInternal(this, ref c);
 
@@ -2729,60 +2789,7 @@ namespace UCode.Mongo
 
 
 
-        /// <summary>
-        /// Asynchronously performs a bulk write operation on a MongoDB collection.
-        /// </summary>
-        /// <param name="listWriteModel">A list of write models specifying the operations to be performed.</param>
-        /// <param name="bulkWriteOptions">Options to control the bulk write operation.</param>
-        /// <param name="forceTransaction">Indicates whether to force the operation to run in a transaction.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
-        /// <returns>A <see cref="Task{long}"/> that represents the asynchronous operation,
-        /// containing the total count of documents inserted, updated, matched, or deleted.
-        /// Returns -1 if the operation was not acknowledged.</returns>
-        /// <exception cref="OperationCanceledException">Thrown when the operation is canceled.</exception>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal async Task<long> BulkWriteAsync([NotNull] List<WriteModel<TDocument>> listWriteModel,
-                    [NotNull] BulkWriteOptions bulkWriteOptions,
-                    [MaybeNull] bool? forceTransaction = default,
-                    [MaybeNull] CancellationToken cancellationToken = default)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
 
-            // Perform the bulk write operation based on the provided options
-            BulkWriteResult<TDocument> result;
-
-            IEnumerable<WriteModel<TDocument>> writeModels = listWriteModel;
-
-            this._contextbase.BeforeBulkWriteInternal<TDocument, TObjectId, TDocument, TUser>(this, ref writeModels, ref bulkWriteOptions);
-
-            if (this.InTransaction(forceTransaction, out var clientSessionHandle))
-            {
-                // Perform the bulk write operation with a session
-                result = await this.MongoCollection.BulkWriteAsync(clientSessionHandle, writeModels, bulkWriteOptions, cancellationToken);
-            }
-            else
-            {
-                // Perform the bulk write operation without a session
-                result = await this.MongoCollection.BulkWriteAsync(writeModels, bulkWriteOptions, cancellationToken);
-            }
-
-            // Check if the result is default
-            if (result == default)
-            {
-                // Return -1 if the operation was not acknowledged
-                return -1;
-            }
-
-            this._contextbase.ResultInternal<TDocument, TObjectId, BulkWriteResult<TDocument>, TUser>(this, ref result);
-
-            // Return the total count of documents inserted, updated, matched, or deleted if the operation was acknowledged
-            if (result.IsAcknowledged)
-            {
-                return result.DeletedCount + result.ModifiedCount + result.MatchedCount + result.InsertedCount + result.RequestCount;
-            }
-
-            return -1;
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static explicit operator ContextBase(DbSet<TDocument, TObjectId, TUser> dbSet) => dbSet._contextbase;

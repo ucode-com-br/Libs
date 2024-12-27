@@ -190,5 +190,20 @@ namespace UCode.Mongo.Options
 
             return System.Text.Json.JsonSerializer.Deserialize<FindOptions>(json)!;
         }
+
+
+        public static implicit operator FindOptions<TDocument>(FindOptionsPaging<TDocument, TObjectId, TProjection, TUser> source)
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize<FindOptionsBase>(source);
+
+            return System.Text.Json.JsonSerializer.Deserialize<FindOptions<TDocument>>(json)!;
+        }
+
+        //public static implicit operator FindOptions<TDocument, TProjection>(FindOptionsPaging<TDocument, TObjectId, TProjection, TUser> source)
+        //{
+        //    var json = System.Text.Json.JsonSerializer.Serialize<FindOptionsBase>(source);
+        //    return System.Text.Json.JsonSerializer.Deserialize<FindOptions<TDocument, TProjection>>(json)!;
+        //}
+
     }
 }
