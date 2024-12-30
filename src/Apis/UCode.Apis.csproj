@@ -1,5 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
+
+
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -8,8 +11,8 @@
     <Copyright>UCode (c) Desenvolvimento de Software 2024</Copyright>
     <IncludeSymbols>True</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <Version>3.11.5</Version>
-    <Title>UCode Compress</Title>
+    <Version>3.11.4</Version>
+    <Title>UCode Blob</Title>
     <RepositoryType>git</RepositoryType>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <SignAssembly>False</SignAssembly>
@@ -18,25 +21,7 @@
     <PackageProjectUrl>https://github.com/ucode-com-br/Libs</PackageProjectUrl>
     <PackageReadmeFile>README.MD</PackageReadmeFile>
     <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
-    <RootNamespace>UCode.Compress</RootNamespace>
+    <RootNamespace>UCode.Apis</RootNamespace>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
-  </PropertyGroup>
-  <Target Name="Husky" BeforeTargets="Restore;CollectPackageReferences" Condition="'$(HUSKY)' != 0">
-    <Exec Command="dotnet tool restore" StandardOutputImportance="Low" StandardErrorImportance="High" />
-    <Exec Condition="0 == 1" Command="husky install" StandardOutputImportance="Low" StandardErrorImportance="High" WorkingDirectory=".." />
-  </Target>
-  <ItemGroup>
-    <None Include="..\..\LICENSE">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\README.MD">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
-  </ItemGroup>
+
 </Project>
