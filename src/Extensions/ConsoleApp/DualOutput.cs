@@ -67,12 +67,13 @@ namespace UCode.Extensions.ConsoleApp
         /// <summary>
         /// Initializes a new instance of the <see cref="DualOutput"/> class with a specified file path.
         /// </summary>
+        /// <param name="consoleTextWriter">The original console write stream.</param>
         /// <param name="filePath">The path of the file to write to.</param>
         /// <param name="overwrite">If true, overwrites the file; if false, appends to the file. Default is true.</param>
         /// <exception cref="IOException">Thrown if the file cannot be created or accessed.</exception>
         /// <exception cref="UnauthorizedAccessException">Thrown if the user does not have permission to access the file.</exception>
-        public DualOutput(string filePath, bool overwrite = true)
-            : this(new FileStream(filePath,
+        public DualOutput(TextWriter consoleTextWriter, string filePath, bool overwrite = true)
+            : this(consoleTextWriter, new FileStream(filePath,
                                   overwrite ? FileMode.Create : FileMode.Append,
                                   FileAccess.Write,
                                   FileShare.Read))
@@ -82,13 +83,14 @@ namespace UCode.Extensions.ConsoleApp
         /// <summary>
         /// Initializes a new instance of the <see cref="DualOutput"/> class with a specified output stream.
         /// </summary>
+        /// <param name="consoleTextWriter">The original console write stream.</param>
         /// <param name="outputStream">The stream where data will be written.</param>
         /// <exception cref="ArgumentNullException">Thrown if the <paramref name="outputStream"/> is null.</exception>
-        public DualOutput(Stream outputStream)
+        public DualOutput(TextWriter consoleTextWriter, Stream outputStream)
         {
             ArgumentNullException.ThrowIfNull(outputStream);
 
-            this._consoleOutput = Console.Out; // Save the original console output.
+            this._consoleOutput = consoleTextWriter; // Save the original console output.
             this._fileOutput = new StreamWriter(outputStream) { AutoFlush = false }; // Initialize file output writer.
 
             // Configure a bounded channel with a specified capacity for message buffering.
