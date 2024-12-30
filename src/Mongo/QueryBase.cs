@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Linq.Expressions;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
@@ -158,6 +159,11 @@ namespace UCode.Mongo
         /// <param name="bsonDocuments">An array of <see cref="BsonDocument"/> objects that represent the BSON documents to be used in the query pipeline.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="bsonDocuments"/> is null.</exception>
         internal QueryBase([NotNull] BsonDocument[] bsonDocuments) => this.Pipeline = bsonDocuments;
+
+        internal QueryBase([NotNull] BsonArray bsonArrayPipeline)
+        {
+            this.Pipeline = bsonArrayPipeline.Select(s=>s.AsBsonDocument).ToArray();
+        }
         #endregion Constructors
 
 

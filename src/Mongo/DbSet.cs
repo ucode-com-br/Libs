@@ -2691,7 +2691,6 @@ namespace UCode.Mongo
             // Set default aggregate options if not provided
             aggregateOptions ??= new AggregateOptions();
 
-
             // Convert the query to a BsonDocument array
             BsonDocument[] bsonDocumentFilter = query!;
 

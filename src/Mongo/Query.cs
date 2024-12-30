@@ -91,6 +91,10 @@ namespace UCode.Mongo
         internal Query(BsonDocument[] bsonElements) : base(bsonElements)
         {
         }
+
+        internal Query(BsonArray bsonArray) : base(bsonArray)
+        {
+        }
         #endregion Constructors
 
         #region Static Methods
@@ -528,6 +532,22 @@ namespace UCode.Mongo
 
         }
 
+        [return: MaybeNull]
+        public static implicit operator BsonArray?([MaybeNull] Query<TDocument>? query)
+        {
+
+            // If the query is null, return the default value
+            if (query == default)
+            {
+                return default;
+            }
+
+            var pipeline = query.Pipeline ?? throw new ArgumentNullException("Pipeline is null.");
+
+            return new BsonArray(pipeline);
+
+        }
+
 
         #region implicity to constructors
 
@@ -542,6 +562,12 @@ namespace UCode.Mongo
         /// </returns>
         [return: MaybeNull]
         public static implicit operator Query<TDocument>?([MaybeNull] FilterDefinition<TDocument>? source) => source == default ? default : new (source);
+
+        [return: MaybeNull]
+        public static implicit operator Query<TDocument>?([MaybeNull] BsonArray? bsonArray) => bsonArray == default ? default : new(bsonArray);
+
+        [return: MaybeNull]
+        public static implicit operator Query<TDocument>?([MaybeNull] BsonDocument[]? bsonDocuments) => bsonDocuments == default ? default : new(bsonDocuments);
 
 
         /// <summary>
@@ -678,6 +704,10 @@ namespace UCode.Mongo
         internal Query(BsonDocument[] bsonElements) : base(bsonElements)
         {
         }
+
+        internal Query(BsonArray bsonArray) : base(bsonArray)
+        {
+        }
         #endregion Constructors
 
 
@@ -705,6 +735,11 @@ namespace UCode.Mongo
         /// A new instance of <see cref="Query{TDocument}"/> initialized with the specified pipeline and a default update.
         /// </returns>
         public static Query<TDocument, TProjection> FromPipeline([NotNull] BsonDocument[] pipeline) => new(pipeline)
+        {
+            Update = default
+        };
+
+        public static Query<TDocument, TProjection> FromPipeline([NotNull] BsonArray pipeline) => new(pipeline)
         {
             Update = default
         };
@@ -1294,6 +1329,44 @@ namespace UCode.Mongo
             return query.ExpressionQuery.ToBsonDocument();
         }
 
+        /// <summary>
+        /// Implicitly converts a <see cref="Query{TDocument, TProjection}"/> to an array of <see cref="BsonDocument"/>.
+        /// </summary>
+        /// <param name="query">The <see cref="Query{TDocument, TProjection}"/> to convert.</param>
+        /// <returns>
+        /// An array of <see cref="BsonDocument"/> if the query is not null; otherwise, returns null.
+        /// </returns>
+        /// <exception cref="ArgumentNullException">Thrown when the <paramref name="query"/> has a null <c>Pipeline</c>.</exception>
+        [return: MaybeNull]
+        public static implicit operator BsonDocument[]?([MaybeNull] Query<TDocument, TProjection>? query)
+        {
+
+            // If the query is null, return the default value
+            if (query == default)
+            {
+                return default;
+            }
+
+            return query.Pipeline ?? throw new ArgumentNullException("Pipeline is null.");
+
+        }
+
+        [return: MaybeNull]
+        public static implicit operator BsonArray?([MaybeNull] Query<TDocument, TProjection>? query)
+        {
+
+            // If the query is null, return the default value
+            if (query == default)
+            {
+                return default;
+            }
+
+            var pipeline = query.Pipeline ?? throw new ArgumentNullException("Pipeline is null.");
+
+            return new BsonArray(pipeline);
+
+        }
+
 
 
         #region Implicity to constructors
@@ -1386,27 +1459,13 @@ namespace UCode.Mongo
         [return: MaybeNull]
         public static implicit operator Query<TDocument, TProjection>?([MaybeNull] FilterDefinition<TDocument>? source) => source == default ? default : new(source);
 
-        /// <summary>
-        /// Implicitly converts a <see cref="Query{TDocument, TProjection}"/> to an array of <see cref="BsonDocument"/>.
-        /// </summary>
-        /// <param name="query">The <see cref="Query{TDocument, TProjection}"/> to convert.</param>
-        /// <returns>
-        /// An array of <see cref="BsonDocument"/> if the query is not null; otherwise, returns null.
-        /// </returns>
-        /// <exception cref="ArgumentNullException">Thrown when the <paramref name="query"/> has a null <c>Pipeline</c>.</exception>
         [return: MaybeNull]
-        public static implicit operator BsonDocument[]?([MaybeNull] Query<TDocument, TProjection>? query)
-        {
+        public static implicit operator Query<TDocument, TProjection>?([MaybeNull] BsonArray? bsonArray) => bsonArray == default ? default : new(bsonArray);
 
-            // If the query is null, return the default value
-            if (query == default)
-            {
-                return default;
-            }
+        [return: MaybeNull]
+        public static implicit operator Query<TDocument, TProjection>?([MaybeNull] BsonDocument[]? bsonDocuments) => bsonDocuments == default ? default : new(bsonDocuments);
 
-            return query.Pipeline ?? throw new ArgumentNullException("Pipeline is null.");
-
-        }
+        
 
         #endregion implicity to constructors
 
