@@ -22,7 +22,7 @@ namespace UCode.Mongo
         /// <returns>
         /// A new instance of the <see cref="IndexDefinition{TDocument}"/> class.
         /// </returns>
-        public IndexDefinition(IndexKeysDefinition<TDocument> indexKeysDefinition, CreateIndexOptions options)
+        public IndexDefinition(IndexKeysDefinition<TDocument> indexKeysDefinition, CreateIndexOptions<TDocument> options)
         {
             this.IndexKeysDefinition = indexKeysDefinition;
             this.IndexOptions = options;
@@ -49,7 +49,7 @@ namespace UCode.Mongo
         /// <value>
         /// An instance of <see cref="CreateIndexOptions"/> representing the options for index creation.
         /// </value>
-        public CreateIndexOptions IndexOptions
+        public CreateIndexOptions<TDocument> IndexOptions
         {
             get; set;
         }

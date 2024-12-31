@@ -23,7 +23,7 @@ namespace UCode.Mongo
 
         private readonly IndexKeysDefinition<TDocument>? _indexKeysDefinition;
 
-        private readonly CreateIndexOptions? _createIndexOptions;
+        private readonly CreateIndexOptions<TDocument>? _createIndexOptions;
 
         //private readonly List<IndexDefinition<TDocument>> _indexDefinitions = new List<IndexDefinition<TDocument>>();
         #endregion
@@ -55,7 +55,7 @@ namespace UCode.Mongo
         /// <returns>
         /// This constructor does not return a value.
         /// </returns>
-        internal IndexKeys(IndexKeysDefinition<TDocument> indexKeysDefinition, CreateIndexOptions createIndexOptions, IndexKeys<TDocument> root)
+        internal IndexKeys(IndexKeysDefinition<TDocument> indexKeysDefinition, CreateIndexOptions<TDocument> createIndexOptions, IndexKeys<TDocument> root)
         {
             this._indexKeysDefinition = indexKeysDefinition;
             this._createIndexOptions = createIndexOptions;
@@ -76,9 +76,9 @@ namespace UCode.Mongo
         /// <returns>
         /// A configured instance of <see cref="CreateIndexOptions"/> based on the provided action.
         /// </returns>
-        private CreateIndexOptions CreateIndexOptions(Action<CreateIndexOptions>? action = default)
+        private CreateIndexOptions<TDocument> CreateIndexOptions(Action<CreateIndexOptions<TDocument>>? action = default)
         {
-            var options = this._createIndexOptions ?? new CreateIndexOptions();
+            var options = this._createIndexOptions ?? new CreateIndexOptions<TDocument>();
 
             action?.Invoke(options);
 
@@ -91,7 +91,7 @@ namespace UCode.Mongo
         /// <param name="id">The index keys definition to be used for the index.</param>
         /// <param name="action">An optional action to configure the index options.</param>
         /// <returns>An instance of <see cref="IndexKeys{TDocument}"/> containing the defined index keys.</returns>
-        private IndexKeys<TDocument> GetIndexDefinition(IndexKeysDefinition<TDocument> ikd, Action<CreateIndexOptions>? action = default)
+        private IndexKeys<TDocument> GetIndexDefinition(IndexKeysDefinition<TDocument> ikd, Action<CreateIndexOptions<TDocument>>? action = default)
         {
             var option = this.CreateIndexOptions(action);
 
