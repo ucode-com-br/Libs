@@ -91,7 +91,7 @@ namespace UCode.Extensions.ConsoleApp
             ArgumentNullException.ThrowIfNull(outputStream);
 
             this._consoleOutput = consoleTextWriter; // Save the original console output.
-            this._fileOutput = new StreamWriter(outputStream) { AutoFlush = false }; // Initialize file output writer.
+            this._fileOutput = new StreamWriter(outputStream) { AutoFlush = this.AutoFlush }; // Initialize file output writer.
 
             // Configure a bounded channel with a specified capacity for message buffering.
             this._channel = Channel.CreateBounded<string>(new BoundedChannelOptions(1000)
@@ -104,6 +104,14 @@ namespace UCode.Extensions.ConsoleApp
             // Start the background processing task to handle messages.
             this._processingTask = Task.Run(this.ProcessQueueAsync, this._cancellationTokenSource.Token);
         }
+
+        /// <summary>
+        /// Auto flush stream writer
+        /// </summary>
+        public bool AutoFlush
+        {
+            get; init;
+        } = true;
 
         /// <summary>
         /// Gets the encoding used by this writer.
@@ -343,6 +351,7 @@ namespace UCode.Extensions.ConsoleApp
                 Thread.Sleep(10);
             }
             this._fileOutput.Flush();
+            this._consoleOutput.Flush();
         }
 
         /// <summary>
@@ -359,6 +368,7 @@ namespace UCode.Extensions.ConsoleApp
                 await Task.Delay(10, cancellationToken).ConfigureAwait(false);
             }
             await this._fileOutput.FlushAsync(cancellationToken).ConfigureAwait(false);
+            await this._consoleOutput.FlushAsync(cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
