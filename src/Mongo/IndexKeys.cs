@@ -125,14 +125,14 @@ namespace UCode.Mongo
         /// <returns>
         /// An instance of <see cref="IndexDefinition{TDocument}"/> representing the ascending index definition.
         /// </returns>
-        public IndexKeys<TDocument> Ascending(FieldDefinition<TDocument> field, Action<CreateIndexOptions>? action = default)
+        public IndexKeys<TDocument> Ascending(FieldDefinition<TDocument> field, Action<CreateIndexOptions<TDocument>>? action = default)
         {
             var id = this._indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Ascending(field) : this._indexKeysDefinition.Ascending(field);
 
             return this.GetIndexDefinition(id, action);
         }
 
-        public IndexKeys<TDocument> Ascending(Func<FieldDefinition<TDocument>> indexKeysDefinitionAction, Action<CreateIndexOptions>? action = default)
+        public IndexKeys<TDocument> Ascending(Func<FieldDefinition<TDocument>> indexKeysDefinitionAction, Action<CreateIndexOptions<TDocument>>? action = default)
         {
             var id = this._indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Ascending(indexKeysDefinitionAction.Invoke()) : _indexKeysDefinition.Ascending(indexKeysDefinitionAction.Invoke());
 
@@ -152,7 +152,7 @@ namespace UCode.Mongo
         /// An <see cref="IndexDefinition{TDocument}"/> instance representing the index definition
         /// with the specified ascending sort order.
         /// </returns>
-        public IndexKeys<TDocument> Ascending(Expression<Func<TDocument, object>> field, Action<CreateIndexOptions>? action = default)
+        public IndexKeys<TDocument> Ascending(Expression<Func<TDocument, object>> field, Action<CreateIndexOptions<TDocument>>? action = default)
         {
             var id = this._indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Ascending(field) : this._indexKeysDefinition.Ascending(field);
 
@@ -167,7 +167,7 @@ namespace UCode.Mongo
         /// <returns>
         /// A combined <see cref="IndexDefinition{TDocument}"/> that represents the combined index keys and options.
         /// </returns>
-        public IndexKeys<TDocument> Combine(IndexKeysDefinition<TDocument>[] keys, Action<CreateIndexOptions>? action = default)
+        public IndexKeys<TDocument> Combine(IndexKeysDefinition<TDocument>[] keys, Action<CreateIndexOptions<TDocument>>? action = default)
         {
             var id = this._indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Combine(keys) : throw new NotImplementedException();
 
@@ -189,7 +189,7 @@ namespace UCode.Mongo
         /// <returns>
         /// The combined <see cref="IndexDefinition{TDocument}"/> that includes all the specified index keys and options.
         /// </returns>
-        public IndexKeys<TDocument> Combine(IEnumerable<IndexKeysDefinition<TDocument>> keys, Action<CreateIndexOptions>? action = default)
+        public IndexKeys<TDocument> Combine(IEnumerable<IndexKeysDefinition<TDocument>> keys, Action<CreateIndexOptions<TDocument>>? action = default)
         {
             var id = this._indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Combine(keys) : throw new NotImplementedException();
 
@@ -204,7 +204,7 @@ namespace UCode.Mongo
         /// <returns>
         /// An <see cref="IndexDefinition{TDocument}"/> that represents the created index definition for the specified field configured in descending order.
         /// </returns>
-        public IndexKeys<TDocument> Descending(FieldDefinition<TDocument> field, Action<CreateIndexOptions>? action = default)
+        public IndexKeys<TDocument> Descending(FieldDefinition<TDocument> field, Action<CreateIndexOptions<TDocument>>? action = default)
         {
             var id = this._indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Descending(field) : this._indexKeysDefinition.Descending(field);
 
@@ -220,7 +220,7 @@ namespace UCode.Mongo
         /// <returns>
         /// An <see cref="IndexDefinition{TDocument}"/> that represents the new index definition with the specified field sorted in descending order.
         /// </returns>
-        public IndexKeys<TDocument> Descending(Expression<Func<TDocument, object>> field, Action<CreateIndexOptions>? action = default)
+        public IndexKeys<TDocument> Descending(Expression<Func<TDocument, object>> field, Action<CreateIndexOptions<TDocument>>? action = default)
         {
             var id = this._indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Descending(field) : this._indexKeysDefinition.Descending(field);
 
@@ -240,7 +240,7 @@ namespace UCode.Mongo
         /// Returns an <see cref="IndexDefinition{TDocument}"/> representing the 
         /// newly created 2D geospatial index.
         /// </returns>
-        public IndexKeys<TDocument> Geo2D(FieldDefinition<TDocument> field, Action<CreateIndexOptions>? action = default)
+        public IndexKeys<TDocument> Geo2D(FieldDefinition<TDocument> field, Action<CreateIndexOptions<TDocument>>? action = default)
         {
             var id = this._indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Geo2D(field) : this._indexKeysDefinition.Geo2D(field);
 
@@ -254,7 +254,7 @@ namespace UCode.Mongo
         /// <param name="field">A lambda expression that identifies the field to index.</param>
         /// <param name="action">An optional action to configure additional index options.</param>
         /// <returns>An instance of <see cref="IndexDefinition{TDocument}"/> that represents the configured index.</returns>
-        public IndexKeys<TDocument> Geo2D(Expression<Func<TDocument, object>> field, Action<CreateIndexOptions>? action = default)
+        public IndexKeys<TDocument> Geo2D(Expression<Func<TDocument, object>> field, Action<CreateIndexOptions<TDocument>>? action = default)
         {
             var id = this._indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Geo2D(field) : this._indexKeysDefinition.Geo2D(field);
 
@@ -269,7 +269,7 @@ namespace UCode.Mongo
         /// <returns>
         /// An <see cref="IndexDefinition{TDocument}"/> object representing the created geospatial index definition.
         /// </returns>
-        public IndexKeys<TDocument> Geo2DSphere(FieldDefinition<TDocument> field, Action<CreateIndexOptions>? action = default)
+        public IndexKeys<TDocument> Geo2DSphere(FieldDefinition<TDocument> field, Action<CreateIndexOptions<TDocument>>? action = default)
         {
             var id = this._indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Geo2DSphere(field) : this._indexKeysDefinition.Geo2DSphere(field);
 
@@ -285,7 +285,7 @@ namespace UCode.Mongo
         /// <returns>
         /// An <see cref="IndexDefinition{TDocument}"/> that describes the created 2dsphere index.
         /// </returns>
-        public IndexKeys<TDocument> Geo2DSphere(Expression<Func<TDocument, object>> field, Action<CreateIndexOptions>? action = default)
+        public IndexKeys<TDocument> Geo2DSphere(Expression<Func<TDocument, object>> field, Action<CreateIndexOptions<TDocument>>? action = default)
         {
             var id = this._indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Geo2DSphere(field) : this._indexKeysDefinition.Geo2DSphere(field);
 
@@ -308,7 +308,7 @@ namespace UCode.Mongo
         /// Returns an <see cref="IndexDefinition{TDocument}"/> that represents 
         /// the created hashed index for the specified field.
         /// </returns>
-        public IndexKeys<TDocument> Hashed(FieldDefinition<TDocument> field, Action<CreateIndexOptions>? action = default)
+        public IndexKeys<TDocument> Hashed(FieldDefinition<TDocument> field, Action<CreateIndexOptions<TDocument>>? action = default)
         {
             var id = this._indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Hashed(field) : this._indexKeysDefinition.Hashed(field);
 
@@ -323,7 +323,7 @@ namespace UCode.Mongo
         /// <returns>
         /// Returns an <see cref="IndexDefinition{TDocument}"/> that represents the hashed index definition.
         /// </returns>
-        public IndexKeys<TDocument> Hashed(Expression<Func<TDocument, object>> field, Action<CreateIndexOptions>? action = default)
+        public IndexKeys<TDocument> Hashed(Expression<Func<TDocument, object>> field, Action<CreateIndexOptions<TDocument>>? action = default)
         {
             var id = this._indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Hashed(field) : this._indexKeysDefinition.Hashed(field);
 
@@ -342,7 +342,7 @@ namespace UCode.Mongo
         /// <returns>
         /// Returns an <see cref="IndexDefinition{TDocument}"/> representing the text index that was created.
         /// </returns>
-        public IndexKeys<TDocument> Text(FieldDefinition<TDocument> field, Action<CreateIndexOptions>? action = default)
+        public IndexKeys<TDocument> Text(FieldDefinition<TDocument> field, Action<CreateIndexOptions<TDocument>>? action = default)
         {
             var id = this._indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Hashed(field) : this._indexKeysDefinition.Hashed(field);
 
@@ -361,7 +361,7 @@ namespace UCode.Mongo
         /// <returns>
         /// An IndexDefinition object representing the text index definition for the specified field.
         /// </returns>
-        public IndexKeys<TDocument> Text(Expression<Func<TDocument, object>> field, Action<CreateIndexOptions>? action = default)
+        public IndexKeys<TDocument> Text(Expression<Func<TDocument, object>> field, Action<CreateIndexOptions<TDocument>>? action = default)
         {
             var id = this._indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Text(field) : this._indexKeysDefinition.Text(field);
 
@@ -382,7 +382,7 @@ namespace UCode.Mongo
         /// <returns>
         /// An <see cref="IndexDefinition{TDocument}"/> representing the created index definition.
         /// </returns>
-        public IndexKeys<TDocument> Wildcard(FieldDefinition<TDocument> field = null, Action<CreateIndexOptions>? action = default)
+        public IndexKeys<TDocument> Wildcard(FieldDefinition<TDocument> field = null, Action<CreateIndexOptions<TDocument>>? action = default)
         {
             var id = this._indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Text(field) : this._indexKeysDefinition.Text(field);
 
@@ -402,7 +402,7 @@ namespace UCode.Mongo
         /// An <see cref="IndexDefinition{TDocument}"/> instance that represents the index definition
         /// including the specified wildcard field.
         /// </returns>
-        public IndexKeys<TDocument> Wildcard(Expression<Func<TDocument, object>> field, Action<CreateIndexOptions>? action = default)
+        public IndexKeys<TDocument> Wildcard(Expression<Func<TDocument, object>> field, Action<CreateIndexOptions<TDocument>>? action = default)
         {
             var id = this._indexKeysDefinition == default ? new IndexKeysDefinitionBuilder<TDocument>().Wildcard(field) : throw new NotImplementedException();
 
