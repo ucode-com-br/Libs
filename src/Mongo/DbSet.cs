@@ -619,6 +619,11 @@ namespace UCode.Mongo
 
             var index_method = methods.SingleOrDefault(w => w.Name.Equals("Index", StringComparison.Ordinal) && w.GetParameters().Length == 1 && w.GetParameters()[0].ParameterType == typeof(IndexKeys<TDocument>));
 
+            if (index_method == null)
+            {
+                return false;
+            }
+
             index_method?.Invoke(this._contextbase, [(IndexKeys<TDocument>)this._contextCollectionMetadata.IndexKeys]);
 
             try
