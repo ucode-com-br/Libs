@@ -8,47 +8,6 @@ using System.Text.Json;
 namespace UCode.Apis.CnpjJa
 {
 
-    [JsonConverter(typeof(JsonStringEnumConverter<Age>))]
-    public enum Age
-    {
-
-        [System.Runtime.Serialization.EnumMember(Value = @"0-12")]
-        [JsonStringEnumMemberName(@"0-12")]
-        age0to12 = 0,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"13-20")]
-        [JsonStringEnumMemberName(@"13-20")]
-        age13to20 = 1,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"21-30")]
-        [JsonStringEnumMemberName(@"21-30")]
-        age21to30 = 2,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"31-40")]
-        [JsonStringEnumMemberName(@"31-40")]
-        age31to40 = 3,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"41-50")]
-        [JsonStringEnumMemberName(@"41-50")]
-        age41to50 = 4,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"51-60")]
-        [JsonStringEnumMemberName(@"")]
-        age51to60 = 5,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"61-70")]
-        [JsonStringEnumMemberName(@"61-70")]
-        age61to70 = 6,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"71-80")]
-        [JsonStringEnumMemberName(@"71-80")]
-        age71to80 = 7,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"81+")]
-        [JsonStringEnumMemberName(@"81+")]
-        age81plus = 8,
-
-    }
     [JsonConverter(typeof(JsonStringEnumConverter<PhonesType>))]
     public enum PhonesType
     {
@@ -93,6 +52,7 @@ namespace UCode.Apis.CnpjJa
         Hybrid = 3,
 
     }
+
     [JsonConverter(typeof(JsonStringEnumConverter<PhoneDtoType>))]
     public enum PhoneDtoType
     {
@@ -149,6 +109,7 @@ namespace UCode.Apis.CnpjJa
         UNKNOWN = 3,
 
     }
+
     [JsonConverter(typeof(JsonStringEnumConverter<PersonDtoType>))]
     public enum PersonDtoType
     {

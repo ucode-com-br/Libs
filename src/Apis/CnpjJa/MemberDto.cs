@@ -5,29 +5,31 @@ namespace UCode.Apis.CnpjJa
 {
     public partial class MemberDto
     {
+        private IDictionary<string, object> _additionalProperties;
+
         [JsonPropertyName("since")]
         [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-
         public string Since
         {
             get; set;
         }
+
         [JsonPropertyName("person")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public PersonDto Person { get; set; } = new PersonDto();
 
-        public PersonBaseDto Person { get; set; } = new PersonBaseDto();
         [JsonPropertyName("role")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public RoleDto Role { get; set; } = new RoleDto();
+
         [JsonPropertyName("agent")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public MemberAgentDto Agent
         {
             get; set;
         }
 
-        private IDictionary<string, object> _additionalProperties;
+        
 
         [JsonExtensionData]
         public IDictionary<string, object> AdditionalProperties
