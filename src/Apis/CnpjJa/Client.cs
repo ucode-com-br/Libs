@@ -97,6 +97,7 @@ namespace UCode.Apis.CnpjJa
             return JsonSerializer.Deserialize<OfficeDto>(content);
         }
 
+        
     }
 
 }
