@@ -1,5 +1,13 @@
 using System;
+using System.Collections;
+using System.Linq;
+using System.Reflection;
+using UCode.Mongo.Attributes;
 using UCode.Mongo.Models;
+using UCode.Extensions;
+using System.Collections.Generic;
+using UCode.Extensions.CodeGenerator;
+using MongoDB.Driver;
 
 namespace UCode.Mongo
 {
@@ -171,5 +179,190 @@ namespace UCode.Mongo
         //                throw new NotImplementedException();
         //            }
         //        }
+
+
+        internal static object? ProcessIgnorableData(this object? obj, bool isRoot = true) => ProcessIgnorableData<object>(obj, isRoot);
+
+
+        /// <summary>
+        /// Processa as propriedades e campos de um objeto em busca do atributo <see cref="IgnorableDataAttribute"/>.
+        /// Caso o atributo seja encontrado em um membro (propriedade ou campo) que não esteja na raiz (isRoot = false),
+        /// seta o valor default definido no atributo (se houver).
+        /// Em seguida, faz a recursão para membros complexos (objetos ou coleções).
+        /// </summary>
+        /// <param name="obj">Objeto a ser processado.</param>
+        /// <param name="isRoot">Se é o objeto raiz na chamada inicial.</param>
+        /// <returns>O próprio objeto (apenas para facilitar encadeamentos se desejado).</returns>
+        internal static T? ProcessIgnorableData<T>(this T? obj, bool isRoot = true)
+        {
+            if (obj is null)
+            {
+                return default;
+            }
+
+            var visited = new Dictionary<object, object>(ReferenceEqualityComparer.Instance);
+
+
+            T clonedObject = CloneRuntimeHelper.DeepCloneRuntime<T>(obj, visited)!;
+
+            var type = typeof(T) ?? obj.GetType();
+
+            // Obtém tanto propriedades quanto campos públicos de instância
+            var members = type.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                .Where(m => m.MemberType is MemberTypes.Field or MemberTypes.Property);
+
+            foreach (var member in members)
+            {
+                // Recupera o atributo [IgnorableData]
+                var ignorableAttr = member.GetCustomAttribute<IgnorableDataAttribute>(inherit: true);
+
+                // Obtém o valor do membro (propriedade ou campo)
+                var memberValue = member switch
+                {
+                    PropertyInfo p when p.CanRead => p.GetValue(clonedObject),
+                    FieldInfo f => f.GetValue(clonedObject),
+                    _ => null
+                };
+
+                // Se o atributo está presente e não é a raiz, aplicar valor default
+                if (ignorableAttr is not null && !isRoot)
+                {
+                    // Tenta usar o DefaultValue definido no atributo
+                    var defaultValue = ignorableAttr.DefaultValue;
+
+                    // Se não houver, ainda assim podemos sobrescrever com null
+                    member.SetValue(clonedObject, defaultValue);
+                }
+                else
+                {
+                    // Se não tem atributo ou é a raiz, verifica se precisa recursão
+                    if (memberValue is not null && !IsSimpleType(memberValue.GetType()))
+                    {
+                        // Se for coleção, processa cada item recursivamente
+                        if (memberValue is IEnumerable enumerable)
+                        {
+                            foreach (var item in enumerable)
+                            {
+                                // item pode ser null ou um tipo primitivo
+                                if (item is not null && !IsSimpleType(item.GetType()))
+                                {
+                                    item.ProcessIgnorableData(isRoot: false);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Objeto complexo (não é coleção e não é tipo simples)
+                            memberValue.ProcessIgnorableData(isRoot: false);
+                        }
+                    }
+                }
+            }
+
+            return clonedObject;
+        }
+
+        internal static bool IsProcessIgnorableData<T>(this T? clonedObject, bool isRoot = true)
+        {
+            if (clonedObject is null)
+            {
+                return default;
+            }
+
+            var visited = new Dictionary<object, object>(ReferenceEqualityComparer.Instance);
+
+
+            var type = typeof(T) ?? clonedObject.GetType();
+
+            // Obtém tanto propriedades quanto campos públicos de instância
+            var members = type.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                .Where(m => m.MemberType is MemberTypes.Field or MemberTypes.Property);
+
+            foreach (var member in members)
+            {
+                // Recupera o atributo [IgnorableData]
+                var ignorableAttr = member.GetCustomAttribute<IgnorableDataAttribute>(inherit: true);
+
+                // Obtém o valor do membro (propriedade ou campo)
+                var memberValue = member switch
+                {
+                    PropertyInfo p when p.CanRead => p.GetValue(clonedObject),
+                    FieldInfo f => f.GetValue(clonedObject),
+                    _ => null
+                };
+
+                // Se o atributo está presente
+                if (ignorableAttr is not null)
+                {
+                    return true;
+                }
+                else
+                {
+                    // verifica se precisa recursão
+                    if (memberValue is not null && !IsSimpleType(memberValue.GetType()))
+                    {
+                        // Se for coleção, processa cada item recursivamente
+                        if (memberValue is IEnumerable enumerable)
+                        {
+                            foreach (var item in enumerable)
+                            {
+                                // item pode ser null ou um tipo primitivo
+                                if (item is not null && !IsSimpleType(item.GetType()))
+                                {
+                                    if (item.IsProcessIgnorableData(isRoot: false))
+                                    {
+                                        return true;
+                                    }
+                                    else
+                                    {
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Objeto complexo (não é coleção e não é tipo simples)
+                            return memberValue.IsProcessIgnorableData(isRoot: false);
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
+
+        /// <summary>
+        /// Método auxiliar para setar valor em um FieldInfo ou PropertyInfo.
+        /// </summary>
+        private static void SetValue(this MemberInfo member, object target, object? value)
+        {
+            switch (member)
+            {
+                case PropertyInfo prop when prop.CanWrite:
+                    prop.SetValue(target, value);
+                    break;
+                case FieldInfo field:
+                    field.SetValue(target, value);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Determina se um tipo é simples (primitivo, string, decimal, etc.) e não precisa de processamento recursivo.
+        /// </summary>
+        private static bool IsSimpleType(Type type)
+        {
+            return type.IsPrimitive
+                   || type.IsEnum
+                   || type == typeof(string)
+                   || type == typeof(decimal)
+                   || type == typeof(DateTime)
+                   || type == typeof(DateTimeOffset)
+                   || type == typeof(TimeSpan)
+                   || type == typeof(Guid);
+        }
+
     }
 }

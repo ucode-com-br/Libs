@@ -167,12 +167,37 @@ namespace UCode.Mongo
             get;
         }
 
-        
+
 
         #endregion Fields
 
 
         #region private/internal methods
+        private TDocument ProcessIgnorable(TDocument doc)
+        {
+            if (doc == null)
+            {
+                return default!;
+            }
+
+            return doc.IsProcessIgnorableData() ? doc.ProcessIgnorableData() ?? default! : doc;
+        }
+
+        private IEnumerable<TDocument> ProcessIgnorable(IEnumerable<TDocument> docs)
+        {
+            if (docs == null)
+            {
+                yield break;
+            }
+            else
+            {
+                foreach (var doc in docs)
+                {
+                    yield return ProcessIgnorable(doc);
+                }
+            }
+        }
+
         /// <summary>
         /// Determines whether a transaction should be started and provides a handle to the client session.
         /// </summary>
@@ -527,9 +552,6 @@ namespace UCode.Mongo
             _ = this.InternalIndex(false, thowIndexExceptions);
         }
         #endregion constructor
-
-
-
 
 
 
@@ -2031,13 +2053,16 @@ namespace UCode.Mongo
         /// indicating that no document was inserted. Otherwise, it returns 1.
         /// </remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async Task<long> InsertAsync([NotNull] TDocument source,
+        public async Task<long> InsertAsync([NotNull] TDocument document,
                     [MaybeNull] InsertOneOptions? insertOneOptions = default,
                     [MaybeNull] bool? forceTransaction = default,
                     [MaybeNull] CancellationToken cancellationToken = default)
         {
             // If no options were provided, create a new default options object
             insertOneOptions ??= new InsertOneOptions();
+
+
+            var source = this.ProcessIgnorable(document);
 
             // Create a list to hold the write model for the insert operation
             var writeModels = new List<WriteModel<TDocument>>
@@ -2091,7 +2116,9 @@ namespace UCode.Mongo
             // Add a write model for each document to insert
             foreach (var doc in docs)
             {
-                var insertOneModel = new InsertOneModel<TDocument>(doc);
+                var source = this.ProcessIgnorable(doc);
+
+                var insertOneModel = new InsertOneModel<TDocument>(source);
                 writeModels.Add(insertOneModel);
             }
 
@@ -2125,8 +2152,10 @@ namespace UCode.Mongo
             bulkWriteOption.BypassDocumentValidation = insertManyOptions.BypassDocumentValidation;
             bulkWriteOption.IsOrdered = insertManyOptions.IsOrdered;
 
+            var source = ProcessIgnorable(docs);
+
             // Perform the insert operation using the write models and options
-            return await this.InsertAsync(docs, bulkWriteOption, forceTransaction, cancellationToken);
+            return await this.InsertAsync(source, bulkWriteOption, forceTransaction, cancellationToken);
         }
 
         #endregion
@@ -2172,9 +2201,12 @@ namespace UCode.Mongo
             // Create a filter definition for each document
             foreach (var doc in docs)
             {
-                FilterDefinition<TDocument> filterDefinition = (query ?? exp).CompleteExpression(doc);
+                var source = this.ProcessIgnorable(doc);
 
-                var model = new ReplaceOneModel<TDocument>(filterDefinition, doc);
+                FilterDefinition<TDocument> filterDefinition = (query ?? exp).CompleteExpression(source);
+
+
+                var model = new ReplaceOneModel<TDocument>(filterDefinition, source);
 
                 updates.Add(model);
             }
@@ -2211,6 +2243,7 @@ namespace UCode.Mongo
                 Comment = replaceOptions.Comment,
                 Let = replaceOptions.Let
             };
+
 
             return await this.ReplaceAsync(docs, query, bulkWriteOptions, forceTransaction, cancellationToken);
         }
@@ -2266,20 +2299,22 @@ namespace UCode.Mongo
             // Initialize the result to null
             ReplaceOneResult result;
 
-            // Create a filter definition to match the document
-            FilterDefinition<TDocument> filterDefinition = query ?? Query<TDocument>.FromExpression(f => f.Id.Equals(doc.Id));
+            var source = this.ProcessIgnorable(doc);
 
-            this._contextbase.BeforeInsertInternal<TDocument, TObjectId, ReplaceOneResult, TUser>(this, ref doc, ref replaceOptions);
+            // Create a filter definition to match the document
+            FilterDefinition<TDocument> filterDefinition = query ?? Query<TDocument>.FromExpression(f => f.Id.Equals(source.Id));
+
+            this._contextbase.BeforeInsertInternal<TDocument, TObjectId, ReplaceOneResult, TUser>(this, ref source, ref replaceOptions);
 
             if (this.InTransaction(forceTransaction, out var clientSessionHandle))
             {
                 // Perform the replace operation with a session
-                result = await this.MongoCollection.ReplaceOneAsync(clientSessionHandle, filterDefinition, doc, replaceOptions, cancellationToken);
+                result = await this.MongoCollection.ReplaceOneAsync(clientSessionHandle, filterDefinition, source, replaceOptions, cancellationToken);
             }
             else
             {
                 // Perform the replace operation without a session
-                result = await this.MongoCollection.ReplaceOneAsync(filterDefinition, doc, replaceOptions, cancellationToken);
+                result = await this.MongoCollection.ReplaceOneAsync(filterDefinition, source, replaceOptions, cancellationToken);
             }
 
 
