@@ -6,10 +6,19 @@ using System.Threading.Tasks;
 namespace UCode.Extensions
 {
     /// <summary>
-    /// Represents a thread-safe list that supports adding elements concurrently.
-    /// Implements the <see cref="IList{T}"/>, <see cref="IReadOnlyList{T}"/>, and <see cref="IDisposable"/> interfaces.
+    /// Implementação otimizada de lista concorrente com:
+    /// - Filas separadas para operações de add/insert/remove
+    /// - Workers assíncronos independentes
+    /// - Timeouts configuráveis por tipo de operação
+    /// - Monitoramento de tarefas pendentes
     /// </summary>
-    /// <typeparam name="T">The type of elements in the list.</typeparam>
+    /// <remarks>
+    /// Padrão de consumo de recursos:
+    /// 1. Operações são enfileiradas em queues dedicadas
+    /// 2. Workers processam batches de forma otimizada
+    /// 3. Lock-free para operações de escrita
+    /// 4. Lock granular para operações de leitura
+    /// </remarks>
     public class ConcurrentListEnqueue<T> : IList<T>, IReadOnlyList<T>, IDisposable
     {
         private readonly List<T> _list = new();

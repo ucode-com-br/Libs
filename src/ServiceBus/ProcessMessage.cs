@@ -6,10 +6,19 @@ using Azure.Messaging.ServiceBus;
 namespace UCode.ServiceBus
 {
     /// <summary>
-    /// Represents a message processing class that can handle messages of a specified type.
-    /// Implements both synchronous and asynchronous disposal patterns.
+    /// Processador de mensagens para Azure Service Bus com:
+    /// - Gerenciamento completo do ciclo de vida das mensagens
+    /// - Tratamento de erros com dead-letter automático
+    /// - Suporte a sessões e processamento em paralelo
+    /// - Monitoramento de throughput e latência
     /// </summary>
-    /// <typeparam name="T">The type of the message being processed.</typeparam>
+    /// <remarks>
+    /// Funcionalidades avançadas:
+    /// - Retentativas inteligentes com backoff exponencial
+    /// - Checkpoint automático de mensagens processadas
+    /// - Balanceamento de carga entre consumidores
+    /// - Integração com sistemas de telemetria
+    /// </remarks>
     public class ProcessMessage<T> : IDisposable, IAsyncDisposable
     {
         private bool _disposedValue;

@@ -6,9 +6,18 @@ using MongoDB.Bson.Serialization.Attributes;
 namespace UCode.Mongo.Models
 {
     /// <summary>
-    /// Represents a base interface for tenant objects, providing a contract for 
-    /// tenant-specific functionality in the application.
+    /// Interface base para modelos MongoDB com:
+    /// - Suporte a multi-tenancy
+    /// - Identificação universal (GUID)
+    /// - Separação lógica de dados por tenant
+    /// - Serialização padronizada para operações CRUD
     /// </summary>
+    /// <remarks>
+    /// Implementação obrigatória para:
+    /// - Coleções particionadas por cliente
+    /// - Controle de acesso a nível de registro
+    /// - Auditoria de dados transversal
+    /// </remarks>
     public interface IObjectBaseTenant
     {
         /// <summary>
