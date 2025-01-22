@@ -140,6 +140,11 @@ namespace UCode.Crypto
         /// other managed objects. 
         /// Therefore, only unmanaged resources should be released.
         /// </param>
+        /// <summary>
+        /// Releases the unmanaged resources and optionally releases the managed resources
+        /// </summary>
+        /// <param name="disposing">true to release both managed and unmanaged resources; false to release only unmanaged resources</param>
+        /// <exception cref="CryptographicException">Thrown if error occurs during crypto provider disposal</exception>
         protected virtual void Dispose(bool disposing)
         {
             if (!this._disposedValue)

@@ -448,6 +448,18 @@ namespace UCode.Extensions
         /// to suggest the compiler to inline the method for performance optimization.
         /// The method is thread-safe due to the use of a lock around the critical section.
         /// </remarks>
+        /// <summary>
+        /// Adds an item to the thread-safe collection
+        /// </summary>
+        /// <param name="item">The item to add</param>
+        /// <exception cref="ArgumentNullException">Thrown if item is null for reference types</exception>
+        /// <exception cref="InvalidOperationException">Thrown if collection modification fails due to concurrent access</exception>
+        /// <example>
+        /// <code>
+        /// var concurrentList = new ConcurrentList<int>();
+        /// concurrentList.Add(42);
+        /// </code>
+        /// </example>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Add(T item)
         {

@@ -481,6 +481,18 @@ namespace UCode.Extensions
         /// waiting after the specified time has elapsed. If no timeout is specified, the wait will continue 
         /// indefinitely until a cancellation is requested.
         /// </remarks>
+        /// <summary>
+        /// Waits for all queued events to complete with a timeout
+        /// </summary>
+        /// <param name="timeout">Maximum time to wait (null for infinite)</param>
+        /// <exception cref="TimeoutException">Thrown if timeout is reached before completion</exception>
+        /// <exception cref="OperationCanceledException">Thrown if the operation is cancelled</exception>
+        /// <example>
+        /// <code>
+        /// var queue = new EventQueue<string>();
+        /// queue.Wait(TimeSpan.FromSeconds(30));
+        /// </code>
+        /// </example>
         public void Wait(TimeSpan? timeout)
         {
             CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();

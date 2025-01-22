@@ -434,6 +434,15 @@ namespace UCode.ServiceBus
         /// </remarks>
         /// <exception cref="ArgumentNullException">Thrown when the provided instance is null.</exception>
         /// 
+        /// <summary>
+        /// Releases resources used by the Service Bus client
+        /// </summary>
+        /// <param name="disposing">true to release managed resources; false to release only unmanaged resources</param>
+        /// <exception cref="ServiceBusException">Thrown if error occurs during client disposal</exception>
+        /// <remarks>
+        /// <para>Releases connection resources and cleans up any pending operations</para>
+        /// <seealso cref="ServiceBusClient.DisposeAsync"/>
+        /// </remarks>
         protected virtual void Dispose(bool disposing)
         {
             if (!this.disposedValue)
