@@ -18,6 +18,29 @@ namespace UCode.Mongo
     /// (expression, JSON, text search) and conversion operators.
     /// </summary>
     /// <typeparam name="TDocument">The document type this query operates on</typeparam>
+    /// <summary>
+    /// Base class for MongoDB query operations
+    /// </summary>
+    /// <typeparam name="TDocument">The document type this query operates on</typeparam>
+    /// <remarks>
+    /// Implements basic CRUD operations and provides common functionality
+    /// for derived query classes. Uses MongoDB driver for data access.
+    /// <para>
+    /// Supports multiple query types including expression-based, JSON-based,
+    /// and full-text search queries.
+    /// </para>
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// public class UserQuery : QueryBase<User>
+    /// {
+    ///     public async Task<User> GetByEmail(string email)
+    ///     {
+    ///         return await Collection.Find(u => u.Email == email).FirstOrDefaultAsync();
+    ///     }
+    /// }
+    /// </code>
+    /// </example>
     public abstract record QueryBase<TDocument>
     {
         /// <summary>
