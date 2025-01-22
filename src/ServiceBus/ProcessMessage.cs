@@ -105,18 +105,29 @@ namespace UCode.ServiceBus
         private Func<ProcessEventArgs<T>, Task>? _processMessageAsync;
         /// <summary>
         /// Represents an asynchronous event that processes messages of type <typeparamref name="T"/>.
-        /// This event can only have one handler assigned to it at a time.
         /// </summary>
         /// <remarks>
-        /// The event handler is expected to be a function that takes <see cref="ProcessEventArgs{T}"/> 
-        /// as an argument and returns a <see cref="Task"/>.
+        /// <para>
+        /// This event handler processes Service Bus messages using the <see cref="ProcessEventArgs{T}"/> wrapper,
+        /// which provides access to message data and completion methods.
+        /// </para>
+        /// <para>
+        /// Only one handler can be registered at a time to ensure clear message processing responsibility.
+        /// </para>
         /// </remarks>
         /// <exception cref="InvalidOperationException">
-        /// Thrown when attempting to add or remove a handler while one is already set.
+        /// Thrown when attempting to register multiple handlers or modify handlers during processing.
         /// </exception>
-        /// <returns>
-        /// The asynchronous event handler for processing messages.
-        /// </returns>
+        /// <example>
+        /// <code>
+        /// processor.ProcessMessageAsync += async args => 
+        /// {
+        ///     var message = args.GetMessagePayload();
+        ///     await ProcessMessageAsync(message);
+        ///     await args.CompleteMessageAsync();
+        /// };
+        /// </code>
+        /// </example>
         public event Func<ProcessEventArgs<T>, Task> ProcessMessageAsync
         {
             add

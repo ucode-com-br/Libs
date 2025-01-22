@@ -29,7 +29,19 @@ namespace UCode.Extensions
         /// <remarks>
         /// Provides type-safe access to get/set values and invoke methods through reflection.
         /// Handles both instance and static members.
+        /// <para>
+        /// This struct is particularly useful for scenarios where you need to dynamically
+        /// interact with object members while maintaining type safety.
+        /// </para>
         /// </remarks>
+        /// <exception cref="ArgumentNullException">Thrown if the member cannot be accessed</exception>
+        /// <example>
+        /// <code>
+        /// var obj = new MyClass();
+        /// var memberAction = new MemberInfoAction&lt;MyClass&gt;(ref obj, propertyInfo);
+        /// memberAction.SetValue("new value");
+        /// </code>
+        /// </example>
         public readonly struct MemberInfoAction<TInstance>
         {
             private readonly TInstance? _instance;
@@ -221,10 +233,24 @@ namespace UCode.Extensions
         private static object? BuildValue(Type type, object[] values) => values.FirstOrDefault(x => x.GetType() == type);
 
         /// <summary>
-        /// Populate instance with dummy data
+        /// Populates an instance with default test data for all supported member types
         /// </summary>
-        /// <typeparam name="T">Type of instance</typeparam>
-        /// <param name="instance">created instance</param>
+        /// <typeparam name="T">Type of the instance to populate</typeparam>
+        /// <param name="instance">The instance to populate with dummy data</param>
+        /// <remarks>
+        /// Supports primitive types, collections, dictionaries and complex objects.
+        /// <para>
+        /// This method is particularly useful for unit testing and prototyping scenarios
+        /// where objects need to be initialized with default values.
+        /// </para>
+        /// </remarks>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="instance"/> is null</exception>
+        /// <example>
+        /// <code>
+        /// var customer = new Customer();
+        /// customer.PopulateWithDummyData();
+        /// </code>
+        /// </example>
         public static void PopulateWithDummyData<T>([NotNull] this T instance)
         {
 

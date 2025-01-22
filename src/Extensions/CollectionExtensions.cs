@@ -25,6 +25,13 @@ namespace UCode.Extensions
         /// Enables fluent-style chaining of Add operations. This method mutates
         /// the original collection rather than creating a new one.
         /// </remarks>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="source"/> is null</exception>
+        /// <example>
+        /// <code>
+        /// var numbers = new Collection&lt;int&gt; { 1, 2 };
+        /// numbers.Add(3).Add(4); // Returns collection containing 1, 2, 3, 4
+        /// </code>
+        /// </example>
         /// <summary>
         /// Adds an item to the collection and returns the modified collection
         /// </summary>
@@ -79,6 +86,13 @@ namespace UCode.Extensions
         /// <returns>
         /// The <see cref="Collection{T}"/> from which the elements have been removed.
         /// </returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="source"/> or <paramref name="remove"/> is null</exception>
+        /// <example>
+        /// <code>
+        /// var numbers = new Collection&lt;int&gt; { 1, 2, 3, 4 };
+        /// numbers.RemoveAll(n => n % 2 == 0); // Removes even numbers
+        /// </code>
+        /// </example>
         public static Collection<T> RemoveAll<T>(this Collection<T> source, Expression<Func<T, bool>> remove)
         {
             var compile = remove.Compile();

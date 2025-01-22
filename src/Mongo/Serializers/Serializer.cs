@@ -17,16 +17,23 @@ namespace UCode.Mongo.Serializers
         private static readonly WeakReference<GuidSerializer> _guidSerializer;
 
         /// <summary>
-        /// Gets or sets the <see cref="GuidSerializer"/> instance.
-        /// If the target of the weak reference exists, it returns that instance, otherwise it creates a new instance 
-        /// of <see cref="GuidSerializer"/> with BsonType.String.
+        /// Gets or sets the <see cref="GuidSerializer"/> instance with BsonType.String representation.
         /// </summary>
         /// <value>
-        /// A <see cref="GuidSerializer"/> instance associated with the property.
+        /// A <see cref="GuidSerializer"/> instance configured to serialize GUIDs as strings.
         /// </value>
-        /// <returns>
-        /// If the target exists, returns the existing <see cref="GuidSerializer"/>; otherwise, returns a new instance.
-        /// </returns>
+        /// <remarks>
+        /// Uses weak reference to maintain serializer instance while allowing garbage collection when needed.
+        /// <para>
+        /// If the existing serializer is not available, creates a new instance with <see cref="BsonType.String"/>.
+        /// </para>
+        /// </remarks>
+        /// <exception cref="InvalidOperationException">Thrown if serializer registration fails</exception>
+        /// <example>
+        /// <code>
+        /// Serializer.GuidSerializer = new MyCustomGuidSerializer();
+        /// </code>
+        /// </example>
         public static GuidSerializer GuidSerializer
         {
             // Try to get the target of the weak reference
