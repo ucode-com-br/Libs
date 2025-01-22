@@ -6,18 +6,18 @@ using System.Threading.Tasks;
 namespace UCode.Extensions
 {
     /// <summary>
-    /// Implementação otimizada de lista concorrente com:
-    /// - Filas separadas para operações de add/insert/remove
-    /// - Workers assíncronos independentes
-    /// - Timeouts configuráveis por tipo de operação
-    /// - Monitoramento de tarefas pendentes
+    /// Optimized concurrent list implementation with:
+    /// - Separate queues for add/insert/remove operations
+    /// - Independent async workers
+    /// - Configurable timeouts per operation type
+    /// - Pending task monitoring
     /// </summary>
     /// <remarks>
-    /// Padrão de consumo de recursos:
-    /// 1. Operações são enfileiradas em queues dedicadas
-    /// 2. Workers processam batches de forma otimizada
-    /// 3. Lock-free para operações de escrita
-    /// 4. Lock granular para operações de leitura
+    /// Resource consumption pattern:
+    /// 1. Operations are enqueued in dedicated queues
+    /// 2. Workers process batches in optimized way
+    /// 3. Lock-free for write operations
+    /// 4. Granular lock for read operations
     /// </remarks>
     public class ConcurrentListEnqueue<T> : IList<T>, IReadOnlyList<T>, IDisposable
     {

@@ -18,14 +18,17 @@ namespace UCode.Extensions
     public static class TypesExtensions
     {
         /// <summary>
-        /// Concatenates a base array with a collection of byte arrays into a single array.
+        /// Concatenates byte arrays efficiently using Buffer.BlockCopy
         /// </summary>
-        /// <param name="base">The base byte array to be concatenated with the other arrays. Cannot be null.</param>
-        /// <param name="parameters">An array of byte arrays to be concatenated to the base array. Cannot be null.</param>
-        /// <returns>
-        /// A new byte array containing all the elements from the base array followed by the elements from the provided byte arrays.
-        /// The resulting array is not null.
-        /// </returns>
+        /// <param name="base">Initial byte array (required)</param>
+        /// <param name="parameters">Additional byte arrays to concatenate</param>
+        /// <returns>New array containing all input bytes in sequence</returns>
+        /// <exception cref="ArgumentNullException">Thrown if base or parameters are null</exception>
+        /// <remarks>
+        /// This method is optimized for performance with large byte arrays.
+        /// Allocates exactly the needed space and copies memory in bulk.
+        /// Thread-safe when input arrays are not modified during operation.
+        /// </remarks>
         [return: NotNull]
         public static byte[] JoinByteArrays([NotNull] this byte[] @base, [NotNull] params byte[][] parameters)
         {

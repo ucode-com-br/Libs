@@ -7,13 +7,15 @@ using System.Threading.Tasks;
 namespace UCode.Extensions
 {
     /// <summary>
-    /// Represents a reference to an object of type <typeparamref name="T"/> 
-    /// that is safe to use across multiple threads, implementing 
-    /// <see cref="IDisposable"/> to release resources, 
-    /// <see cref="IComparable{T}"/> for comparing instances, 
-    /// and <see cref="IEquatable{T}"/> for equality comparisons.
+    /// Thread-safe reference wrapper implementing <see cref="IDisposable"/>, 
+    /// <see cref="IComparable{T}"/> and <see cref="IEquatable{T}"/> interfaces
     /// </summary>
-    /// <typeparam name="T">The type of the object referenced.</typeparam>
+    /// <typeparam name="T">The type of the wrapped object</typeparam>
+    /// <remarks>
+    /// Provides atomic operations with configurable timeouts and lock-free
+    /// optimistic concurrency control. The disposable pattern ensures proper
+    /// cleanup of wrapped disposable objects.
+    /// </remarks>
     public class ConcurrentObjectReference<T> : IDisposable, IComparable<T>, IEquatable<T>
     {
         private T _value;
@@ -270,6 +272,14 @@ namespace UCode.Extensions
         /// <example>
         /// <code>
         /// 
+        /// <summary>
+        /// Releases all resources used by the ConcurrentObjectReference
+        /// </summary>
+        /// <remarks>
+        /// Implements IDisposable pattern to properly handle both managed
+        /// and unmanaged resources. If the wrapped object implements IDisposable,
+        /// it will be disposed as well.
+        /// </remarks>
         public void Dispose()
         {
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
