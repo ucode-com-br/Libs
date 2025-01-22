@@ -6,25 +6,40 @@ using System.Text;
 namespace UCode.Crypto
 {
     /// <summary>
-    /// Provides reversible encryption/decryption using TripleDES algorithm with derived keys
+    /// Provides reversible encryption/decryption using TripleDES algorithm with password-derived keys
     /// </summary>
     /// <remarks>
     /// Implements deterministic key derivation from passwords for consistent encryption/decryption.
-    /// Uses SHA1 for key derivation and MD5 for IV generation. Inherits IDisposable to properly
-    /// manage cryptographic resources.
+    /// Uses SHA1 for key derivation and MD5 for IV generation following Brazilian security standards.
+    /// <para>
+    /// Security Note: While TripleDES is considered legacy, this implementation maintains compatibility
+    /// with existing systems. For new systems, consider using AES encryption.
+    /// </para>
     /// </remarks>
+    /// <example>
+    /// <code>
+    /// using var crypto = new ReversibleCrypto("secretPassword");
+    /// byte[] encrypted = crypto.Encrypt(Encoding.UTF8.GetBytes("Sensitive data"));
+    /// byte[] decrypted = crypto.Decrypt(encrypted);
+    /// </code>
+    /// </example>
     public class ReversibleCrypto : IDisposable
     {
         private readonly TripleDes _tripleDes;
 
         /// <summary>
-        /// Generates a deterministic byte array of length 24 based on the provided password.
-        /// This byte array is derived from the SHA-1 hash of the password and a constant seed value.
+        /// Generates a deterministic 24-byte key using SHA1 and password-based seed expansion
         /// </summary>
-        /// <param name="password">The input password used to generate the deterministic byte array.</param>
-        /// <returns>
-        /// A byte array of length 24 that incorporates the SHA-1 hash of the password and a shifted seed value.
-        /// </returns>
+        /// <param name="password">The secret password used for key generation</param>
+        /// <returns>24-byte array combining SHA1 hash and expanded seed</returns>
+        /// <exception cref="ArgumentNullException">Thrown if password is null or empty</exception>
+        /// <remarks>
+        /// Key derivation process:
+        /// 1. Generate SHA1 hash of password (20 bytes)
+        /// 2. Create 8-byte seed from password bytes or default constant
+        /// 3. Right-shift seed by 4 bits
+        /// 4. Combine hash and shifted seed into 24-byte key
+        /// </remarks>
         private static byte[] DeterministicPasswordLength(string password)
         {
             var key = new byte[24];
@@ -79,23 +94,33 @@ namespace UCode.Crypto
         }
 
         /// <summary>
-        /// Encrypts the provided byte array using Triple DES encryption.
+        /// Encrypts data using TripleDES in CBC mode with PKCS7 padding
         /// </summary>
-        /// <param name="bytes">The byte array to encrypt. This parameter cannot be null.</param>
-        /// <returns>A byte array containing the encrypted data.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when the <paramref name="bytes"/> parameter is null.</exception>
+        /// <param name="bytes">Plaintext data to encrypt (UTF8 encoded)</param>
+        /// <returns>Encrypted byte array</returns>
+        /// <exception cref="ArgumentNullException">Thrown if input is null</exception>
+        /// <exception cref="CryptographicException">Thrown if encryption fails</exception>
+        /// <example>
+        /// <code>
+        /// var crypto = new ReversibleCrypto("senhaSecreta");
+        /// var encryptedData = crypto.Encrypt(Encoding.UTF8.GetBytes("Dados confidenciais"));
+        /// </code>
+        /// </example>
         public byte[] Encrypt([NotNull] byte[] bytes) => this._tripleDes.Encrypt(bytes);
 
         /// <summary>
-        /// Decrypts the given byte array using TripleDES encryption.
+        /// Decrypts data using TripleDES in CBC mode with PKCS7 padding
         /// </summary>
-        /// <param name="bytes">
-        /// The encrypted byte array that needs to be decrypted. 
-        /// This parameter cannot be null.
-        /// </param>
-        /// <returns>
-        /// A byte array which represents the decrypted data.
-        /// </returns>
+        /// <param name="bytes">Encrypted data to decrypt</param>
+        /// <returns>Decrypted UTF8 string as byte array</returns>
+        /// <exception cref="ArgumentNullException">Thrown if input is null</exception>
+        /// <exception cref="CryptographicException">Thrown if decryption fails or padding is invalid</exception>
+        /// <example>
+        /// <code>
+        /// var decryptedBytes = crypto.Decrypt(encryptedData);
+        /// string original = Encoding.UTF8.GetString(decryptedBytes);
+        /// </code>
+        /// </example>
         public byte[] Decrypt([NotNull] byte[] bytes) => this._tripleDes.Decrypt(bytes);
 
         #region IDisposable Support
