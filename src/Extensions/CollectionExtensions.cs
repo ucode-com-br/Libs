@@ -93,6 +93,20 @@ namespace UCode.Extensions
         /// numbers.RemoveAll(n => n % 2 == 0); // Removes even numbers
         /// </code>
         /// </example>
+        /// <summary>
+        /// Removes all elements from the collection that match the specified predicate
+        /// </summary>
+        /// <typeparam name="T">The type of elements in the collection</typeparam>
+        /// <param name="source">The collection to modify</param>
+        /// <param name="remove">Expression defining elements to remove</param>
+        /// <returns>The modified collection with matching elements removed</returns>
+        /// <exception cref="ArgumentNullException">Thrown if source or remove is null</exception>
+        /// <example>
+        /// <code>
+        /// var numbers = new Collection&lt;int&gt; { 1, 2, 3, 4 };
+        /// numbers.RemoveAll(n => n % 2 == 0); // Removes even numbers (2,4)
+        /// </code>
+        /// </example>
         public static Collection<T> RemoveAll<T>(this Collection<T> source, Expression<Func<T, bool>> remove)
         {
             var compile = remove.Compile();
@@ -129,6 +143,20 @@ namespace UCode.Extensions
         /// <returns>
         /// The modified <see cref="Collection{T}"/> with each element replaced according to the specified function.
         /// </returns>
+        /// <summary>
+        /// Replaces each element in the collection using the specified transformation function
+        /// </summary>
+        /// <typeparam name="T">The type of elements in the collection</typeparam>
+        /// <param name="source">The collection to modify</param>
+        /// <param name="replace">Transformation function to apply to each element</param>
+        /// <returns>The modified collection with transformed elements</returns>
+        /// <exception cref="ArgumentNullException">Thrown if source or replace is null</exception>
+        /// <example>
+        /// <code>
+        /// var names = new Collection&lt;string&gt; { "john", "jane" };
+        /// names.Replace(n => n.ToUpper()); // Collection becomes ["JOHN", "JANE"]
+        /// </code>
+        /// </example>
         public static Collection<T> Replace<T>(this Collection<T> source, Expression<Func<T, T>> replace)
         {
             var compile = replace.Compile();

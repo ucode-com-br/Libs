@@ -151,6 +151,26 @@ namespace UCode.Extensions
         /// <typeparam name="TInstance">Instance Type</typeparam>
         /// <param name="instance">created instance</param>
         /// <param name="action">action to bee taken in each property, field or method</param>
+        /// <summary>
+        /// Performs reflection-based operations on all public members of an instance
+        /// </summary>
+        /// <typeparam name="TInstance">The type of instance being inspected</typeparam>
+        /// <param name="instance">The instance to analyze</param>
+        /// <param name="action">Action to perform on each member</param>
+        /// <exception cref="ArgumentNullException">Thrown if instance is null</exception>
+        /// <remarks>
+        /// Iterates through all public fields, properties and methods of the instance,
+        /// providing a type-safe way to access and manipulate them through reflection.
+        /// </remarks>
+        /// <example>
+        /// <code>
+        /// var obj = new MyClass();
+        /// obj.PublicMemberInfoAction(member => {
+        ///     if (member.CanSetValue)
+        ///         member.SetValue("new value");
+        /// });
+        /// </code>
+        /// </example>
         public static void PublicMemberInfoAction<TInstance>([NotNull] this TInstance instance, Action<MemberInfoAction<TInstance>> action)
         {
             ArgumentNullException.ThrowIfNull(instance, nameof(instance));
@@ -245,6 +265,22 @@ namespace UCode.Extensions
         /// </para>
         /// </remarks>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="instance"/> is null</exception>
+        /// <example>
+        /// <code>
+        /// var customer = new Customer();
+        /// customer.PopulateWithDummyData();
+        /// </code>
+        /// </example>
+        /// <summary>
+        /// Populates an object instance with default test data for all supported member types
+        /// </summary>
+        /// <typeparam name="T">Type of instance to populate</typeparam>
+        /// <param name="instance">Instance to populate with test data</param>
+        /// <exception cref="ArgumentNullException">Thrown if instance is null</exception>
+        /// <remarks>
+        /// <para>Supports primitive types, collections, dictionaries and complex objects.</para>
+        /// <para>For complex objects, creates nested instances with default values.</para>
+        /// </remarks>
         /// <example>
         /// <code>
         /// var customer = new Customer();
