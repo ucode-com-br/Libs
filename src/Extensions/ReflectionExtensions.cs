@@ -77,8 +77,32 @@ namespace UCode.Extensions
                 return (T?)this._getValue.Invoke(this._instance);
             }
 
+            /// <summary>
+            /// Invokes the member with specified arguments
+            /// </summary>
+            /// <param name="args">Arguments to pass to the member</param>
+            /// <returns>Invocation result or null for void methods</returns>
+            /// <exception cref="TargetInvocationException">Wraps exceptions thrown by the invoked member</exception>
+            /// <exception cref="ArgumentException">Thrown for invalid argument count or type</exception>
+            /// <exception cref="InvalidOperationException">Thrown if member cannot be invoked</exception>
             public object? Invoke(object?[]? args) => this.Invoke<object>(args);
 
+            /// <summary>
+            /// Invokes the member with specified arguments and returns typed result
+            /// </summary>
+            /// <typeparam name="T">Expected return type</typeparam>
+            /// <param name="args">Arguments to pass to the member</param>
+            /// <returns>Typed invocation result or default(T) for void methods</returns>
+            /// <exception cref="InvalidCastException">Thrown if return type doesn't match T</exception>
+            /// <exception cref="TargetInvocationException">Wraps exceptions thrown by the invoked member</exception>
+            /// <exception cref="ArgumentException">Thrown for invalid argument count or type</exception>
+            /// <example>
+            /// <code>
+            /// var method = typeof(Math).GetMethod("Abs", new[] { typeof(int) });
+            /// var result = new MemberInfoAction<int>(new Math(), method).Invoke<int>(-5);
+            /// // result will be 5
+            /// </code>
+            /// </example>
             public T? Invoke<T>(params object?[]? args)
             {
                 if (this._invoke == null)

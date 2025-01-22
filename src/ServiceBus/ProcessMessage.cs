@@ -19,6 +19,28 @@ namespace UCode.ServiceBus
     /// - Balanceamento de carga entre consumidores
     /// - Integração com sistemas de telemetria
     /// </remarks>
+    /// <summary>
+    /// Handles processing of Service Bus messages with proper resource disposal
+    /// </summary>
+    /// <typeparam name="T">Type of the message payload</typeparam>
+    /// <remarks>
+    /// Implements both synchronous and asynchronous disposal patterns to ensure
+    /// proper cleanup of Service Bus resources. Designed for use with Azure Service Bus.
+    /// <para>
+    /// Features automatic message completion/abandonment and error handling.
+    /// Supports both session and non-session based processing.
+    /// </para>
+    /// </remarks>
+    /// <exception cref="ServiceBusException">Thrown for service-related problems</exception>
+    /// <exception cref="ObjectDisposedException">Thrown if used after disposal</exception>
+    /// <example>
+    /// <code>
+    /// await using var processor = new ProcessMessage<Order>(messageReceiver);
+    /// var order = processor.GetMessagePayload();
+    /// await ProcessOrderAsync(order);
+    /// await processor.CompleteMessageAsync();
+    /// </code>
+    /// </example>
     public class ProcessMessage<T> : IDisposable, IAsyncDisposable
     {
         private bool _disposedValue;

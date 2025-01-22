@@ -25,6 +25,20 @@ namespace UCode.Extensions
         /// Enables fluent-style chaining of Add operations. This method mutates
         /// the original collection rather than creating a new one.
         /// </remarks>
+        /// <summary>
+        /// Adds an item to the collection and returns the modified collection
+        /// </summary>
+        /// <typeparam name="T">The type of elements in the collection</typeparam>
+        /// <param name="source">Source collection to modify</param>
+        /// <param name="item">Item to add to the collection</param>
+        /// <returns>The same collection instance with new item added</returns>
+        /// <exception cref="ArgumentNullException">Thrown if source collection is null</exception>
+        /// <example>
+        /// <code>
+        /// var numbers = new Collection<int> { 1, 2 };
+        /// numbers.Add(3); // Returns collection containing 1, 2, 3
+        /// </code>
+        /// </example>
         public static Collection<T> Add<T>(this Collection<T> source, T item)
         {
             source.Add(item);
@@ -33,14 +47,19 @@ namespace UCode.Extensions
         }
 
         /// <summary>
-        /// Adds one or more items to the specified collection.
+        /// Adds multiple items to the collection and returns the modified collection
         /// </summary>
-        /// <typeparam name="T">The type of elements in the collection.</typeparam>
-        /// <param name="source">The collection to which items will be added.</param>
-        /// <param name="itens">The items to add to the collection.</param>
-        /// <returns>
-        /// The updated collection with the new items added.
-        /// </returns>
+        /// <typeparam name="T">The type of elements in the collection</typeparam>
+        /// <param name="source">Source collection to modify</param>
+        /// <param name="itens">Array of items to add to the collection</param>
+        /// <returns>The same collection instance with new items added</returns>
+        /// <exception cref="ArgumentNullException">Thrown if source collection or items array is null</exception>
+        /// <example>
+        /// <code>
+        /// var letters = new Collection<char> { 'a' };
+        /// letters.Add('b', 'c'); // Returns collection containing 'a', 'b', 'c'
+        /// </code>
+        /// </example>
         public static Collection<T> Add<T>(this Collection<T> source, params T[] itens)
         {
             foreach (var item in itens)
