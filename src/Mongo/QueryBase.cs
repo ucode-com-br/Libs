@@ -13,6 +13,11 @@ using static UCode.Extensions.ExpressionExtensions;
 
 namespace UCode.Mongo
 {
+    /// <summary>
+    /// Abstract base record for building MongoDB queries with support for multiple query types
+    /// (expression, JSON, text search) and conversion operators.
+    /// </summary>
+    /// <typeparam name="TDocument">The document type this query operates on</typeparam>
     public abstract record QueryBase<TDocument>
     {
         /// <summary>

@@ -10,7 +10,9 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace UCode.Apis.BigDataCorp.Models.Company
 {
-
+    /// <summary>
+    /// Represents an economic group of companies with aggregated financial and operational metrics
+    /// </summary>
     public class CompanyGroup
     {
         /// <summary>

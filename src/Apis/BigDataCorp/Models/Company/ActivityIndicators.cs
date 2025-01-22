@@ -10,6 +10,9 @@ using System.Threading.Tasks;
 
 namespace UCode.Apis.BigDataCorp.Models.Company
 {
+    /// <summary>
+    /// Represents key activity indicators for a company, including employee and revenue metrics
+    /// </summary>
     [DatasetInfo("activity_indicators", "ActivityIndicators")]
     public class ActivityIndicators
     {

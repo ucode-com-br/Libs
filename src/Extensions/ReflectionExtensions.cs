@@ -16,7 +16,8 @@ using static UCode.Extensions.ReflectionExtensions;
 namespace UCode.Extensions
 {
     /// <summary>
-    /// Entensions using reflection
+    /// Provides extension methods for advanced reflection operations including member access,
+    /// instance creation, and dynamic method invocation.
     /// </summary>
     public static class ReflectionExtensions
     {

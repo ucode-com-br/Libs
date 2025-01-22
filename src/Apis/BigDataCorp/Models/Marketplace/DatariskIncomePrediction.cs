@@ -10,7 +10,10 @@ using System.Threading.Tasks;
 
 namespace UCode.Apis.BigDataCorp.Models.Marketplace
 {
-    //https://docs.bigdatacorp.com.br/plataforma/reference/marketplace_partner_datarisk_income_prediction_person
+    /// <summary>
+    /// Represents income prediction data from the DataRisk marketplace partner analysis.
+    /// Documentation: https://docs.bigdatacorp.com.br/plataforma/reference/marketplace_partner_datarisk_income_prediction_person
+    /// </summary>
     [DatasetInfo("partner_datarisk_income_prediction_person", "DatariskIncomePrediction")]
     public class DatariskIncomePrediction
     {
