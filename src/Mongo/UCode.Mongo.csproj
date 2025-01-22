@@ -44,11 +44,12 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
 
     <!--<PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.2.5" />-->
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.1" />
     <PackageReference Include="MongoDB.Bson" Version="3.1.0" />
     <PackageReference Include="MongoDB.Driver" Version="3.1.0" />
-    <PackageReference Include="OpenTelemetry" Version="1.11.0-rc.1" />
-    <PackageReference Include="OpenTelemetry.Api" Version="1.11.0-rc.1" />
+    <PackageReference Include="OpenTelemetry" Version="1.11.0" />
+    <PackageReference Include="OpenTelemetry.Api" Version="1.11.0" />
+    <PackageReference Include="System.Formats.Asn1" Version="9.0.1" />
     
     <!--<PackageReference Include="UCode.Extensions" Version="$(Version)" />
     <PackageReference Include="UCode.Repositories" Version="$(Version)" />-->
