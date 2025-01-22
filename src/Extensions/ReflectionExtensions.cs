@@ -23,9 +23,13 @@ namespace UCode.Extensions
     {
         #region PublicMemberInfoAction
         /// <summary>
-        /// Actions and member proxy for each call in <see cref="MemberInfoCall{TInstance}"/>
+        /// Encapsulates reflection-based operations for a member (field, property or method)
         /// </summary>
-        /// <typeparam name="TInstance">Instance type of</typeparam>
+        /// <typeparam name="TInstance">The declaring type containing the member</typeparam>
+        /// <remarks>
+        /// Provides type-safe access to get/set values and invoke methods through reflection.
+        /// Handles both instance and static members.
+        /// </remarks>
         public readonly struct MemberInfoAction<TInstance>
         {
             private readonly TInstance? _instance;

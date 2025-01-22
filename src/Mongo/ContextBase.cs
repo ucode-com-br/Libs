@@ -203,16 +203,20 @@ namespace UCode.Mongo
 
         #region Constructor
         /// <summary>
-        /// Initializes a new instance of the <see cref="ContextBase"/> class.
+        /// Initializes a MongoDB database context with logging and transaction support
         /// </summary>
-        /// <param name="loggerFactory">The logger factory used to create loggers.</param>
-        /// <param name="connectionString">The connection string for the MongoDB database.</param>
-        /// <param name="applicationName">Optional name of the application; if provided, it sets the application name in MongoDB client settings.</param>
-        /// <param name="transactionalContext">Indicates whether the context should support transactions.</param>
+        /// <param name="loggerFactory">Factory for creating loggers</param>
+        /// <param name="connectionString">MongoDB connection string</param>
+        /// <param name="applicationName">Optional application name for MongoDB monitoring</param>
+        /// <param name="transactionalContext">Enables transaction support when true</param>
         /// <remarks>
-        /// This constructor initializes the MongoDB client and database, sets up logging, and configures
-        /// event subscriptions for command and connection events. If transactional support is enabled,
-        /// it starts a session and begins a transaction.
+        /// Performs key initialization steps:
+        /// 1. Configures GUID serialization format
+        /// 2. Extracts database name from connection string
+        /// 3. Creates MongoDB client with telemetry instrumentation
+        /// 4. Initializes transactional session if requested
+        /// 5. Sets up collection tracking and metadata
+        /// Uses connection string parsing to extract database name using regex pattern.
         /// </remarks>
         protected ContextBase([NotNull] ILoggerFactory loggerFactory,
             [NotNull] string connectionString,

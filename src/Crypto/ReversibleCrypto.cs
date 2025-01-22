@@ -6,9 +6,13 @@ using System.Text;
 namespace UCode.Crypto
 {
     /// <summary>
-    /// Represents a reversible cryptography implementation that allows for data encryption and decryption.
-    /// This class implements the IDisposable interface to manage resources effectively.
+    /// Provides reversible encryption/decryption using TripleDES algorithm with derived keys
     /// </summary>
+    /// <remarks>
+    /// Implements deterministic key derivation from passwords for consistent encryption/decryption.
+    /// Uses SHA1 for key derivation and MD5 for IV generation. Inherits IDisposable to properly
+    /// manage cryptographic resources.
+    /// </remarks>
     public class ReversibleCrypto : IDisposable
     {
         private readonly TripleDes _tripleDes;

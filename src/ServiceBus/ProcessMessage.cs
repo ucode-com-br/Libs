@@ -208,13 +208,18 @@ namespace UCode.ServiceBus
 
 
         /// <summary>
-        /// Asynchronously handles messages from a messaging service.
-        /// This method processes the incoming message and invokes the appropriate
-        /// handlers. If there is no message processor defined, it abandons the message
-        /// and invokes the error handler if available.
+        /// Handles incoming Service Bus messages and routes them to registered processors
         /// </summary>
-        /// <param name="args">The arguments containing message details to be processed.</param>
-        /// <returns>A Task representing the asynchronous operation.</returns>
+        /// <param name="args">Message event arguments containing message data</param>
+        /// <returns>Task representing the asynchronous processing operation</returns>
+        /// <remarks>
+        /// Message handling workflow:
+        /// 1. Checks for registered message processor
+        /// 2. Wraps message in ProcessEventArgs for unified handling
+        /// 3. Automatically abandons message if no processor registered
+        /// 4. Triggers error handler on processing failures
+        /// Uses IDisposable pattern for ProcessEventArgs to ensure proper resource cleanup.
+        /// </remarks>
         private async Task MessageHandler(ProcessMessageEventArgs args)
         {
             if (this._processMessageAsync != null)

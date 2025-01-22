@@ -15,14 +15,16 @@ namespace UCode.Extensions
     public static class CollectionExtensions
     {
         /// <summary>
-        /// Adds an item to the specified Collection.
+        /// Adds an item to the collection and returns the modified collection
         /// </summary>
-        /// <typeparam name="T">The type of the items in the Collection.</typeparam>
-        /// <param name="source">The Collection to which the item will be added.</param>
-        /// <param name="item">The item to add to the Collection.</param>
-        /// <returns>
-        /// The original Collection with the new item added.
-        /// </returns>
+        /// <typeparam name="T">The type of elements in the collection</typeparam>
+        /// <param name="source">The target collection</param>
+        /// <param name="item">The item to add</param>
+        /// <returns>The same collection instance with the new item added</returns>
+        /// <remarks>
+        /// Enables fluent-style chaining of Add operations. This method mutates
+        /// the original collection rather than creating a new one.
+        /// </remarks>
         public static Collection<T> Add<T>(this Collection<T> source, T item)
         {
             source.Add(item);

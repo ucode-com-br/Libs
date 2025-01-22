@@ -70,13 +70,14 @@ namespace UCode.Mongo.Serializers
         public static void ChangeGuidSerializer(GuidSerializer guidSerializer) => GuidSerializer = guidSerializer;
 
         /// <summary>
-        /// Registers a specified BSON serializer for a given type.
+        /// Registers a custom serializer for a specific type if not already registered
         /// </summary>
-        /// <typeparam name="T">The type for which the BSON serializer is being registered.</typeparam>
-        /// <param name="serializer">The BSON serializer to be registered for the specified type.</param>
+        /// <typeparam name="T">Type to register serializer for</typeparam>
+        /// <param name="serializer">Custom serializer implementation</param>
         /// <remarks>
-        /// This method checks if a serializer is already registered for the type <typeparamref name="T"/>. 
-        /// If no serializer is currently registered, it registers the provided <paramref name="serializer"/>.
+        /// This method is idempotent - it will only register the serializer once per type.
+        /// Checks the existing serializer registry before adding a new one.
+        /// Thread-safe through MongoDB driver's internal registration mechanism.
         /// </remarks>
         public static void RegisterSerializer<T>(IBsonSerializer<T> serializer)
         {
