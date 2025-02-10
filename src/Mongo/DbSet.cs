@@ -1722,7 +1722,7 @@ namespace UCode.Mongo
         /// </exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async Task<long> UpdateManyAsync([NotNull] Query<TDocument> query,
-                    [NotNull] UpdateOptions options,
+                    [NotNull] UpdateOptions<TDocument> options,
                     [MaybeNull] bool? forceTransaction = default,
                     [MaybeNull] CancellationToken cancellationToken = default)
         {
@@ -1772,7 +1772,7 @@ namespace UCode.Mongo
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async Task<long> UpdateManyAsync([NotNull] string filter,
             [NotNull] string updateStr,
-            [NotNull] UpdateOptions options,
+            [NotNull] UpdateOptions<TDocument> options,
             [MaybeNull] bool? forceTransaction = default,
             [MaybeNull] CancellationToken cancellationToken = default)
         {
@@ -1969,14 +1969,14 @@ namespace UCode.Mongo
         /// </remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async Task<long> UpdateAddToSetAsync([NotNull] Query<TDocument> query,
-                    UpdateOptions? updateOptions = default,
+                    UpdateOptions<TDocument>? updateOptions = default,
                     [MaybeNull] bool? forceTransaction = default,
                     [MaybeNull] CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             // If updateOptions is null, create a new instance with default values
-            updateOptions ??= new UpdateOptions();
+            updateOptions ??= new UpdateOptions<TDocument>();
 
 
             // Call the UpdateAsync method with the query, update, and options
@@ -2009,7 +2009,7 @@ namespace UCode.Mongo
         internal async Task<long> UpdateAsync(
                     [NotNull] FilterDefinition<TDocument> filterDefinition,
                     [NotNull] UpdateDefinition<TDocument> updateDefinition,
-                    [NotNull] UpdateOptions updateOptions,
+                    [NotNull] UpdateOptions<TDocument> updateOptions,
                     [MaybeNull] bool? forceTransaction = default,
                     [MaybeNull] CancellationToken cancellationToken = default)
         {
@@ -2186,13 +2186,13 @@ namespace UCode.Mongo
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async Task<long> ReplaceAsync([NotNull] IEnumerable<TDocument> docs,
                     [MaybeNull] Query<TDocument>? query = null,
-                    [MaybeNull] BulkWriteOptions? bulkWriteOptions = default,
+                    [MaybeNull] QueryBulkWriteOptions<TDocument>? bulkWriteOptions = default,
                     [MaybeNull] bool? forceTransaction = default,
                     [MaybeNull] CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            bulkWriteOptions ??= new BulkWriteOptions();
+            bulkWriteOptions ??= new QueryBulkWriteOptions<TDocument>();
 
 
             var updates = new List<WriteModel<TDocument>>();
@@ -2202,15 +2202,13 @@ namespace UCode.Mongo
             // Create a filter definition for each document
             foreach (var doc in docs)
             {
-                var source = this.ProcessIgnorable(doc);
+                var replacement = this.ProcessIgnorable(doc);
 
-                FilterDefinition<TDocument> filterDefinition = (query ?? exp).CompleteExpression(source);
+                FilterDefinition<TDocument> filterDefinition = (query ?? exp).CompleteExpression(replacement);
 
+                var model = new ReplaceOneModel<TDocument>(filterDefinition, replacement);
 
-
-                var model = new ReplaceOneModel<TDocument>(filterDefinition, source);
-
-                model.IsUpsert = 
+                bulkWriteOptions.Populate(ref model);
 
                 updates.Add(model);
             }
@@ -2232,20 +2230,24 @@ namespace UCode.Mongo
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async Task<long> ReplaceAsync([NotNull] IEnumerable<TDocument> docs,
                     [MaybeNull] Query<TDocument>? query = null,
-                    [MaybeNull] ReplaceOptions? replaceOptions = default,
+                    [MaybeNull] ReplaceOptions<TDocument>? replaceOptions = default,
                     [MaybeNull] bool? forceTransaction = default,
                     [MaybeNull] CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            replaceOptions ??= new ReplaceOptions();
+            replaceOptions ??= new ReplaceOptions<TDocument>();
 
-            var bulkWriteOptions = new BulkWriteOptions()
+            var bulkWriteOptions = new QueryBulkWriteOptions<TDocument>(new BulkWriteOptions()
             {
                 IsOrdered = true,
                 BypassDocumentValidation = replaceOptions.BypassDocumentValidation,
                 Comment = replaceOptions.Comment,
                 Let = replaceOptions.Let
+            })
+            {
+                IsUpsert = replaceOptions.IsUpsert,
+                Sort = replaceOptions.Sort
             };
 
 
@@ -2267,7 +2269,7 @@ namespace UCode.Mongo
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async Task<long> ReplaceAsync([NotNull] TDocument doc,
                     [MaybeNull] Query<TDocument>? query = default,
-                    [MaybeNull] ReplaceOptions? replaceOptions = default,
+                    [MaybeNull] ReplaceOptions<TDocument>? replaceOptions = default,
                     [MaybeNull] bool? forceTransaction = default,
                     [MaybeNull] CancellationToken cancellationToken = default)
         {
@@ -2291,14 +2293,14 @@ namespace UCode.Mongo
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async Task<ReplaceOneResult> ReplaceOneAsync([NotNull] TDocument doc,
                     [MaybeNull] Query<TDocument>? query = default,
-                    [MaybeNull] ReplaceOptions? replaceOptions = default,
+                    [MaybeNull] ReplaceOptions<TDocument>? replaceOptions = default,
                     [MaybeNull] bool? forceTransaction = default,
                     [MaybeNull] CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             // Set default replace options if not provided
-            replaceOptions ??= new ReplaceOptions();
+            replaceOptions ??= new ReplaceOptions<TDocument>();
 
             // Initialize the result to null
             ReplaceOneResult result;
@@ -2834,7 +2836,6 @@ namespace UCode.Mongo
 
 
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static explicit operator ContextBase(DbSet<TDocument, TObjectId, TUser> dbSet) => dbSet._contextbase;
 
 

@@ -32,7 +32,7 @@ namespace UCode.Mongo
         /// <param name="sender">The DbSet from which the document is derived, cannot be null.</param>
         /// <param name="original">A reference to the original document before insertion.</param>
         /// <param name="replaceOptions">A reference to the options that dictate how the document can be replaced.</param>
-        internal void BeforeInsertInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref TDocument original, ref ReplaceOptions replaceOptions)
+        internal void BeforeInsertInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref TDocument original, ref ReplaceOptions<TDocument> replaceOptions)
                     where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
                     where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
         {
@@ -72,7 +72,7 @@ namespace UCode.Mongo
 
         /// <summary>
         /// Prepares for an 
-        internal void BeforeUpdateInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref FilterDefinition<TDocument> filterDefinition, ref UpdateDefinition<TDocument> updateDefinition, ref UpdateOptions updateOptions)
+        internal void BeforeUpdateInternal<TDocument, TObjectId, TProjection, TUser>(DbSet<TDocument, TObjectId, TUser> sender, ref FilterDefinition<TDocument> filterDefinition, ref UpdateDefinition<TDocument> updateDefinition, ref UpdateOptions<TDocument> updateOptions)
             where TObjectId : IComparable<TObjectId>, IEquatable<TObjectId>
             where TDocument : IObjectBase<TObjectId, TUser>, IObjectBaseTenant
         {

@@ -41,6 +41,7 @@ namespace UCode.Mongo.Options
         protected readonly FindOneAndDeleteOptions<TDocument>? _deleteOption2;
         protected readonly FindOneAndDeleteOptions<TDocument, TProjection>? _deleteOption3;
 
+        protected readonly ReplaceOptions<TDocument>? _replaceOption0;
         protected readonly ReplaceOptions? _replaceOption1;
         protected readonly FindOneAndReplaceOptions<TDocument>? _replaceOption2;
         protected readonly FindOneAndReplaceOptions<TDocument, TProjection>? _replaceOption3;
@@ -130,6 +131,7 @@ namespace UCode.Mongo.Options
             this._deleteOption1?.ToString() ??
             this._deleteOption2?.ToString() ??
             this._deleteOption3?.ToString() ??
+            this._replaceOption0?.ToString() ??
             this._replaceOption1?.ToString() ??
             this._replaceOption2?.ToString() ??
             this._replaceOption3?.ToString() ??
@@ -160,6 +162,7 @@ namespace UCode.Mongo.Options
             this._deleteOption1?.Equals(obj) ??
             this._deleteOption2?.Equals(obj) ??
             this._deleteOption3?.Equals(obj) ??
+            this._replaceOption0?.Equals(obj) ??
             this._replaceOption1?.Equals(obj) ??
             this._replaceOption2?.Equals(obj) ??
             this._replaceOption3?.Equals(obj) ??
@@ -190,6 +193,7 @@ namespace UCode.Mongo.Options
             this._deleteOption1?.GetHashCode() ??
             this._deleteOption2?.GetHashCode() ??
             this._deleteOption3?.GetHashCode() ??
+            this._replaceOption0?.GetHashCode() ??
             this._replaceOption1?.GetHashCode() ??
             this._replaceOption2?.GetHashCode() ??
             this._replaceOption3?.GetHashCode() ??
@@ -341,6 +345,11 @@ namespace UCode.Mongo.Options
             _replaceOption1 = replaceOptions; 
         }
 
+        protected OptionObject(ReplaceOptions<TDocument> replaceOptions)
+        {
+            _replaceOption0 = replaceOptions;
+        }
+
         /// <summary>
         /// Constructor for the OptionObject class that initializes the instance with specified replace options.
         /// </summary>
@@ -428,6 +437,9 @@ namespace UCode.Mongo.Options
         public static implicit operator OptionObject<TDocument, TProjection>(FindOneAndDeleteOptions<TDocument, TProjection> source) => new OptionObject<TDocument, TProjection>(source);
 
         // Replace Options Implicit Conversion Operators
+        public static implicit operator ReplaceOptions<TDocument>(OptionObject<TDocument, TProjection> source) => source._replaceOption0;
+        public static implicit operator OptionObject<TDocument, TProjection>(ReplaceOptions<TDocument> source) => new OptionObject<TDocument, TProjection>(source);
+
         public static implicit operator ReplaceOptions(OptionObject<TDocument, TProjection> source) => source._replaceOption1;
         public static implicit operator OptionObject<TDocument, TProjection>(ReplaceOptions source) => new OptionObject<TDocument, TProjection>(source);
 
