@@ -41,7 +41,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.18.2" />
+    <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.18.3" />
     <PackageReference Include="System.Formats.Asn1" Version="9.0.1" />
     <PackageReference Include="System.Text.Json" Version="9.0.1" />
   </ItemGroup>

@@ -8,7 +8,7 @@
     <Copyright>UCode (c) Desenvolvimento de Software 2024</Copyright>
     <IncludeSymbols>True</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <Version>3.11.14</Version>
+    <Version>3.11.15</Version>
     <Title>UCode Cache</Title>
     <RepositoryType>git</RepositoryType>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
@@ -41,10 +41,10 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="LZStringCSharp" Version="1.4.0" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
-    <PackageReference Include="SharpCompress" Version="0.38.0" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.1" />
+    <PackageReference Include="SharpCompress" Version="0.39.0" />
     <PackageReference Include="System.Net.Http" Version="4.3.4" />
     <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
   </ItemGroup>

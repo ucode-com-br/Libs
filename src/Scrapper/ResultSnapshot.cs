@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Http;
 
@@ -10,7 +11,7 @@ namespace UCode.Scrapper
     /// </summary>
     public readonly struct ResultSnapshot : IResultSnapshot
     {
-        public ResultSnapshot(int index, HttpRequestMessage? request, HttpResponseMessage? response, IEnumerable<Cookie>? cookies, TimeSpan elapsed, Exception? exception)
+        public ResultSnapshot(int index, [MaybeNull] HttpRequestMessage? request, [MaybeNull] HttpResponseMessage? response, [MaybeNull] IEnumerable<Cookie>? cookies, [NotNull] TimeSpan elapsed, [MaybeNull] Exception? exception)
         {
             this.Index = index;
             this.Request = request;

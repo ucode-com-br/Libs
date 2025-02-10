@@ -8,7 +8,7 @@
     <Copyright>UCode (c) Desenvolvimento de Software 2024</Copyright>
     <IncludeSymbols>True</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <Version>3.11.14</Version>
+    <Version>3.11.15</Version>
     <Title>UCode Scrapper</Title>
     <RepositoryType>git</RepositoryType>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
@@ -40,11 +40,11 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="HtmlAgilityPack" Version="1.11.71" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.0" />
-    <PackageReference Include="Polly" Version="8.5.0" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.72" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.1" />
+    <PackageReference Include="Polly" Version="8.5.2" />
     <PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
-    <PackageReference Include="Selenium.WebDriver" Version="4.27.0" />
+    <PackageReference Include="Selenium.WebDriver" Version="4.28.0" />
     <PackageReference Include="WebDriverManager" Version="2.17.5" />
     <!--<PackageReference Include="UCode.Extensions" Version="1.8.3" Condition="'$(Configuration)'!='Debug'"  />-->
   </ItemGroup>

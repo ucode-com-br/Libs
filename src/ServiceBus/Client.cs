@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
@@ -46,7 +48,7 @@ namespace UCode.ServiceBus
         /// An optional action to configure the default options for creating queues.
         /// If not provided, an empty delegate will be used.
         /// </param>
-        public Client(string connectionString, bool session, bool partitioned, bool autoCreateQueue, Action<CreateQueueOptions> defaultCreateQueueOptions = null)
+        public Client(string connectionString, bool session, bool partitioned, bool autoCreateQueue, Action<CreateQueueOptions>? defaultCreateQueueOptions = null, CancellationToken cancellationToken = default)
         {
             var serviceBusClientOptions = new ServiceBusClientOptions()
             {
@@ -69,10 +71,11 @@ namespace UCode.ServiceBus
             this._autoCreateQueue = autoCreateQueue;
             this._defaultCreateQueueOptions = defaultCreateQueueOptions ?? ((q) => { });
 
-            this.SetQueuesAsync().Wait();
+            this.SetQueuesAsync(cancellationToken).Wait(cancellationToken);
         }
 
         private readonly System.Collections.Concurrent.ConcurrentDictionary<string, QueueProperties> _dictQueueProperties = new();
+
         /// <summary>
         /// Gets the collection of keys from the dictionary of queue properties as a read-only list.
         /// </summary>
@@ -85,7 +88,7 @@ namespace UCode.ServiceBus
         /// <c>string</c> and are converted to a list to ensure that the consumers of this API 
         /// receive a snapshot of the keys at the time of access, without allowing further modifications.
         /// </remarks>
-        public IReadOnlyList<string> Queues => this._dictQueueProperties.Keys.ToList();
+        public IReadOnlyList<string> Queues => [.. this._dictQueueProperties.Keys];
 
         /// <summary>
         /// Asynchronously checks if a queue exists with the specified name. If the queue does not exist and 
@@ -98,14 +101,14 @@ namespace UCode.ServiceBus
         /// A Task representing the asynchronous operation, containing true if the queue exists 
         /// or has been created, otherwise false.
         /// </returns>
-        public async Task<bool> ExistQueueAsync(string queueName)
+        public async Task<bool> ExistQueueAsync(string queueName, CancellationToken cancellationToken = default)
         {
             if (this._dictQueueProperties.ContainsKey(queueName))
             {
                 return true;
             }
 
-            await this.SetQueuesAsync();
+            await this.SetQueuesAsync(cancellationToken);
 
             if (!this._dictQueueProperties.ContainsKey(queueName) && this._autoCreateQueue)
             {
@@ -113,7 +116,7 @@ namespace UCode.ServiceBus
 
                 this._defaultCreateQueueOptions(defaultCreateQueueOptions);
 
-                var created = await this._serviceBusAdministrationClient.CreateQueueAsync(defaultCreateQueueOptions);
+                var created = await this._serviceBusAdministrationClient.CreateQueueAsync(defaultCreateQueueOptions, cancellationToken: cancellationToken);
 
                 this._dictQueueProperties.AddOrUpdate(created.Value.Name, created.Value, (key, value) => created.Value);
 
@@ -135,9 +138,9 @@ namespace UCode.ServiceBus
         /// <returns>
         /// A Task representing the asynchronous operation.
         /// </returns>
-        private async Task SetQueuesAsync()
+        private async Task SetQueuesAsync(CancellationToken cancellationToken = default)
         {
-            var pages = this._serviceBusAdministrationClient.GetQueuesAsync().AsPages();
+            var pages = this._serviceBusAdministrationClient.GetQueuesAsync(cancellationToken).AsPages();
 
             await foreach (var page in pages)
             {
@@ -156,9 +159,9 @@ namespace UCode.ServiceBus
         /// A task that represents the asynchronous operation. The task result contains
         /// a <see cref="Sender"/> instance if the queue exists; otherwise, it returns null.
         /// </returns>
-        public async Task<Sender> CreateSenderAsync(string queueName)
+        public async Task<Sender?> CreateSenderAsync(string queueName, CancellationToken cancellationToken = default)
         {
-            if (await this.ExistQueueAsync(queueName))
+            if (await this.ExistQueueAsync(queueName, cancellationToken: cancellationToken))
             {
                 var serviceBusSender = this._serviceBusClient.CreateSender(queueName);
 
@@ -176,9 +179,9 @@ namespace UCode.ServiceBus
         /// A Task that represents the asynchronous operation. The task result contains
         /// an instance of the Receiver if the queue exists; otherwise, it returns null.
         /// </returns>
-        public async Task<Receiver> CreateReceiverAsync(string queueName)
+        public async Task<Receiver?> CreateReceiverAsync(string queueName, CancellationToken cancellationToken = default)
         {
-            if (await this.ExistQueueAsync(queueName))
+            if (await this.ExistQueueAsync(queueName, cancellationToken))
             {
                 var receiver = this._serviceBusClient.CreateReceiver(queueName);
 
@@ -211,9 +214,9 @@ namespace UCode.ServiceBus
         /// a <see cref="ProcessMessage{T}"/> that processes messages from the queue, or null 
         /// if the queue does not exist.
         /// </returns>
-        public async Task<ProcessMessage<T>?> CreateProcessorAsync<T>(string queueName, string? identifierOfProcessor = null, bool receiveAndDelete = false)
+        public async Task<ProcessMessage<T>?> CreateProcessorAsync<T>(string queueName, string? identifierOfProcessor = null, bool receiveAndDelete = false, CancellationToken cancellationToken = default)
         {
-            if (await this.ExistQueueAsync(queueName))
+            if (await this.ExistQueueAsync(queueName, cancellationToken: cancellationToken))
             {
                 var autoComplete = false;
                 var receiveMode = receiveAndDelete ? ServiceBusReceiveMode.ReceiveAndDelete : ServiceBusReceiveMode.PeekLock;
@@ -278,7 +281,7 @@ namespace UCode.ServiceBus
         /// <returns>
         /// A task representing the asynchronous operation, with no result.
         /// </returns>
-        public async Task ResubmitDeadLetterAsync<T>(string queueName, Func<ServiceBusReceivedMessage, T, bool> validate = null, string? sessionId = null)
+        public async Task ResubmitDeadLetterAsync<T>(string queueName, Func<ServiceBusReceivedMessage, T, bool>? validate = null, string? sessionId = null, CancellationToken cancellationToken = default)
         {
             if (this._session && string.IsNullOrWhiteSpace(sessionId))
             {
@@ -291,7 +294,7 @@ namespace UCode.ServiceBus
 
             if (this._session)
             {
-                receiver = await this._serviceBusClient.AcceptSessionAsync(queueName, sessionId);
+                receiver = await this._serviceBusClient.AcceptSessionAsync(queueName, sessionId, cancellationToken: cancellationToken);
             }
             else
             {
@@ -337,6 +340,7 @@ namespace UCode.ServiceBus
                 }
             }
         }
+
         /// <summary>
         /// Asynchronously resubmits a message from the dead-letter queue to the specified queue.
         /// </summary>
@@ -353,9 +357,10 @@ namespace UCode.ServiceBus
         /// <param name="queueName">The name of the queue from which to remove messages.</param>
         /// <param name="remove">A function that takes a message and an object of type T, and returns a boolean indicating whether the message should be removed.</param>
         /// <param name="sessionId">Optional session identifier for session-enabled queues. Required if the queue is session-enabled.</param>
+        /// <param name="cancellationToken">An optional <see cref="CancellationToken"/> instance to signal the request to cancel the operation.</param>
         /// <exception cref="ArgumentNullException">Thrown when sessionId is required but not provided for session-enabled queues.</exception>
         /// <returns>A Task representing the asynchronous operation.</returns>
-        public async Task QueueRemoveAllAsync<T>(string queueName, Func<ServiceBusReceivedMessage, T, bool> remove, string? sessionId = null)
+        public async Task QueueRemoveAllAsync<T>(string queueName, Func<ServiceBusReceivedMessage, T, bool> remove, string? sessionId = null, CancellationToken cancellationToken = default)
         {
             if (this._session && string.IsNullOrWhiteSpace(sessionId))
             {
@@ -366,7 +371,7 @@ namespace UCode.ServiceBus
 
             if (this._session)
             {
-                receiver = await this._serviceBusClient.AcceptSessionAsync(queueName, sessionId);
+                receiver = await this._serviceBusClient.AcceptSessionAsync(queueName, sessionId, cancellationToken: cancellationToken);
             }
             else
             {
@@ -377,7 +382,7 @@ namespace UCode.ServiceBus
             }
 
 
-            var dlqMessages = receiver.ReceiveMessagesAsync();
+            var dlqMessages = receiver.ReceiveMessagesAsync(cancellationToken);
 
             await foreach (var msg in dlqMessages)
             {
@@ -405,11 +410,11 @@ namespace UCode.ServiceBus
 
                 if (remove.Invoke(msg, obj))
                 {
-                    await receiver.CompleteMessageAsync(msg);
+                    await receiver.CompleteMessageAsync(msg, cancellationToken);
                 }
                 else
                 {
-                    await receiver.AbandonMessageAsync(msg);
+                    await receiver.AbandonMessageAsync(msg, cancellationToken: cancellationToken);
                 }
             }
         }

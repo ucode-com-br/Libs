@@ -103,6 +103,7 @@ namespace UCode.ServiceBus
         }
 
         private Func<ProcessEventArgs<T>, Task>? _processMessageAsync;
+
         /// <summary>
         /// Represents an asynchronous event that processes messages of type <typeparamref name="T"/>.
         /// </summary>
@@ -151,6 +152,7 @@ namespace UCode.ServiceBus
                 this.EnsureNotRunningAndInvoke(() => this._processMessageAsync = default);
             }
         }
+
         /// <summary>
         /// Represents an asynchronous task for receiving active data.
         /// </summary>
@@ -353,7 +355,7 @@ namespace UCode.ServiceBus
         /// </returns>
         /// <remarks>
         /// This method 
-        public async Task StartAsync() => _ = await this.TryStartAsync();
+        public async Task StartAsync(CancellationToken cancellationToken = default) => _ = await this.TryStartAsync(cancellationToken);
 
         /// <summary>
         /// Attempts to start the processing asynchronously. 
@@ -365,24 +367,24 @@ namespace UCode.ServiceBus
         /// A task that represents the asynchronous operation, 
         /// containing a boolean value that indicates whether 
         /// the processing was successfully started.
-        ///// </returns>
-        public async Task<bool> TryStartAsync()
+        /// </returns>
+        public async Task<bool> TryStartAsync(CancellationToken cancellationToken = default)
         {
             var result = false;
 
-            await this._changeStateLock.WaitAsync();
+            await this._changeStateLock.WaitAsync(cancellationToken);
             try
             {
                 if (!this._running)
                 {
                     if (this._processor != null)
                     {
-                        await this._processor.StartProcessingAsync();
+                        await this._processor.StartProcessingAsync(cancellationToken);
                     }
 
                     if (this._sessionProcessor != null)
                     {
-                        await this._sessionProcessor.StartProcessingAsync();
+                        await this._sessionProcessor.StartProcessingAsync(cancellationToken);
                     }
 
                     if (this._processor == null && this._sessionProcessor == null)
@@ -416,7 +418,7 @@ namespace UCode.ServiceBus
         /// This method attempts to stop the current process and ignores any result 
         /// returned by the <see cref="TryStopAsync"/> method itself.
         /// </remarks>
-        public async Task StopAsync() => _ = await this.TryStopAsync();
+        public async Task StopAsync(CancellationToken cancellationToken = default) => _ = await this.TryStopAsync(cancellationToken);
 
         /// <summary>
         /// Asynchronously attempts to stop the current processing. 
@@ -430,11 +432,11 @@ namespace UCode.ServiceBus
         /// A task that represents the asynchronous operation. The task result is 
         /// true if the processing was stopped successfully; otherwise, false. 
         /// </returns>
-        public async Task<bool> TryStopAsync()
+        public async Task<bool> TryStopAsync(CancellationToken cancellationToken = default)
         {
             var result = false;
 
-            await this._changeStateLock.WaitAsync();
+            await this._changeStateLock.WaitAsync(cancellationToken);
             try
             {
                 if (this._running)
@@ -442,12 +444,12 @@ namespace UCode.ServiceBus
 
                     if (this._processor != null)
                     {
-                        await this._processor.StopProcessingAsync();
+                        await this._processor.StopProcessingAsync(cancellationToken);
                     }
 
                     if (this._sessionProcessor != null)
                     {
-                        await this._sessionProcessor.StopProcessingAsync();
+                        await this._sessionProcessor.StopProcessingAsync(cancellationToken);
                     }
 
                     if (this._processor == null && this._sessionProcessor == null)
@@ -562,6 +564,8 @@ namespace UCode.ServiceBus
                     await this._sessionProcessor.DisposeAsync();
                 }
             }
+
+            GC.SuppressFinalize(this);
         }
 
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
@@ -56,7 +57,7 @@ namespace UCode.ServiceBus
         /// <returns>
         /// A value task representing the asynchronous operation, with no result.
         /// </returns>
-        public async ValueTask SendOneAsync<T>([NotNull] T instance, Action<SendMessage<T>> configureMessage = default, CancellationToken cancellationToken = default)
+        public async ValueTask SendOneAsync<T>([NotNull] T instance, Action<SendMessage<T>>? configureMessage = default, CancellationToken cancellationToken = default)
         {
             var msg = new SendMessage<T>(instance);
 
@@ -72,53 +73,6 @@ namespace UCode.ServiceBus
             }
         }
 
-
-        /// <summary>
-        /// Represents the result of a send operation, encapsulating a value of type T and an optional exception.
-        /// </summary>
-        /// <typeparam name="T">The type of the value being sent.</typeparam>
-        public struct SendResult<T>
-        {
-            /// <summary>
-            /// Initializes a new instance of the <see cref="SendResult{T}"/> class.
-            /// </summary>
-            /// <param name="value">The value of type <typeparamref name="T"/> to be assigned to the <see cref="Value"/> property.</param>
-            /// <param name="exception">An <see cref="Exception"/> that may have occurred during the operation.</param>
-            /// <returns>
-            /// A new instance of <see cref="SendResult{T}"/> with the specified value and exception.
-            /// </returns>
-            public SendResult(T @value, Exception exception)
-            {
-                this.Value = @value;
-                this.Exception = exception;
-            }
-
-            /// <summary>
-            /// Initializes a new instance of the <see cref="SendResult{T}"/> class 
-            /// with the specified value.
-            /// </summary>
-            /// <param name="value">The value to be assigned to the <see cref="Value"/> property.</param>
-            public SendResult(T @value) => this.Value = @value;
-
-            /// <summary>
-            /// Represents a generic property that can get or set a value of type <typeparamref name="T"/>.
-            /// </summary>
-            /// <typeparam name="T">The type of the value represented by the property.</typeparam>
-            /// <value>
-            /// The current value of the type <typeparamref name="T"/>, which can be retrieved or assigned.
-            /// </value>
-            public T Value
-            {
-                get; set;
-            }
-            /// <summary>
-            /// Gets or sets the exception that has occurred.
-            /// </summary>
-            /// <value>
-            /// The exception instance or null if no exception has occurred.
-            /// </value>
-            public Exception? Exception { get; set; } = null;
-        }
 
         /// <summary>
         /// Asynchronously sends a collection of instances to a service bus 
@@ -141,7 +95,7 @@ namespace UCode.ServiceBus
         /// An asynchronous enumerable of <see cref="SendResult{T}"/> 
         /// that represents the result of each send operation.
         /// </returns>
-        public async IAsyncEnumerable<SendResult<T>> SendAsync<T>([NotNull] IEnumerable<T> instances, Action<SendMessage<T>> configureMessage = default, CancellationToken cancellationToken = default)
+        public async IAsyncEnumerable<SendResult<T>> SendAsync<T>([NotNull] IEnumerable<T> instances, Action<SendMessage<T>>? configureMessage = default, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             foreach (var instance in instances)
             {
@@ -167,6 +121,7 @@ namespace UCode.ServiceBus
                 yield return sr;
             }
         }
+
         /// <summary>
         /// Sends a collection of instances asynchronously and returns the results.
         /// </summary>
@@ -177,7 +132,7 @@ namespace UCode.ServiceBus
         /// <returns>
         /// An enumerable collection of <see cref="SendResult{T}"/> representing the results of the send operation.
         /// </returns>
-        public IEnumerable<SendResult<T>> Send<T>([NotNull] IEnumerable<T> instances, Action<SendMessage<T>> configureMessage = default, CancellationToken cancellationToken = default)
+        public IEnumerable<SendResult<T>> Send<T>([NotNull] IEnumerable<T> instances, Action<SendMessage<T>>? configureMessage = default, CancellationToken cancellationToken = default)
         {
             var task = this.PrivateSendAsync(instances, configureMessage, cancellationToken);
 
@@ -205,7 +160,7 @@ namespace UCode.ServiceBus
         /// A <see cref="ValueTask"/> that represents the asynchronous operation, containing an enumerable of <see cref="SendResult{T}"/>
         /// representing the results of sending the instances.
         /// </returns>
-        private async ValueTask<IEnumerable<SendResult<T>>> PrivateSendAsync<T>([NotNull] IEnumerable<T> instances, Action<SendMessage<T>> configureMessage = default, CancellationToken cancellationToken = default)
+        private async ValueTask<IEnumerable<SendResult<T>>> PrivateSendAsync<T>([NotNull] IEnumerable<T> instances, Action<SendMessage<T>>? configureMessage = default, CancellationToken cancellationToken = default)
         {
             var list = new List<SendResult<T>>();
 
@@ -248,11 +203,11 @@ namespace UCode.ServiceBus
         /// <returns>A task representing the asynchronous operation of sending the messages.</returns>
         /// <exception cref="Exception">Thrown if there is a failure to add a message to the batch.</exception>
         public async ValueTask SendBatchAsync<T>(
-        [NotNull] IEnumerable<T> instances,
-        Action<SendMessage<T>> configureMessage = default,
-        int chunkSize = 4000,
-        long? maxSizeInBytes = null,
-        CancellationToken cancellationToken = default)
+            [NotNull] IEnumerable<T> instances,
+            Action<SendMessage<T>>? configureMessage = default,
+            int chunkSize = 4000,
+            long? maxSizeInBytes = null,
+            CancellationToken cancellationToken = default)
         {
             var tasks = new List<Task>();
 
@@ -325,6 +280,8 @@ namespace UCode.ServiceBus
             {
                 await this._serviceBusSender.DisposeAsync();
             }
+
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>

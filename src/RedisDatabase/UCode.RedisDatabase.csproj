@@ -8,7 +8,7 @@
     <Copyright>UCode (c) Desenvolvimento de Software 2024</Copyright>
     <IncludeSymbols>True</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <Version>3.11.14</Version>
+    <Version>3.11.15</Version>
     <Title>UCode RedisDatabase</Title>
     <RepositoryType>git</RepositoryType>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
@@ -45,8 +45,8 @@
     <PackageReference Include="BinaryPack" Version="1.0.3" />
     <PackageReference Include="K4os.Compression.LZ4.Streams" Version="1.3.8" />
     <PackageReference Include="MongoDB.Bson" Version="3.1.0" />
-    <PackageReference Include="OpenTelemetry" Version="1.11.0" />
-    <PackageReference Include="OpenTelemetry.Api" Version="1.11.0" />
+    <PackageReference Include="OpenTelemetry" Version="1.11.1" />
+    <PackageReference Include="OpenTelemetry.Api" Version="1.11.1" />
     <PackageReference Include="OpenTelemetry.Instrumentation.StackExchangeRedis" Version="1.10.0-beta.1" />
     <PackageReference Include="StackExchange.Redis" Version="2.8.24" />
     <PackageReference Include="System.Formats.Asn1" Version="9.0.1" />

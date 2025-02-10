@@ -8,7 +8,7 @@ namespace UCode.Scrapper
     /// </summary>
     public class ClientHttpExceptionEventArgs : EventArgs
     {
-        public ClientHttpExceptionEventArgs([NotNull] string message, [NotNull] Exception? exception, [NotNull] TimeSpan? elapsed, ResultSnapshot? resultSnapshot)
+        public ClientHttpExceptionEventArgs([NotNull] string message, [MaybeNull] Exception? exception, [MaybeNull] TimeSpan? elapsed, [MaybeNull] ResultSnapshot? resultSnapshot)
         {
             this.Message = message;
             this.Exception = exception;

@@ -2194,6 +2194,7 @@ namespace UCode.Mongo
 
             bulkWriteOptions ??= new BulkWriteOptions();
 
+
             var updates = new List<WriteModel<TDocument>>();
 
             Expression<Func<TDocument, TDocument, bool>> exp = (item, constrain) => item.Id.Equals(constrain.Id);
@@ -2206,7 +2207,10 @@ namespace UCode.Mongo
                 FilterDefinition<TDocument> filterDefinition = (query ?? exp).CompleteExpression(source);
 
 
+
                 var model = new ReplaceOneModel<TDocument>(filterDefinition, source);
+
+                model.IsUpsert = 
 
                 updates.Add(model);
             }

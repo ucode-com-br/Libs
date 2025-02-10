@@ -251,6 +251,12 @@ namespace UCode.ServiceBus
         }
 
 
+        public bool MessageReceived
+        {
+            get => this._serviceBusReceivedMessage != null;
+        }
+
+
         /// <summary>
         /// Gets the application properties of the received message from the service bus.
         /// This property returns an <see cref="IReadOnlyDictionary{TKey, TValue}"/> 
@@ -559,6 +565,8 @@ namespace UCode.ServiceBus
             {
                 await this.AbandonAsync();
             }
+
+            GC.SuppressFinalize(this);
 
         }
     }
