@@ -7,7 +7,6 @@ using UCode.Mongo.Models;
 using UCode.Extensions;
 using System.Collections.Generic;
 using UCode.Extensions.CodeGenerator;
-using MongoDB.Driver;
 
 namespace UCode.Mongo
 {

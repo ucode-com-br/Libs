@@ -27,12 +27,6 @@ namespace UCode.ServiceBus
         private readonly SemaphoreSlim _semaphore = new(1, 1);
         private T? _body;
 
-        /// <summary>
-        /// Gets a value indicating whether session management is enabled.
-        /// </summary>
-        /// <value>
-        /// <c>true</c> if session management is enabled; otherwise, <c>false</c>.
-        /// </value>
         public bool UseSession
         {
             get;
@@ -113,7 +107,9 @@ namespace UCode.ServiceBus
         /// finished, allowing for any necessary cleanup or finalization 
         /// activities to be performed.
         /// </remarks>
-        public async ValueTask CompletedAsync() => _ = this.TryCompletedAsync();
+        public async ValueTask CompletedAsync() => await this.CompletedAsync();
+
+
         /// <summary>
         /// Attempts to mark the operation as completed asynchronously.
         /// </summary>
@@ -159,7 +155,8 @@ namespace UCode.ServiceBus
         /// <returns>
         /// A ValueTask representing the asynchronous operation of abandoning the task.
         /// </returns>
-        public async ValueTask AbandonAsync() => _ = this.TryAbandonAsync();
+        public async ValueTask AbandonAsync() => await this.AbandonAsync();
+
         /// <summary>
         /// Attempts to abandon the current message asynchronously.
         /// </summary>
@@ -203,7 +200,8 @@ namespace UCode.ServiceBus
         /// which can return a ValueTask 
         /// indicating the completion of the lock renewal process.
         /// </returns>
-        public async ValueTask RenewLockAsync() => _ = this.TryRenewLockAsync();
+        public async ValueTask RenewLockAsync() => _ = await this.TryRenewLockAsync();
+
         /// <summary>
         /// Attempts to renew the lock on a message asynchronously.
         /// This method ensures that the lock is renewed if the message is not completed or abandoned.
@@ -287,6 +285,7 @@ namespace UCode.ServiceBus
         /// A string representing the partition key of the Service Bus message.
         /// </value>
         public string PartitionKey => this._serviceBusReceivedMessage.PartitionKey;
+
         /// <summary>
         /// Gets the partition key for the transaction associated with the received message.
         /// </summary>
@@ -299,6 +298,7 @@ namespace UCode.ServiceBus
         /// </remarks>
         public string TransactionPartitionKey => this._serviceBusReceivedMessage.TransactionPartitionKey;
 
+
         /// <summary>
         /// Gets the session ID of the service bus received message.
         /// </summary>
@@ -306,6 +306,7 @@ namespace UCode.ServiceBus
         /// A string representing the session ID. If the session ID is not set, this value may be null.
         /// </value>
         public string SessionId => this._serviceBusReceivedMessage.SessionId;
+
         /// <summary>
         /// Gets the ReplyToSessionId property from the associated service bus received message.
         /// This property is used to get the session identifier for the reply address
@@ -316,6 +317,7 @@ namespace UCode.ServiceBus
         /// If the message does not have a reply session identifier, this property returns null.
         /// </value>
         public string ReplyToSessionId => this._serviceBusReceivedMessage.ReplyToSessionId;
+
         /// <summary>
         /// Gets the subject of the received message from the service bus.
         /// </summary>
@@ -323,6 +325,7 @@ namespace UCode.ServiceBus
         /// A string representing the subject of the service bus received message.
         /// </value>
         public string Subject => this._serviceBusReceivedMessage.Subject;
+
         /// <summary>
         /// Gets the "To" address of the message received from the service bus.
         /// </summary>
@@ -335,6 +338,7 @@ namespace UCode.ServiceBus
         /// which encapsulates the details of the message received.
         /// </remarks>
         public string To => this._serviceBusReceivedMessage.To;
+
         /// <summary>
         /// Gets the 'ReplyTo' property from the received message using the service bus.
         /// </summary>
@@ -342,6 +346,7 @@ namespace UCode.ServiceBus
         /// A string representing the address to which replies to the message should be sent.
         /// </value>
         public string ReplyTo => this._serviceBusReceivedMessage.ReplyTo;
+
         /// <summary>
         /// Gets the correlation identifier of the received message from the service bus.
         /// </summary>
@@ -359,6 +364,7 @@ namespace UCode.ServiceBus
         /// If the message does not have a TTL defined, it will return null.
         /// </value>
         public TimeSpan? TimeToLive => this._serviceBusReceivedMessage.TimeToLive;
+
         /// <summary>
         /// Gets the lock token of the received message from the Service Bus.
         /// The lock token is a unique identifier for the message, which can be used
@@ -368,6 +374,7 @@ namespace UCode.ServiceBus
         /// A <see cref="string"/> representing the lock token associated with the message.
         /// </value>
         public string LockToken => this._serviceBusReceivedMessage.LockToken;
+
         /// <summary>
         /// Gets the number of times the message has been delivered.
         /// </summary>
@@ -377,6 +384,7 @@ namespace UCode.ServiceBus
         /// and not completed or abandoned.
         /// </value>
         public int DeliveryCount => this._serviceBusReceivedMessage.DeliveryCount;
+
         /// <summary>
         /// Gets the DateTimeOffset indicating when the message is locked until.
         /// </summary>
@@ -388,6 +396,7 @@ namespace UCode.ServiceBus
         /// Ensure that the message has been received and is currently locked before accessing this property.
         /// </remarks>
         public DateTimeOffset LockedUntil => this._serviceBusReceivedMessage.LockedUntil;
+
         /// <summary>
         /// Gets the sequence number of the received message from the service bus.
         /// </summary>
@@ -396,6 +405,7 @@ namespace UCode.ServiceBus
         /// within the service bus queue or topic.
         /// </value>
         public long SequenceNumber => this._serviceBusReceivedMessage.SequenceNumber;
+
         /// <summary>
         /// Gets the sequence number of the message as it was enqueued in the service bus.
         /// </summary>
@@ -408,6 +418,7 @@ namespace UCode.ServiceBus
         /// order in which the message was enqueued in the service bus queue or subscription.
         /// </remarks>
         public long EnqueuedSequenceNumber => this._serviceBusReceivedMessage.EnqueuedSequenceNumber;
+
         /// <summary>
         /// Gets the time at which the message was enqueued in the service bus.
         /// </summary>
@@ -420,6 +431,7 @@ namespace UCode.ServiceBus
         /// when the message was added to the service bus queue.
         /// </remarks>
         public DateTimeOffset EnqueuedTime => this._serviceBusReceivedMessage.EnqueuedTime;
+
         /// <summary>
         /// Gets the source of the dead letter message from the service bus received message.
         /// </summary>
@@ -432,6 +444,7 @@ namespace UCode.ServiceBus
         /// This property allows you to trace the origin of the message that ended up in the dead letter queue.
         /// </remarks>
         public string DeadLetterSource => this._serviceBusReceivedMessage.DeadLetterSource;
+
         /// <summary>
         /// Gets the reason why the message was dead-lettered in the service bus.
         /// </summary>
@@ -439,6 +452,7 @@ namespace UCode.ServiceBus
         /// A string that specifies the reason why the message was dead-lettered.
         /// </value>
         public string DeadLetterReason => this._serviceBusReceivedMessage.DeadLetterReason;
+
         /// <summary>
         /// Gets the error description associated with a dead-lettered message in the service bus.
         /// </summary>
@@ -459,6 +473,7 @@ namespace UCode.ServiceBus
         /// A <see cref="DateTimeOffset"/> representing the date and time when the message expires.
         /// </value>
         public DateTimeOffset ExpiresAt => this._serviceBusReceivedMessage.ExpiresAt;
+
         /// <summary>
         /// Gets the name of the state of the received message from the service bus.
         /// This property returns the string representation of the current state 
@@ -469,6 +484,7 @@ namespace UCode.ServiceBus
         /// the state is not defined in the enumeration.
         /// </returns>
         public string? State => System.Enum.GetName(this._serviceBusReceivedMessage.State);
+
         /// <summary>
         /// Gets the content type of the message. If the content type is not defined,
         /// it defaults to "application/json".
@@ -511,6 +527,14 @@ namespace UCode.ServiceBus
             }
         }
 
+
+
+
+
+
+
+
+
         public static implicit operator ServiceBusReceivedMessage(ReceiveMessage<T> source)
         {
             ArgumentNullException.ThrowIfNull(source);
@@ -531,6 +555,10 @@ namespace UCode.ServiceBus
 
             return source.Body;
         }
+
+
+
+
 
         /// <summary>
         /// Returns a string that represents the current object.
