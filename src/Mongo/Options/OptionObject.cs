@@ -1,4 +1,4 @@
-sing MongoDB.Driver;
+using MongoDB.Driver;
 
 namespace UCode.Mongo.Options
 {
