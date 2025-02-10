@@ -15,7 +15,7 @@ namespace UCode.Blob
     /// </remarks>
     public class Service
     {
-        private readonly BlobServiceClient _blobServiceClient;
+        internal readonly BlobServiceClient _blobServiceClient;
         private readonly List<string> _listContainerNames = new();
 
         /// <summary>
@@ -106,34 +106,26 @@ namespace UCode.Blob
         [return: NotNull]
         public async Task<Container> Container([NotNull] string containerName)
         {
-            // Start a stopwatch to measure the time it takes to get the container
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-
-            // Write a debug message indicating that the BlobContainerClient is being retrieved
-            DebugWrite($"{nameof(UCode)}.{nameof(Blob)}.{nameof(Service)}::Container => GetBlobContainerClient");
 
             // Get the BlobContainerClient for the specified container name
             var blobContainerClient = this._blobServiceClient.GetBlobContainerClient(containerName);
 
-            // Write a debug message indicating that the container is being created
-            DebugWrite($"{nameof(UCode)}.{nameof(Blob)}.{nameof(Service)}::Container => CreateIfNotExistsAsync");
 
             // Create the container if it does not exist
             _ = await blobContainerClient.CreateIfNotExistsAsync();
 
-            // Write a debug message indicating that a new container is being created
-            DebugWrite($"{nameof(UCode)}.{nameof(Blob)}.{nameof(Service)}::Container => NewContainer");
 
             // Create a new Container object using the specified container name and BlobContainerClient
             var result = new Container(this, blobContainerClient);
 
-            // Stop the stopwatch and write a debug message indicating the container retrieval is complete
-            stopwatch.Stop();
-
-            DebugWrite($"{nameof(UCode)}.{nameof(Blob)}.{nameof(Service)}::Container => Result ({stopwatch.ElapsedMilliseconds}ms)");
 
 
             return result;
+        }
+
+        public async Task<Container<T>> Container<T>()
+        {
+            return new Container<T>(this);
         }
 
         /// <summary>

@@ -1,15 +1,18 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 namespace UCode.Blob
 {
+
+
     /// <summary>
     /// Represents a collection of Containers.
     /// </summary>
     public class Containers
     {
-        private readonly Dictionary<string, Container> _containers = new();
+        protected readonly Dictionary<string, Container> _containers = new();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Containers"/> class
@@ -32,7 +35,7 @@ namespace UCode.Blob
             get; set;
         }
 
-        public Container this[string containerName]
+        public Container? this[string containerName]
         {
             get
             {

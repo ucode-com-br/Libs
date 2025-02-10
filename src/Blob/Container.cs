@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
@@ -10,6 +11,18 @@ using Azure.Storage.Sas;
 
 namespace UCode.Blob
 {
+    public class Container<T>: Container
+    {
+        public Container([NotNull] Service service): base(service, (service._blobServiceClient).GetBlobContainerClient(typeof(T).Name.ToLower()))
+        {
+        }
+
+        internal Container([NotNull] Service service, [NotNull] BlobContainerClient cloudBlobContainer): base(service, cloudBlobContainer)
+        {
+        }
+    }
+
+
     /// <summary>
     /// Represents a generic container that can hold items.
     /// This class can be used to store and manipulate a collection of objects of a specified type.
@@ -57,9 +70,10 @@ namespace UCode.Blob
         /// <value>
         /// A <see cref="BlobContainerClient"/> that represents a client to the Azure Blob Storage container.
         /// </value>
-        private BlobContainerClient CloudBlobContainer
+        protected BlobContainerClient CloudBlobContainer
         {
             get;
+            set;
         }
 
         /// <summary>
@@ -74,7 +88,7 @@ namespace UCode.Blob
         public async Task UploadAsync([NotNull] string path, Stream content,
             IDictionary<string, string> metadata = null,
             string contentType = null,
-            bool overwrite = true)
+            bool overwrite = true, CancellationToken cancellationToken = default)
         {
             // Get the blob client for the specified path
             var blob = this.CloudBlobContainer.GetBlobClient(path);
@@ -93,8 +107,9 @@ namespace UCode.Blob
                     content.Seek(0, SeekOrigin.Begin);
                 }
 
-                _ = await blob.UploadAsync(content, overwrite);
+                _ = await blob.UploadAsync(content, overwrite, cancellationToken: cancellationToken);
             }
+
 
             // If the blob exists, set its metadata and content type
             if (await blob.ExistsAsync())
@@ -102,14 +117,14 @@ namespace UCode.Blob
                 // If metadata is not null, set the blob's metadata
                 if (metadata != null)
                 {
-                    await blob.SetMetadataAsync(metadata);
+                    await blob.SetMetadataAsync(metadata, cancellationToken: cancellationToken);
                 }
 
                 // If contentType is not null, set the blob's content type
                 if (contentType != null)
                 {
                     // Get the blob's properties
-                    BlobProperties properties = await blob.GetPropertiesAsync();
+                    BlobProperties properties = await blob.GetPropertiesAsync(cancellationToken: cancellationToken);
 
                     //using MD5 md5Hash = MD5.Create();
 
@@ -170,13 +185,13 @@ namespace UCode.Blob
         /// Thrown when the blob with the specified path does not exist.
         /// </exception>
         [return: NotNull]
-        public async Task<Stream> DownloadAsync([NotNull] string path)
+        public async Task<Stream> DownloadAsync([NotNull] string path, CancellationToken cancellationToken = default)
         {
             // Get the blob client for the specified path
             var blob = this.CloudBlobContainer.GetBlobClient(path);
 
             // Check if the blob exists
-            if (await blob.ExistsAsync())
+            if (await blob.ExistsAsync(cancellationToken))
             {
                 // Create a new memory stream to store the blob's content
                 MemoryStream memoryStream = new();
@@ -197,9 +212,9 @@ namespace UCode.Blob
                 //}
 
                 // Download the blob's content and copy it to the memory stream.
-                using (BlobDownloadInfo download = await blob.DownloadAsync())
+                using (BlobDownloadInfo download = await blob.DownloadAsync(cancellationToken))
                 {
-                    await download.Content.CopyToAsync(memoryStream);
+                    await download.Content.CopyToAsync(memoryStream, cancellationToken);
                 }
 
                 // Return the memory stream containing the blob's content
@@ -231,31 +246,17 @@ namespace UCode.Blob
         /// </returns>
         /// <exception cref="FileNotFoundException">Thrown when the specified blob does not exist.</exception>
         [return: NotNull]
-        public async Task<(Stream Content, IDictionary<string, string> Metadata, string ContentType)> DownloadAllAsync([NotNull] string path)
+        public async Task<(Stream Content, IDictionary<string, string> Metadata, string ContentType)> DownloadAllAsync([NotNull] string path, CancellationToken cancellationToken = default)
         {
             var blob = this.CloudBlobContainer.GetBlobClient(path);
 
-            if (await blob.ExistsAsync())
+            if (await blob.ExistsAsync(cancellationToken))
             {
                 MemoryStream memoryStream = new();
 
-                //try
-                //{
-                //    using (BlobDownloadInfo download = await blob.DownloadAsync())
-                //    {
-                //        await download.Content.CopyToAsync(memoryStream);
-                //    }
-                //}
-                //catch(Exception)
-                //{
-                //    memoryStream.Dispose();
-                //    memoryStream = null;
-
-                //    return null;
-                //}
 
                 // Download the blob's content and copy it to the memory stream.
-                using (BlobDownloadInfo download = await blob.DownloadAsync())
+                using (BlobDownloadInfo download = await blob.DownloadAsync(cancellationToken))
                 {
                     await download.Content.CopyToAsync(memoryStream);
                 }
@@ -263,7 +264,7 @@ namespace UCode.Blob
                 try
                 {
                     // Get the blob's properties and metadata.
-                    var properties = await blob.GetPropertiesAsync();
+                    var properties = await blob.GetPropertiesAsync(cancellationToken: cancellationToken);
 
                     // Return the blob's content, metadata, and content type.
                     return (memoryStream, properties.Value.Metadata, properties.Value.ContentType);
@@ -293,13 +294,13 @@ namespace UCode.Blob
         /// Thrown when the blob cannot generate a SAS URI.
         /// </exception>
         [return: NotNull]
-        public async Task<Uri> GenerateDownloadUrl([NotNull] string path, [NotNull] TimeSpan ttl)
+        public async Task<Uri> GenerateDownloadUrl([NotNull] string path, [NotNull] TimeSpan ttl, CancellationToken cancellationToken = default)
         {
             // Get the blob client for the specified path
             var blob = this.CloudBlobContainer.GetBlobClient(path);
 
             // Check if the blob exists
-            if (await blob.ExistsAsync())
+            if (await blob.ExistsAsync(cancellationToken: cancellationToken))
             {
                 // Check if the blob can generate a SAS URI
                 if (blob.CanGenerateSasUri)
@@ -340,13 +341,13 @@ namespace UCode.Blob
         /// contains a boolean indicating whether the blob was deleted (`true`) 
         /// or if it did not exist (`false`).
         /// </returns>
-        public async Task<bool> DeleteIfExistsAsync([NotNull] string path)
+        public async Task<bool> DeleteIfExistsAsync([NotNull] string path, CancellationToken cancellationToken = default)
         {
             // Get the blob client for the specified path
             var blob = this.CloudBlobContainer.GetBlobClient(path);
 
             // Delete the blob if it exists and return the result
-            return (await blob.DeleteIfExistsAsync()).Value;
+            return (await blob.DeleteIfExistsAsync(cancellationToken: cancellationToken)).Value;
         }
 
         /// <summary>
@@ -354,13 +355,13 @@ namespace UCode.Blob
         /// </summary>
         /// <param name="path">The string path of the blob whose existence is to be checked. This parameter cannot be null.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains a boolean value indicating whether the blob exists.</returns>
-        public async Task<bool> ExistAsync([NotNull] string path)
+        public async Task<bool> ExistAsync([NotNull] string path, CancellationToken cancellationToken = default)
         {
             // Get the blob client for the specified path
             var blob = this.CloudBlobContainer.GetBlobClient(path);
 
             // Check if the blob exists and return the result
-            return (await blob.ExistsAsync()).Value;
+            return (await blob.ExistsAsync(cancellationToken)).Value;
         }
 
         /// <summary>
@@ -371,17 +372,17 @@ namespace UCode.Blob
         /// <param name="destination">The destination path where the blob should be moved.</param>
         /// <param name="overwrite">A boolean value indicating whether to overwrite the destination blob if it already exists. Default is false.</param>
         /// <returns>A task that represents the asynchronous move operation.</returns>
-        public async Task MoveAsync([NotNull] string source, [NotNull] string destination, bool overwrite = false)
+        public async Task MoveAsync([NotNull] string source, [NotNull] string destination, bool overwrite = false, CancellationToken cancellationToken = default)
         {
             // Get the blob client for the source and destination paths
             var sourceBlob = this.CloudBlobContainer.GetBlobClient(source);
             var destBlob = this.CloudBlobContainer.GetBlobClient(destination);
 
             // Copy the blob to the new destination
-            await CopyAsync(sourceBlob, destBlob, overwrite);
+            await CopyAsync(sourceBlob, destBlob, overwrite, cancellationToken);
 
             // Delete the source blob
-            _ = sourceBlob.Delete();
+            _ = await sourceBlob.DeleteAsync(cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -391,14 +392,14 @@ namespace UCode.Blob
         /// <param name="destination">The path where the blob should be copied to.</param>
         /// <param name="overwrite">A boolean value indicating whether to overwrite the destination blob if it already exists. The default is false.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        public async Task CopyAsync([NotNull] string source, [NotNull] string destination, bool overwrite = false)
+        public async Task CopyAsync([NotNull] string source, [NotNull] string destination, bool overwrite = false, CancellationToken cancellationToken = default)
         {
             // Get the blob client for the source and destination paths
             var sourceBlob = this.CloudBlobContainer.GetBlobClient(source);
             var destBlob = this.CloudBlobContainer.GetBlobClient(destination);
 
             // Copy the blob to the new destination
-            await CopyAsync(sourceBlob, destBlob, overwrite);
+            await CopyAsync(sourceBlob, destBlob, overwrite, cancellationToken);
         }
 
         /// <summary>
@@ -409,31 +410,31 @@ namespace UCode.Blob
         /// <param name="overwrite">A boolean indicating whether to overwrite the destination blob if it exists.</param>
         /// <returns>A Task representing the asynchronous operation of copying the blob.</returns>
         /// <exception cref="FileNotFoundException">Thrown when the source blob does not exist.</exception>
-        private static async Task CopyAsync([NotNull] BlobClient sourceBlob, [NotNull] BlobClient destBlob, bool overwrite)
+        private static async Task CopyAsync([NotNull] BlobClient sourceBlob, [NotNull] BlobClient destBlob, bool overwrite, CancellationToken cancellationToken = default)
         {
             // Check if the source blob exists
-            if (await sourceBlob.ExistsAsync())
+            if (await sourceBlob.ExistsAsync(cancellationToken))
             {
                 // Acquire a lease on the source blob
                 var sourceBlobLease = sourceBlob.GetBlobLeaseClient();
-                _ = await sourceBlobLease.AcquireAsync(TimeSpan.FromSeconds(-1));
+                _ = await sourceBlobLease.AcquireAsync(TimeSpan.FromSeconds(-1), cancellationToken: cancellationToken);
 
                 // If overwrite is true, delete the destination blob if it exists
                 if (overwrite)
                 {
-                    _ = destBlob.DeleteIfExists();
+                    _ = destBlob.DeleteIfExists(cancellationToken: cancellationToken);
                 }
 
                 // Start copying the source blob to the destination blob
                 _ = await destBlob.StartCopyFromUriAsync(sourceBlob.Uri);
 
                 // Get the properties of the source blob
-                BlobProperties sourceBlobProperties = await sourceBlob.GetPropertiesAsync();
+                BlobProperties sourceBlobProperties = await sourceBlob.GetPropertiesAsync(cancellationToken: cancellationToken);
 
                 // If the source blob is leased, break the lease
                 if (sourceBlobProperties.LeaseState == LeaseState.Leased)
                 {
-                    _ = await sourceBlobLease.BreakAsync();
+                    _ = await sourceBlobLease.BreakAsync(cancellationToken: cancellationToken);
                 }
             }
             else
