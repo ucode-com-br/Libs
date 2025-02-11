@@ -4,10 +4,12 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Blobs.Specialized;
 using Azure.Storage.Sas;
+using Microsoft.VisualBasic;
 
 namespace UCode.Blob
 {
@@ -100,54 +102,31 @@ namespace UCode.Blob
             }
 
             // If content is not null, upload the file to the blob
-            if (content != null)
+            if (content != null && content.CanRead)
             {
                 if (content.CanSeek)
                 {
                     content.Seek(0, SeekOrigin.Begin);
                 }
 
-                _ = await blob.UploadAsync(content, overwrite, cancellationToken: cancellationToken);
-            }
-
-
-            // If the blob exists, set its metadata and content type
-            if (await blob.ExistsAsync())
-            {
-                // If metadata is not null, set the blob's metadata
-                if (metadata != null)
+                BlobUploadOptions blobUploadOptions = new BlobUploadOptions()
                 {
-                    await blob.SetMetadataAsync(metadata, cancellationToken: cancellationToken);
-                }
-
-                // If contentType is not null, set the blob's content type
-                if (contentType != null)
-                {
-                    // Get the blob's properties
-                    BlobProperties properties = await blob.GetPropertiesAsync(cancellationToken: cancellationToken);
-
-                    //using MD5 md5Hash = MD5.Create();
-
-                    // Create a new BlobHttpHeaders object with the specified content type
-                    var headers = new BlobHttpHeaders
+                    Metadata = metadata ?? new Dictionary<string, string>(),
+                    HttpHeaders = new BlobHttpHeaders
                     {
                         // Set the MIME ContentType every time the properties 
                         // are updated or the field will be cleared
-                        ContentType = contentType,
+                        ContentType = contentType ?? "application/octet-stream"
+                    },
+                    Conditions = overwrite ? null : new BlobRequestConditions { IfNoneMatch = new ETag("*") }
+                };
 
-                        // Populate remaining headers with 
-                        // the pre-existing properties
-                        ContentLanguage = properties.ContentLanguage,
-                        CacheControl = properties.CacheControl,
-                        ContentDisposition = properties.ContentDisposition,
-                        ContentEncoding = properties.ContentEncoding,
-                        ContentHash = properties.ContentHash
-                        //ContentHash = md5Hash.ComputeHash(content)
-                    };
+                _ = await blob.UploadAsync(content, blobUploadOptions, cancellationToken: cancellationToken);
 
-                    // Set the blob's HTTP headers
-                    await blob.SetHttpHeadersAsync(headers);
-                }
+            }
+            else
+            {
+                throw new ArgumentNullException(nameof(content));
             }
         }
 
