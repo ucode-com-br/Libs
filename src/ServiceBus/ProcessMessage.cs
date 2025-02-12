@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
+using Microsoft.Extensions.Primitives;
 
 namespace UCode.ServiceBus
 {
@@ -70,10 +71,10 @@ namespace UCode.ServiceBus
             this._partitioned = partitioned;
 
             // add handler to process messages
-            processor.ProcessMessageAsync += this.MessageHandler;
+            processor.ProcessMessageAsync += this.MessageHandlerAsync;
 
             // add handler to process any errors
-            processor.ProcessErrorAsync += this.ErrorHandler;
+            processor.ProcessErrorAsync += this.ErrorHandlerAsync;
         }
 
         /// <summary>
@@ -96,10 +97,10 @@ namespace UCode.ServiceBus
             this._partitioned = partitioned;
 
             // add handler to process messages
-            processor.ProcessMessageAsync += this.MessageSessionHandler;
+            processor.ProcessMessageAsync += this.MessageSessionHandlerAsync;
 
             // add handler to process any errors
-            processor.ProcessErrorAsync += this.ErrorHandler;
+            processor.ProcessErrorAsync += this.ErrorHandlerAsync;
         }
 
         private Func<ProcessEventArgs<T>, Task>? _processMessageAsync;
@@ -255,7 +256,7 @@ namespace UCode.ServiceBus
         /// 4. Triggers error handler on processing failures
         /// Uses IDisposable pattern for ProcessEventArgs to ensure proper resource cleanup.
         /// </remarks>
-        private async Task MessageHandler(ProcessMessageEventArgs args)
+        private async Task MessageHandlerAsync(ProcessMessageEventArgs args)
         {
             if (this._processMessageAsync != null)
             {
@@ -266,11 +267,11 @@ namespace UCode.ServiceBus
             }
             else
             {
-                await args.AbandonMessageAsync(args.Message);
+                await args.AbandonMessageAsync(args.Message, cancellationToken:args.CancellationToken);
 
                 if (this._processErrorAsync != null)
                 {
-                    await this._processErrorAsync.Invoke(this.GetInvalidOperationException("Message processor event is null, abandon message."));
+                    await this._processErrorAsync.Invoke(this.GetInvalidOperationException("Message processor event is null, abandon message.", args.CancellationToken));
                 }
             }
         }
@@ -283,7 +284,7 @@ namespace UCode.ServiceBus
         /// <returns>
         /// A task representing the asynchronous operation.
         /// </returns>
-        private async Task ErrorHandler(ProcessErrorEventArgs args)
+        private async Task ErrorHandlerAsync(ProcessErrorEventArgs args)
         {
             if (this._processErrorAsync != null)
             {
@@ -299,7 +300,7 @@ namespace UCode.ServiceBus
         /// </summary>
         /// <param name="args">The event arguments containing the message session information.</param>
         /// <returns>A task that represents the asynchronous operation.</returns>
-        private async Task MessageSessionHandler(ProcessSessionMessageEventArgs args)
+        private async Task MessageSessionHandlerAsync(ProcessSessionMessageEventArgs args)
         {
             if (this._processMessageAsync != null)
             {
@@ -310,11 +311,11 @@ namespace UCode.ServiceBus
             }
             else
             {
-                await args.AbandonMessageAsync(args.Message);
+                await args.AbandonMessageAsync(args.Message, cancellationToken: args.CancellationToken);
 
                 if (this._processErrorAsync != null)
                 {
-                    await this._processErrorAsync.Invoke(this.GetInvalidOperationException("Message processor event with session is null, abandon message."));
+                    await this._processErrorAsync.Invoke(this.GetInvalidOperationException("Message processor event with session is null, abandon message.", args.CancellationToken));
                 }
             }
         }
@@ -330,10 +331,9 @@ namespace UCode.ServiceBus
         /// A <see cref="ProcessExceptionEventArgs"/> object containing the details of the exception 
         /// that occurred during processing.
         /// </returns>
-        private ProcessExceptionEventArgs GetInvalidOperationException(string errorMessage)
+        private ProcessExceptionEventArgs GetInvalidOperationException(string errorMessage, CancellationToken cancellationToken = default)
         {
             var exception = new InvalidOperationException(errorMessage);
-            CancellationToken cancellationToken = default;
 
             var processErrorEventArgs = new ProcessErrorEventArgs(exception,
                 ServiceBusErrorSource.Abandon,

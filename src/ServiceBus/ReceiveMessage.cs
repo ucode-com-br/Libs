@@ -107,7 +107,7 @@ namespace UCode.ServiceBus
         /// finished, allowing for any necessary cleanup or finalization 
         /// activities to be performed.
         /// </remarks>
-        public async ValueTask CompletedAsync() => await this.CompletedAsync();
+        public async ValueTask CompletedAsync(CancellationToken cancellationToken = default) => _ = await this.TryCompletedAsync(cancellationToken);
 
 
         /// <summary>
@@ -121,16 +121,16 @@ namespace UCode.ServiceBus
         /// This method uses a semaphore to ensure that only one thread can mark the operation as completed at a time.
         /// If the operation is already completed or has been abandoned, the completion will not take place.
         /// </remarks>
-        public async ValueTask<bool> TryCompletedAsync()
+        public async ValueTask<bool> TryCompletedAsync(CancellationToken cancellationToken = default)
         {
             var result = false;
-            await this._semaphore.WaitAsync();
+            await this._semaphore.WaitAsync(cancellationToken);
 
             try
             {
                 if (!this.IsCompleted && !this.IsAbandoned)
                 {
-                    await this._receiver.CompletedAsync(this._serviceBusReceivedMessage);
+                    await this._receiver.CompletedAsync(this._serviceBusReceivedMessage, cancellationToken);
 
                     this.IsCompleted = true;
 
@@ -155,7 +155,7 @@ namespace UCode.ServiceBus
         /// <returns>
         /// A ValueTask representing the asynchronous operation of abandoning the task.
         /// </returns>
-        public async ValueTask AbandonAsync() => await this.AbandonAsync();
+        public async ValueTask AbandonAsync(CancellationToken cancellationToken = default) => _ = await this.TryAbandonAsync(cancellationToken);
 
         /// <summary>
         /// Attempts to abandon the current message asynchronously.
@@ -169,16 +169,16 @@ namespace UCode.ServiceBus
         /// A <see cref="ValueTask{Boolean}"/> that represents the asynchronous operation.
         /// The result is true if the abandonment was successful; otherwise, false.
         /// </returns>
-        public async ValueTask<bool> TryAbandonAsync()
+        public async ValueTask<bool> TryAbandonAsync(CancellationToken cancellationToken = default)
         {
             var result = false;
-            await this._semaphore.WaitAsync();
+            await this._semaphore.WaitAsync(cancellationToken);
 
             try
             {
                 if (!this.IsCompleted && !this.IsAbandoned)
                 {
-                    await this._receiver.AbandonAsync(this._serviceBusReceivedMessage);
+                    await this._receiver.AbandonAsync(this._serviceBusReceivedMessage, cancellationToken);
 
                     this.IsAbandoned = true;
                     result = true;
@@ -200,7 +200,7 @@ namespace UCode.ServiceBus
         /// which can return a ValueTask 
         /// indicating the completion of the lock renewal process.
         /// </returns>
-        public async ValueTask RenewLockAsync() => _ = await this.TryRenewLockAsync();
+        public async ValueTask RenewLockAsync(CancellationToken cancellationToken = default) => _ = await this.TryRenewLockAsync(cancellationToken);
 
         /// <summary>
         /// Attempts to renew the lock on a message asynchronously.
@@ -210,7 +210,7 @@ namespace UCode.ServiceBus
         /// A <see cref="ValueTask{Boolean}"/> representing the asynchronous operation. 
         /// The result indicates whether the lock was successfully renewed.
         /// </returns>
-        public async ValueTask<bool> TryRenewLockAsync()
+        public async ValueTask<bool> TryRenewLockAsync(CancellationToken cancellationToken = default)
         {
             var result = false;
             await this._semaphore.WaitAsync();
@@ -219,7 +219,7 @@ namespace UCode.ServiceBus
             {
                 if (!this.IsCompleted && !this.IsAbandoned)
                 {
-                    await this._receiver.RenewLockAsync(this._serviceBusReceivedMessage);
+                    await this._receiver.RenewLockAsync(this._serviceBusReceivedMessage, cancellationToken);
                     result = true;
                 }
             }
@@ -248,7 +248,9 @@ namespace UCode.ServiceBus
             this._receiver = receiver;
         }
 
-
+        /// <summary>
+        /// Verify if message is received
+        /// </summary>
         public bool MessageReceived
         {
             get => this._serviceBusReceivedMessage != null;
@@ -523,7 +525,9 @@ namespace UCode.ServiceBus
                     r.AsTask().Wait();
                 }
 
-                return this._body ??= this._serviceBusReceivedMessage.Body.ToObjectFromJson<T>();
+                this._body ??= this._serviceBusReceivedMessage.Body.ToObjectFromJson<T>();
+
+                return this._body!;
             }
         }
 
