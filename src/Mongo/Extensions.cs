@@ -7,6 +7,8 @@ using UCode.Mongo.Models;
 using UCode.Extensions;
 using System.Collections.Generic;
 using UCode.Extensions.CodeGenerator;
+using System.Text.Json;
+using UCode.Mongo.Serializers;
 
 namespace UCode.Mongo
 {
@@ -15,6 +17,9 @@ namespace UCode.Mongo
     /// </summary>
     public static class Extensions
     {
+        public static void AddIgnorableDataConverter(this JsonSerializerOptions options) => options.Converters.Add(new IgnorableDataJsonConverterFactory());
+
+
         /// <summary>
         /// Determines whether the specified type is a structure (value type).
         /// </summary>

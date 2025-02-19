@@ -11,6 +11,7 @@ using MongoDB.Driver;
 using UCode.Extensions;
 using UCode.Mongo.Models;
 using UCode.Mongo.OpenTelemetry;
+using UCode.Mongo.Serializers;
 
 namespace UCode.Mongo
 {
@@ -222,6 +223,8 @@ namespace UCode.Mongo
             [NotNull] string? applicationName = null,
             [NotNull] bool transactionalContext = false)
         {
+            BsonSerializer.RegisterSerializationProvider(new IgnorableDataSerializationProvider());
+
             //BsonSerializer.TryRegisterSerializer(new GuidSerializer(BsonType.String));
             BsonSerializer.TryRegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
 

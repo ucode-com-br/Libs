@@ -17,7 +17,7 @@ namespace UCode.Extensions
     /// </remarks>
     public static class JsonExtensions
     {
-        private static JsonSerializerOptions _globalSerializerOptions;
+        private static JsonSerializerOptions? _globalSerializerOptions;
 
 
         /// <summary>

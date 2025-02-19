@@ -162,7 +162,12 @@ namespace UCode.Mongo
         /// </summary>
         /// <param name="expressionQuery">The expression that defines the query criteria.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="expressionQuery"/> is null.</exception>
-        internal QueryBase([NotNull] Expression<Func<TDocument, bool>> expressionQuery) => this.ExpressionQuery = expressionQuery;
+        internal QueryBase([NotNull] Expression<Func<TDocument, bool>> expressionQuery)
+        {
+            var rewriter = new ExpressionVisitorRewriter();
+
+            this.ExpressionQuery = rewriter.Rewrite(expressionQuery);
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="QueryBase"/> class.
@@ -175,7 +180,12 @@ namespace UCode.Mongo
         /// This constructor requires a non-null expression query to ensure that
         /// the query can be constructed without encountering null reference issues.
         /// </remarks>
-        internal QueryBase([NotNull] Expression<Func<TDocument, TDocument, bool>> expressionQuery) => this.IncompletedExpressionQuery = expressionQuery;
+        internal QueryBase([NotNull] Expression<Func<TDocument, TDocument, bool>> expressionQuery)
+        {
+            var rewriter = new ExpressionVisitorRewriter();
+
+            this.IncompletedExpressionQuery = rewriter.Rewrite(expressionQuery);
+        }
 
 
         /// <summary>
