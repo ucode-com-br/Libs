@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using MongoDB.Bson.Serialization;
@@ -19,6 +20,12 @@ namespace UCode.Mongo.Serializers
     /// </remarks>
     public class IgnorableDataSerializationProvider : IBsonSerializationProvider
     {
+        /// <summary>
+        /// Singleton serializer
+        /// </summary>
+        private static readonly Dictionary<Type, IBsonSerializer?> Serializers = [];
+
+
         /// <summary>
         /// Gets a serializer for the given type if it contains any members decorated with <see cref="IgnorableDataAttribute"/>.
         /// </summary>
@@ -47,27 +54,41 @@ namespace UCode.Mongo.Serializers
         /// </example>
         public IBsonSerializer? GetSerializer(Type type)
         {
+            ArgumentNullException.ThrowIfNull(type);
+
+            IBsonSerializer? serializer = null;
+
             // Only consider classes and structs.
-            if (!type.IsClass && !type.IsValueType)
+            if (type.IsClass || type.IsValueType)
             {
-                return null;
+                if (Serializers.TryGetValue(type, out var bsonSerializer))
+                {
+                    serializer = bsonSerializer;
+                }
+                else
+                {
+                    // Determine if the type has any public properties or fields with the IgnorableData attribute.
+                    var hasIgnorableMembers = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                                                   .Any(p => p.IsDefined(typeof(IgnorableDataAttribute), inherit: true))
+                                               || type.GetFields(BindingFlags.Public | BindingFlags.Instance)
+                                                      .Any(f => f.IsDefined(typeof(IgnorableDataAttribute), inherit: true));
+
+                    if (!hasIgnorableMembers)
+                    {
+                        // Return null so that the default serializer will be used.
+                        return null;
+                    }
+
+                    // Create an instance of IgnorableDataSerializer<T> using reflection.
+                    var serializerType = typeof(IgnorableDataSerializer<>).MakeGenericType(type);
+
+                    serializer = (IBsonSerializer?)Activator.CreateInstance(serializerType);
+
+                    Serializers[type] = serializer;
+                }
             }
 
-            // Determine if the type has any public properties or fields with the IgnorableData attribute.
-            var hasIgnorableMembers = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                                           .Any(p => p.IsDefined(typeof(IgnorableDataAttribute), inherit: true))
-                                       || type.GetFields(BindingFlags.Public | BindingFlags.Instance)
-                                              .Any(f => f.IsDefined(typeof(IgnorableDataAttribute), inherit: true));
-
-            if (!hasIgnorableMembers)
-            {
-                // Return null so that the default serializer will be used.
-                return null;
-            }
-
-            // Create an instance of IgnorableDataSerializer<T> using reflection.
-            var serializerType = typeof(IgnorableDataSerializer<>).MakeGenericType(type);
-            return (IBsonSerializer?)Activator.CreateInstance(serializerType);
+            return serializer;
         }
     }
 

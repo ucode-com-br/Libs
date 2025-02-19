@@ -33,21 +33,21 @@ namespace UCode.Mongo.Serializers
     {
         // A static dictionary that maps member names to BsonSerializationInfo.
         // This metadata is used to support IBsonDocumentSerializer.
-        private static readonly Dictionary<string, BsonSerializationInfo> __memberSerializationInfo;
+        private static readonly Lazy<Dictionary<string, BsonSerializationInfo>>? MemberSerializationInfo;
 
-        static IgnorableDataSerializer()
+        static IgnorableDataSerializer() => MemberSerializationInfo = new Lazy<Dictionary<string, BsonSerializationInfo>>(() =>
         {
-            __memberSerializationInfo = new Dictionary<string, BsonSerializationInfo>();
+            var keyValuePairs = new Dictionary<string, BsonSerializationInfo>();
 
             // Process public properties.
             var properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                                      .Where(p => p.CanRead && p.GetIndexParameters().Length == 0);
+                .Where(p => p.CanRead && p.GetIndexParameters().Length == 0);
             foreach (var prop in properties)
             {
                 var serializer = BsonSerializer.LookupSerializer(prop.PropertyType);
                 // Create metadata for the property. Even if the property is marked with IgnorableData,
                 // it must be included in the mapping.
-                __memberSerializationInfo[prop.Name] =
+                keyValuePairs[prop.Name] =
                     new BsonSerializationInfo(prop.Name, serializer, prop.PropertyType);
             }
 
@@ -56,10 +56,12 @@ namespace UCode.Mongo.Serializers
             foreach (var field in fields)
             {
                 var serializer = BsonSerializer.LookupSerializer(field.FieldType);
-                __memberSerializationInfo[field.Name] =
+                keyValuePairs[field.Name] =
                     new BsonSerializationInfo(field.Name, serializer, field.FieldType);
             }
-        }
+
+            return keyValuePairs;
+        }, System.Threading.LazyThreadSafetyMode.ExecutionAndPublication);
 
         /// <summary>
         /// Serializes an instance of <typeparamref name="T"/> to BSON.
@@ -165,13 +167,13 @@ namespace UCode.Mongo.Serializers
         /// <returns>
         /// <c>true</c> if the member was found; otherwise, <c>false</c>.
         /// </returns>
-        public bool TryGetMemberSerializationInfo(string memberName, out BsonSerializationInfo serializationInfo) => __memberSerializationInfo.TryGetValue(memberName, out serializationInfo);
+        public bool TryGetMemberSerializationInfo(string memberName, out BsonSerializationInfo serializationInfo) => MemberSerializationInfo.Value.TryGetValue(memberName, out serializationInfo);
 
         /// <summary>
         /// Gets all member names represented by this serializer.
         /// </summary>
         /// <returns>An <see cref="IEnumerable{String}"/> containing all member names.</returns>
-        public IEnumerable<string> GetMemberNames() => __memberSerializationInfo.Keys;
+        public IEnumerable<string> GetMemberNames() => MemberSerializationInfo.Value.Keys;
 
         #endregion
     }
