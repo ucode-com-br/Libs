@@ -17,7 +17,7 @@ namespace UCode.Mongo.Serializers
     /// <see cref="IgnorableDataAttribute"/> when the object is not the root document during serialization.
     /// For deserialization, the BSON document is assumed to be at the root level.
     /// This implementation considers the element name and order as defined by [BsonElement] (or, if missing, by [JsonPropertyName]
-    /// and [JsonPropertyOrder]). If neither is defined, the member name is used and the order é int.MaxValue.
+    /// and [JsonPropertyOrder]). If neither is defined, the member name is used and the order is int.MaxValue.
     /// Supported attributes include BsonElement, BsonId, BsonIgnore, BsonIgnoreIfNull, BsonIgnoreIfDefault,
     /// JsonPropertyName and JsonPropertyOrder.
     /// </summary>
@@ -50,11 +50,11 @@ namespace UCode.Mongo.Serializers
                                                 .Where(p => p.CanRead && p.CanWrite && p.GetIndexParameters().Length == 0);
                     foreach (var prop in properties)
                     {
-                        if (Attribute.IsDefined(prop, typeof(BsonIgnoreAttribute), true))
+                        if (prop.IsDefined(typeof(BsonIgnoreAttribute), true))
                             continue;
                         var serializer = GetMemberSerializer(prop, prop.PropertyType);
                         string elementName = GetElementName(prop);
-                        bool isIgnorable = Attribute.IsDefined(prop, typeof(IgnorableDataAttribute), true);
+                        bool isIgnorable = prop.IsDefined(typeof(IgnorableDataAttribute), true);
                         if (!dict.ContainsKey(elementName))
                         {
                             dict[elementName] = new MemberDataInfo { Member = prop, Serializer = serializer, IsIgnorable = isIgnorable };
@@ -69,11 +69,11 @@ namespace UCode.Mongo.Serializers
                     var fields = currentType.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
                     foreach (var field in fields)
                     {
-                        if (Attribute.IsDefined(field, typeof(BsonIgnoreAttribute), true))
+                        if (field.IsDefined(typeof(BsonIgnoreAttribute), true))
                             continue;
                         var serializer = GetMemberSerializer(field, field.FieldType);
                         string elementName = GetElementName(field);
-                        bool isIgnorable = Attribute.IsDefined(field, typeof(IgnorableDataAttribute), true);
+                        bool isIgnorable = field.IsDefined(typeof(IgnorableDataAttribute), true);
                         if (!dict.ContainsKey(elementName))
                         {
                             dict[elementName] = new MemberDataInfo { Member = field, Serializer = serializer, IsIgnorable = isIgnorable };
@@ -135,10 +135,10 @@ namespace UCode.Mongo.Serializers
 
             foreach (var prop in properties)
             {
-                if (Attribute.IsDefined(prop, typeof(BsonIgnoreAttribute), true))
+                if (prop.IsDefined(typeof(BsonIgnoreAttribute), true))
                     continue;
 
-                if (!isRoot && Attribute.IsDefined(prop, typeof(IgnorableDataAttribute), true))
+                if (!isRoot && prop.IsDefined(typeof(IgnorableDataAttribute), true))
                     continue;
 
                 // Determine the element name based on [BsonElement] or [JsonPropertyName].
@@ -146,10 +146,10 @@ namespace UCode.Mongo.Serializers
                 bsonWriter.WriteName(elementName);
                 var propValue = prop.GetValue(value);
 
-                if (Attribute.IsDefined(prop, typeof(BsonIgnoreIfNullAttribute), true) && propValue == null)
+                if (prop.IsDefined(typeof(BsonIgnoreIfNullAttribute), true) && propValue == null)
                     continue;
 
-                if (Attribute.IsDefined(prop, typeof(BsonIgnoreIfDefaultAttribute), true))
+                if (prop.IsDefined(typeof(BsonIgnoreIfDefaultAttribute), true))
                 {
                     var defaultValue = prop.GetCustomAttribute<BsonDefaultValueAttribute>(true)?.DefaultValue
                                              ?? GetDefault(prop.PropertyType);
@@ -172,20 +172,20 @@ namespace UCode.Mongo.Serializers
 
             foreach (var field in fields)
             {
-                if (Attribute.IsDefined(field, typeof(BsonIgnoreAttribute), true))
+                if (field.IsDefined(typeof(BsonIgnoreAttribute), true))
                     continue;
 
-                if (!isRoot && Attribute.IsDefined(field, typeof(IgnorableDataAttribute), true))
+                if (!isRoot && field.IsDefined(typeof(IgnorableDataAttribute), true))
                     continue;
 
                 var elementName = GetElementName(field);
                 bsonWriter.WriteName(elementName);
                 var fieldValue = field.GetValue(value);
 
-                if (Attribute.IsDefined(field, typeof(BsonIgnoreIfNullAttribute), true) && fieldValue == null)
+                if (field.IsDefined(typeof(BsonIgnoreIfNullAttribute), true) && fieldValue == null)
                     continue;
 
-                if (Attribute.IsDefined(field, typeof(BsonIgnoreIfDefaultAttribute), true))
+                if (field.IsDefined(typeof(BsonIgnoreIfDefaultAttribute), true))
                 {
                     var defaultValue = field.GetCustomAttribute<BsonDefaultValueAttribute>(true)?.DefaultValue
                                              ?? GetDefault(field.FieldType);
@@ -204,8 +204,9 @@ namespace UCode.Mongo.Serializers
 
         /// <summary>
         /// Deserializes a BSON document into an instance of <typeparamref name="T"/>.
-        /// The deserialization considera o nome e a ordem: os valores são lidos e depois aplicados na ordem determinada.
-        /// Para a desserialização, o documento é assumido estar no nível raiz.
+        /// The deserialization considers the element name and order: values are read and then applied
+        /// in the order determined by the attributes.
+        /// For deserialization, the document is assumed to be at the root level.
         /// </summary>
         /// <param name="context">The BSON deserialization context.</param>
         /// <param name="args">The BSON deserialization arguments.</param>
@@ -226,7 +227,7 @@ namespace UCode.Mongo.Serializers
             bsonReader.ReadStartDocument();
             var instance = (T)Activator.CreateInstance(typeof(T))!;
 
-            // Lista temporária para armazenar os valores lidos e sua ordem.
+            // Temporary list to hold deserialized values along with their order.
             var deserializedMembers = new List<(int Order, MemberDataInfo MemberData, object Value)>();
 
             while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
@@ -253,7 +254,7 @@ namespace UCode.Mongo.Serializers
 
             bsonReader.ReadEndDocument();
 
-            // Aplica os valores na ordem definida.
+            // Apply the deserialized values in order.
             foreach (var item in deserializedMembers.OrderBy(m => m.Order))
             {
                 SetMemberValue(instance, item.MemberData.Member, item.Value);
@@ -297,37 +298,36 @@ namespace UCode.Mongo.Serializers
 
         /// <summary>
         /// Determines the element name for a property.
-        /// First checks for [BsonElement] with a non-empty ElementName; if not found, then [JsonPropertyName];
-        /// otherwise uses the property name (or "_id" se marcado com [BsonId]).
+        /// It first checks for [BsonElement] with a non-empty ElementName; if not found, then [JsonPropertyName];
+        /// otherwise, it uses the property name (or "_id" if marked with [BsonId]).
         /// </summary>
         private static string GetElementName(PropertyInfo prop)
         {
-            // Using Attribute.GetCustomAttribute ensures we pegue o atributo correto.
-            var bsonElem = (BsonElementAttribute?)Attribute.GetCustomAttribute(prop, typeof(BsonElementAttribute));
+            var bsonElem = prop.GetCustomAttribute<BsonElementAttribute>(true);
             if (bsonElem != null && !string.IsNullOrWhiteSpace(bsonElem.ElementName))
                 return bsonElem.ElementName;
-            var jsonProp = (JsonPropertyNameAttribute?)Attribute.GetCustomAttribute(prop, typeof(JsonPropertyNameAttribute));
+            var jsonProp = prop.GetCustomAttribute<JsonPropertyNameAttribute>(true);
             if (jsonProp != null && !string.IsNullOrWhiteSpace(jsonProp.Name))
                 return jsonProp.Name;
-            if (Attribute.IsDefined(prop, typeof(BsonIdAttribute)))
+            if (prop.IsDefined(typeof(BsonIdAttribute), true))
                 return "_id";
             return prop.Name;
         }
 
         /// <summary>
         /// Determines the element name for a field.
-        /// First checks for [BsonElement] with a non-empty ElementName; if not found, then [JsonPropertyName];
-        /// otherwise uses the field name (or "_id" se marcado com [BsonId]).
+        /// It first checks for [BsonElement] with a non-empty ElementName; if not found, then [JsonPropertyName];
+        /// otherwise, it uses the field name (or "_id" if marked with [BsonId]).
         /// </summary>
         private static string GetElementName(FieldInfo field)
         {
-            var bsonElem = (BsonElementAttribute?)Attribute.GetCustomAttribute(field, typeof(BsonElementAttribute));
+            var bsonElem = field.GetCustomAttribute<BsonElementAttribute>(true);
             if (bsonElem != null && !string.IsNullOrWhiteSpace(bsonElem.ElementName))
                 return bsonElem.ElementName;
-            var jsonProp = (JsonPropertyNameAttribute?)Attribute.GetCustomAttribute(field, typeof(JsonPropertyNameAttribute));
+            var jsonProp = field.GetCustomAttribute<JsonPropertyNameAttribute>(true);
             if (jsonProp != null && !string.IsNullOrWhiteSpace(jsonProp.Name))
                 return jsonProp.Name;
-            if (Attribute.IsDefined(field, typeof(BsonIdAttribute)))
+            if (field.IsDefined(typeof(BsonIdAttribute), true))
                 return "_id";
             return field.Name;
         }
@@ -407,8 +407,8 @@ namespace UCode.Mongo.Serializers
 
         /// <summary>
         /// Retrieves the order for a member.
-        /// First checks for [BsonElement] and uses its Order if defined (and not int.MaxValue);
-        /// otherwise, checks for [JsonPropertyOrder]; if not found, returns int.MaxValue.
+        /// It first checks for [BsonElement] and uses its Order if defined (and not int.MaxValue);
+        /// otherwise, it checks for [JsonPropertyOrder]; if not found, returns int.MaxValue.
         /// </summary>
         private static int GetOrder(MemberInfo member)
         {
