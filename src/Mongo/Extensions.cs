@@ -17,7 +17,7 @@ namespace UCode.Mongo
     /// </summary>
     public static class Extensions
     {
-        public static void AddIgnorableDataConverter(this JsonSerializerOptions options) => options.Converters.Add(new IgnorableDataJsonConverterFactory());
+        //public static void AddIgnorableDataConverter(this JsonSerializerOptions options) => options.Converters.Add(new IgnorableDataJsonConverterFactory());
 
 
         /// <summary>

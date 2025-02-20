@@ -9,6 +9,7 @@ using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson.Serialization.Serializers;
 using UCode.Mongo.Attributes;
+using static MongoDB.Bson.Serialization.Serializers.SerializerHelper;
 
 namespace UCode.Mongo.Serializers
 {
@@ -53,7 +54,7 @@ namespace UCode.Mongo.Serializers
                         if (prop.IsDefined(typeof(BsonIgnoreAttribute), true))
                             continue;
                         var serializer = GetMemberSerializer(prop, prop.PropertyType);
-                        string elementName = GetElementName(prop);
+                        string elementName =  GetElementName(prop);
                         bool isIgnorable = prop.IsDefined(typeof(IgnorableDataAttribute), true);
                         if (!dict.ContainsKey(elementName))
                         {
@@ -107,96 +108,79 @@ namespace UCode.Mongo.Serializers
                 return;
             }
 
-            var bsonWriter = context.Writer as BsonWriter
-                ?? throw new InvalidOperationException("Expected writer to be a BsonWriter.");
+            var bsonWriter = context.Writer as BsonWriter ?? throw new InvalidOperationException("Expected writer to be a BsonWriter.");
 
             // Determine if the object is the root document.
             var isRoot = bsonWriter.SerializationDepth == 0;
 
+            var type = typeof(T);
+
             bsonWriter.WriteStartDocument();
 
-            // Process properties in order.
-            ProcessProperties(context, value, bsonWriter, isRoot, typeof(T));
 
-            // Process fields in order.
-            ProcessFields(context, value, bsonWriter, isRoot, typeof(T));
+            var members = type.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                .Where(w => w.MemberType is MemberTypes.Property or MemberTypes.Field &&
+                    ((w is PropertyInfo prop && prop.CanRead && prop.GetIndexParameters().Length == 0) || (w is FieldInfo field)) ).OrderBy(p => GetOrder(p));
+
+            foreach (var member in members)
+            {
+                if (member is PropertyInfo prop)
+                {
+                    if (prop.IsDefined(typeof(BsonIgnoreAttribute), true))
+                        continue;
+
+                    if (!isRoot && prop.IsDefined(typeof(IgnorableDataAttribute), true))
+                        continue;
+
+                    // Determine the element name based on [BsonElement] or [JsonPropertyName].
+                    var elementName = GetElementName(prop);
+                    bsonWriter.WriteName(elementName);
+                    var propValue = prop.GetValue(value);
+
+                    if (prop.IsDefined(typeof(BsonIgnoreIfNullAttribute), true) && propValue == null)
+                        continue;
+
+                    if (prop.IsDefined(typeof(BsonIgnoreIfDefaultAttribute), true))
+                    {
+                        var defaultValue = GetDefault(member, prop.PropertyType);
+                        if (object.Equals(propValue, defaultValue))
+                            continue;
+                    }
+
+                    var serializer = GetMemberSerializer(prop, prop.PropertyType);
+                    serializer.Serialize(context, propValue);
+                }
+                else if (member is FieldInfo field)
+                {
+                    if (field.IsDefined(typeof(BsonIgnoreAttribute), true))
+                        continue;
+
+                    if (!isRoot && field.IsDefined(typeof(IgnorableDataAttribute), true))
+                        continue;
+
+                    var elementName = GetElementName(field);
+                    bsonWriter.WriteName(elementName);
+                    var fieldValue = field.GetValue(value);
+
+                    if (field.IsDefined(typeof(BsonIgnoreIfNullAttribute), true) && fieldValue == null)
+                        continue;
+
+                    if (field.IsDefined(typeof(BsonIgnoreIfDefaultAttribute), true))
+                    {
+                        var defaultValue = GetDefault(member, field.FieldType);
+                        if (object.Equals(fieldValue, defaultValue))
+                            continue;
+                    }
+
+                    var serializer = GetMemberSerializer(field, field.FieldType);
+                    serializer.Serialize(context, fieldValue);
+                }
+            }
+
 
             bsonWriter.WriteEndDocument();
         }
 
-        /// <summary>
-        /// Processes and serializes all public properties of the object, sorted by order.
-        /// </summary>
-        private static void ProcessProperties(BsonSerializationContext context, T value, BsonWriter bsonWriter, bool isRoot, Type type)
-        {
-            var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                                 .Where(p => p.CanRead && p.CanWrite && p.GetIndexParameters().Length == 0)
-                                 .OrderBy(p => GetOrder(p));
-
-            foreach (var prop in properties)
-            {
-                if (prop.IsDefined(typeof(BsonIgnoreAttribute), true))
-                    continue;
-
-                if (!isRoot && prop.IsDefined(typeof(IgnorableDataAttribute), true))
-                    continue;
-
-                // Determine the element name based on [BsonElement] or [JsonPropertyName].
-                var elementName = GetElementName(prop);
-                bsonWriter.WriteName(elementName);
-                var propValue = prop.GetValue(value);
-
-                if (prop.IsDefined(typeof(BsonIgnoreIfNullAttribute), true) && propValue == null)
-                    continue;
-
-                if (prop.IsDefined(typeof(BsonIgnoreIfDefaultAttribute), true))
-                {
-                    var defaultValue = prop.GetCustomAttribute<BsonDefaultValueAttribute>(true)?.DefaultValue
-                                             ?? GetDefault(prop.PropertyType);
-                    if (object.Equals(propValue, defaultValue))
-                        continue;
-                }
-
-                var serializer = GetMemberSerializer(prop, prop.PropertyType);
-                serializer.Serialize(context, propValue);
-            }
-        }
-
-        /// <summary>
-        /// Processes and serializes all public fields of the object, sorted by order.
-        /// </summary>
-        private static void ProcessFields(BsonSerializationContext context, T value, BsonWriter bsonWriter, bool isRoot, Type type)
-        {
-            var fields = type.GetFields(BindingFlags.Public | BindingFlags.Instance)
-                             .OrderBy(f => GetOrder(f));
-
-            foreach (var field in fields)
-            {
-                if (field.IsDefined(typeof(BsonIgnoreAttribute), true))
-                    continue;
-
-                if (!isRoot && field.IsDefined(typeof(IgnorableDataAttribute), true))
-                    continue;
-
-                var elementName = GetElementName(field);
-                bsonWriter.WriteName(elementName);
-                var fieldValue = field.GetValue(value);
-
-                if (field.IsDefined(typeof(BsonIgnoreIfNullAttribute), true) && fieldValue == null)
-                    continue;
-
-                if (field.IsDefined(typeof(BsonIgnoreIfDefaultAttribute), true))
-                {
-                    var defaultValue = field.GetCustomAttribute<BsonDefaultValueAttribute>(true)?.DefaultValue
-                                             ?? GetDefault(field.FieldType);
-                    if (object.Equals(fieldValue, defaultValue))
-                        continue;
-                }
-
-                var serializer = GetMemberSerializer(field, field.FieldType);
-                serializer.Serialize(context, fieldValue);
-            }
-        }
 
         #endregion
 
@@ -293,8 +277,8 @@ namespace UCode.Mongo.Serializers
         /// <summary>
         /// Returns the default value for a given type.
         /// </summary>
-        private static object? GetDefault(Type type) =>
-            type.IsValueType ? Activator.CreateInstance(type) : null;
+        private static object? GetDefault(MemberInfo memberInfo, Type type) =>
+            memberInfo.GetCustomAttribute<BsonDefaultValueAttribute>(true)?.DefaultValue ?? (type.IsValueType ? Activator.CreateInstance(type) : null);
 
         /// <summary>
         /// Determines the element name for a property.
@@ -306,11 +290,14 @@ namespace UCode.Mongo.Serializers
             var bsonElem = prop.GetCustomAttribute<BsonElementAttribute>(true);
             if (bsonElem != null && !string.IsNullOrWhiteSpace(bsonElem.ElementName))
                 return bsonElem.ElementName;
+
             var jsonProp = prop.GetCustomAttribute<JsonPropertyNameAttribute>(true);
             if (jsonProp != null && !string.IsNullOrWhiteSpace(jsonProp.Name))
                 return jsonProp.Name;
+
             if (prop.IsDefined(typeof(BsonIdAttribute), true))
                 return "_id";
+
             return prop.Name;
         }
 
