@@ -158,6 +158,7 @@ namespace UCode.Mongo
             if (node == null)
                 return null;
 
+            /*
             // Handle string method calls: Equals, StartsWith, EndsWith.
             if (node.Method.DeclaringType == typeof(string))
             {
@@ -254,7 +255,7 @@ namespace UCode.Mongo
                         }
                     }
                 }
-            }
+            }*/
 
             // Handle Any method calls.
             if (node.Method.Name == "Any" && node.Arguments.Count == 2)
