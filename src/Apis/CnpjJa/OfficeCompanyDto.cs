@@ -27,7 +27,7 @@ namespace UCode.Apis.CnpjJa
         }
         [JsonPropertyName("equity")]
         [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-        public float Equity
+        public float? Equity
         {
             get; set;
         }
